@@ -1,42 +1,13 @@
 import type { Color } from '@deck.gl/core'
-import { ScatterplotLayer, TextLayer } from '@deck.gl/layers'
+import { TextLayer } from '@deck.gl/layers'
 import { type Camera, type RoadEvent, type RoadEventCategory, plainWords } from '../../shared/adapters/roads'
-import type { Entity } from '../../shared/entity'
 import { formatLat, formatLon } from '../lib/coords'
 import { formatAge } from '../lib/format'
 import { getEntities } from '../runtime/entityStore'
-import { LABEL_FONT, OUTLINE, SELECTED, iconScale, selectionRing } from './common'
-import type { InspectorModel, LayerContext, LayerDef } from './types'
+import { LABEL_FONT, OUTLINE, dots } from './common'
+import type { InspectorModel, LayerDef } from './types'
 
 const SOURCE_LINK = [{ label: 'transportdata.gov.lv', href: 'https://map.transportdata.gov.lv/' }]
-
-/** Dots with a ring around the selected one: all either road layer needs. */
-function dots<T extends Entity>(id: string, data: T[], colorOf: (entity: T) => Color, radius: number, ctx: LayerContext) {
-  const highlight = `${ctx.selectedId}|${ctx.hoveredId}`
-  return [
-    new ScatterplotLayer<T>({
-      id,
-      data,
-      pickable: true,
-      getPosition: (entity) => [entity.lon, entity.lat],
-      getRadius: radius,
-      radiusUnits: 'pixels',
-      getFillColor: (entity) => (entity.id === ctx.selectedId || entity.id === ctx.hoveredId ? SELECTED : colorOf(entity)),
-      getLineColor: OUTLINE,
-      getLineWidth: 1.5,
-      lineWidthUnits: 'pixels',
-      stroked: true,
-      updateTriggers: { getFillColor: highlight },
-    }),
-    selectionRing(
-      `${id}-selection`,
-      data.filter((entity) => entity.id === ctx.selectedId),
-      ctx.now,
-      12,
-      iconScale(ctx.zoom),
-    ),
-  ]
-}
 
 const CAMERA: Color = [120, 220, 255]
 

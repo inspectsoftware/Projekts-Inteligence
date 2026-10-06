@@ -1,6 +1,7 @@
 import type { FeedId } from '../../shared/feeds'
 import { aircraftFeed } from './aircraft'
 import { gpsHexFeed } from './gpsHex'
+import { energyFeed, internetFeed, newsFeed, radiationFeed, riversFeed } from './panels'
 import { camerasFeed, roadsFeed } from './roads'
 import { satellitesFeed } from './satellites'
 import { sanctionsFeed, shipsFeed } from './ships'
@@ -26,4 +27,9 @@ export const FEEDS: FeedRegistry = {
   fires: firesFeed,
   cameras: camerasFeed,
   roads: roadsFeed,
+  radiation: radiationFeed,
+  rivers: riversFeed,
+  energy: energyFeed,
+  internet: internetFeed,
+  news: newsFeed,
 }

@@ -14,6 +14,11 @@ export const FEED_IDS = [
   'fires',
   'cameras',
   'roads',
+  'radiation',
+  'rivers',
+  'energy',
+  'internet',
+  'news',
 ] as const
 export type FeedId = (typeof FEED_IDS)[number]
 
@@ -73,6 +78,36 @@ export interface WeatherWarning {
   polygons: [number, number][][]
 }
 
+/** The national power system, from the latest hour the grid operators have published (usually a few hours back). */
+export interface EnergySnapshot {
+  /** Epoch ms of the hour the figures are for. */
+  at: number | null
+  loadMw: number | null
+  generationMw: number | null
+  /** Net exchange with the neighbours: positive while the country is importing. */
+  importMw: number | null
+  mix: { source: string; mw: number }[]
+  /** Exchange with each neighbour; positive is import into Latvia. */
+  flows: { country: string; mw: number }[]
+  /** Day-ahead price for the Latvian bidding zone, EUR/MWh: this quarter-hour, and the range of the day published. */
+  price: { now: number | null; low: number | null; high: number | null }
+}
+
+/** One measure of how much of the country's internet is reachable, against its own recent normal. */
+export interface InternetSignal {
+  id: string
+  label: string
+  latest: number
+  baseline: number
+}
+
+export interface NewsItem {
+  title: string
+  link: string
+  /** Epoch ms. */
+  at: number
+}
+
 /** What a feed delivers. One entity list cannot describe orbits, hexes or news, hence the union. */
 export type FeedPayload =
   | { shape: 'entities'; entities: Entity[] }
@@ -80,6 +115,9 @@ export type FeedPayload =
   | { shape: 'cells'; windowStart: number; cells: GpsCell[] }
   | { shape: 'warnings'; warnings: WeatherWarning[] }
   | { shape: 'vessel-list'; imo: number[]; mmsi: number[] }
+  | ({ shape: 'energy' } & EnergySnapshot)
+  | { shape: 'internet'; signals: InternetSignal[] }
+  | { shape: 'news'; items: NewsItem[] }
 
 export type PayloadOf<S extends FeedPayload['shape']> = Extract<FeedPayload, { shape: S }>
 
@@ -96,6 +134,12 @@ export function countOf(payload: FeedPayload): number {
       return payload.warnings.length
     case 'vessel-list':
       return payload.imo.length
+    case 'energy':
+      return payload.mix.length
+    case 'internet':
+      return payload.signals.length
+    case 'news':
+      return payload.items.length
   }
 }
 

@@ -1,4 +1,5 @@
 import { type RoadEvent, plainWords } from '../adapters/roads'
+import type { RadiationStation } from '../adapters/sensors'
 import type { Ship } from '../adapters/ships'
 import { type Aircraft, Flag } from '../entity'
 import type { WarningLevel } from '../feeds'
@@ -160,7 +161,28 @@ export const roadAccidentRule: AlertRule = {
       })),
 }
 
+/** Natural background is about 0.05 to 0.2 µSv/h; nothing in Latvia's record comes near this. */
+export const RADIATION_ALERT_USVH = 0.3
+
+/** A radiation monitor reading well above natural background. */
+export const radiationRule: AlertRule = {
+  id: 'radiation',
+  clearAfterMs: 2 * 60 * 60_000,
+  evaluate: ({ entities }) =>
+    (entities('radiation') as RadiationStation[])
+      .filter((station) => station.props.usvh >= RADIATION_ALERT_USVH)
+      .map((station) => ({
+        key: `radiation:${station.id}`,
+        severity: 'critical' as const,
+        title: `Raised radiation: ${station.props.name}`,
+        detail: `${station.props.usvh.toFixed(2)} µSv/h, above normal background`,
+        at: { lon: station.lon, lat: station.lat },
+        entityId: station.id,
+      })),
+}
+
 export const RULES: readonly AlertRule[] = [
+  radiationRule,
   emergencyRule,
   militaryInsideRule,
   gpsInterferenceRule,

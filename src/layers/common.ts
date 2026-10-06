@@ -2,6 +2,7 @@ import type { Color } from '@deck.gl/core'
 import { ScatterplotLayer } from '@deck.gl/layers'
 import type { Entity } from '../../shared/entity'
 import { positionAt } from '../map/motion'
+import type { LayerContext } from './types'
 
 export const LABEL_FONT = '"JetBrains Mono Variable", ui-monospace, monospace'
 export const HALO: Color = [4, 7, 10, 215]
@@ -29,4 +30,32 @@ export function selectionRing<T extends Entity>(id: string, selected: T[], now: 
     lineWidthUnits: 'pixels',
     updateTriggers: { getPosition: now },
   })
+}
+
+/** Fixed things drawn as dots, with a ring around the selected one. */
+export function dots<T extends Entity>(id: string, data: T[], colorOf: (entity: T) => Color, radius: number, ctx: LayerContext) {
+  const highlight = `${ctx.selectedId}|${ctx.hoveredId}`
+  return [
+    new ScatterplotLayer<T>({
+      id,
+      data,
+      pickable: true,
+      getPosition: (entity) => [entity.lon, entity.lat],
+      getRadius: radius,
+      radiusUnits: 'pixels',
+      getFillColor: (entity) => (entity.id === ctx.selectedId || entity.id === ctx.hoveredId ? SELECTED : colorOf(entity)),
+      getLineColor: OUTLINE,
+      getLineWidth: 1.5,
+      lineWidthUnits: 'pixels',
+      stroked: true,
+      updateTriggers: { getFillColor: highlight },
+    }),
+    selectionRing(
+      `${id}-selection`,
+      data.filter((entity) => entity.id === ctx.selectedId),
+      ctx.now,
+      12,
+      iconScale(ctx.zoom),
+    ),
+  ]
 }

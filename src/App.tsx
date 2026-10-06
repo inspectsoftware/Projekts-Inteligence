@@ -7,6 +7,7 @@ import { Inspector } from './ui/Inspector'
 import { LeftRail } from './ui/LeftRail'
 import { MapButtons } from './ui/MapButtons'
 import { RadarControl } from './ui/RadarControl'
+import { StatusPanel } from './ui/StatusPanel'
 import { TopBar } from './ui/TopBar'
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
       <LeftRail />
       <MapButtons />
       <AlertStack />
+      <StatusPanel />
       <Inspector />
       <RadarControl />
       <Hud />

@@ -76,6 +76,11 @@ Listed here as each layer lands, with the attribution its licence requires.
 | Sanctioned-vessel flag         | [OpenSanctions](https://www.opensanctions.org/datasets/maritime/) maritime list                | CC BY-NC 4.0                                    |
 | Buses and trams                | Operators' public live maps on [marsruti.lv](https://www.marsruti.lv) (Liepāja, Rēzekne, regional buses) | No published terms; used lightly      |
 | Road cameras, roadworks, incidents | Latvia's National Access Point for road data, [transportdata.gov.lv](https://transportdata.gov.lv) (Latvijas Valsts ceļi) | Public map data; read every 5 min |
+| Power system and price         | [energy-charts.info](https://www.energy-charts.info) (Fraunhofer ISE), from ENTSO-E and Nord Pool data | CC BY 4.0                               |
+| Internet reachability          | [IODA](https://ioda.inetintel.cc.gatech.edu/country/LV), Georgia Tech                          | Free for research and non-commercial use        |
+| News headlines                 | [LSM](https://eng.lsm.lv) English service RSS: titles and links only                           | Headlines link back to the source               |
+| Radiation                      | EURDEP network, via [BfS](https://odlinfo.bfs.de) open data                                    | Free to use with acknowledgement                |
+| River and coastal gauges       | [LVĢMC](https://videscentrs.lvgmc.lv) hydrology files                                          | No published terms; cached, read every 15 min   |
 
 Baked data in `public/data/` is rebuilt by hand with the scripts in `scripts/`
 (`node scripts/bake-boundaries.mjs`, `node scripts/bake-osm.mjs`), never as part of the build.
@@ -88,6 +93,9 @@ Baked data in `public/data/` is rebuilt by hand with the scripts in `scripts/`
   outside its own site, so Rīga's buses, trams and trolleybuses are not on the map.
 - **Road weather:** the road authority's road-weather layer is published empty, so only its
   cameras, roadworks and incidents are shown.
+- **Power:** the transmission operator's live figures sit behind bot protection, so grid numbers
+  come from ENTSO-E data and run a few hours behind. Frequency is not shown for the same reason.
+- **Air quality:** LVĢMC publishes its station list openly but not the readings, so there is no layer.
 - **Defence sites** are simply what OpenStreetMap maps as military land: a public map's view, not an
   inventory.
 
