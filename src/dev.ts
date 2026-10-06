@@ -1,3 +1,4 @@
+import { getMap } from './map/instance'
 import { useAlerts } from './state/alerts'
 import { useFeeds } from './state/feeds'
 import { useLayers } from './state/layers'
@@ -10,5 +11,5 @@ import { useWindows } from './state/windows'
  * can be staged from the browser console.
  */
 Object.assign(window, {
-  __pwh: { alerts: useAlerts, feeds: useFeeds, layers: useLayers, selection: useSelection, windows: useWindows },
+  __pwh: { alerts: useAlerts, feeds: useFeeds, layers: useLayers, selection: useSelection, windows: useWindows, map: getMap },
 })

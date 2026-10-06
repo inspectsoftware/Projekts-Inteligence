@@ -999,4 +999,11 @@ export const ru: Record<string, string> = {
     'По состоянию на {date} оценка свежих заголовков по ключевым словам ({name}) подтверждает уровень {level}. Учтено заголовков: {n}.',
   'As of {date}, no recent headline mentions {name}.': 'По состоянию на {date} в свежих заголовках упоминаний нет: {name}.',
   'This reads indicators and headline counts; it is not a threat assessment.': 'Здесь учитываются показатели и число заголовков; это не оценка угроз.',
+  'New': 'Новое',
+  'Landsat and Sentinel-2 passes of the last few days (NASA HLS)': 'Пролёты Landsat и Sentinel-2 за последние дни (NASA HLS)',
+  'About 30 m per pixel, two days old at best, clouds included. Older imagery shows where no pass saw the ground.': 'Около 30 м на пиксель, в лучшем случае двухдневной давности, с облаками. Там, где пролёт не видел землю, показаны более старые снимки.',
+  'Passes': 'Пролёты',
+  '{from} to {to}': '{from} – {to}',
+  'Imagery date': 'Дата снимков',
+  'Experimental': 'Экспериментально',
 }

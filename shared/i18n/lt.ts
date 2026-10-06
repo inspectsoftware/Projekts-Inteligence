@@ -987,4 +987,11 @@ export const lt: Record<string, string> = {
   'As of {date}, keyword scoring of the recent headlines about {name} supports level {level}. Headlines counted: {n}.': '{date} duomenimis, naujausių antraščių ({name}) vertinimas pagal raktažodžius pagrindžia {level} lygį. Įskaityta antraščių: {n}.',
   'As of {date}, no recent headline mentions {name}.': '{date} duomenimis, naujausiose antraštėse neminima šalis: {name}.',
   'This reads indicators and headline counts; it is not a threat assessment.': 'Čia remiamasi rodikliais ir antraščių skaičiumi; tai nėra grėsmių vertinimas.',
+  'New': 'Nauji',
+  'Landsat and Sentinel-2 passes of the last few days (NASA HLS)': 'Pastarųjų dienų Landsat ir Sentinel-2 praskridimai (NASA HLS)',
+  'About 30 m per pixel, two days old at best, clouds included. Older imagery shows where no pass saw the ground.': 'Apie 30 m vienam pikseliui, geriausiu atveju dviejų dienų senumo, su debesimis. Kur praskridimas žemės nematė, rodomi senesni vaizdai.',
+  'Passes': 'Praskridimai',
+  '{from} to {to}': '{from} – {to}',
+  'Imagery date': 'Vaizdų data',
+  'Experimental': 'Eksperimentinis',
 }

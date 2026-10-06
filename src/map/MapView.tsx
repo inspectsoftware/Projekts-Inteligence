@@ -5,13 +5,14 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef } from 'react'
 import { t } from '../i18n'
 import { setBorder } from '../runtime/border'
-import { useUi } from '../state/ui'
+import { useRecent, useUi } from '../state/ui'
 import { finishBoot } from '../ui/boot'
 import { applyBaseMode, applyZoomCeiling, rasterId } from './baseMode'
-import { ORTHO_LITHUANIA, clampZoom, zoomCeiling } from './basemaps'
+import { ORTHO_LITHUANIA, clampZoom, recentEnd, zoomCeiling } from './basemaps'
 import { INTRO_START, lockToRegion, runIntro } from './camera'
 import { setMap, setMapFailure, useMap, useMapFailure } from './instance'
 import { CLIP_SCHEME, TRIM_SCHEME, loadEstoniaTile, loadLatviaTile, setClipBorder } from './orthoClip'
+import { PATIENT_SCHEME, loadPatientTile } from './patientTiles'
 import { startScene } from './scene'
 import { addSpotlight } from './spotlight'
 import { buildStyle } from './style'
@@ -23,11 +24,13 @@ setWorkerUrl(workerUrl)
 // the navy their service fills the edge of its coverage with.
 addProtocol(CLIP_SCHEME, loadLatviaTile)
 addProtocol(TRIM_SCHEME, loadEstoniaTile)
+addProtocol(PATIENT_SCHEME, loadPatientTile)
 
 export function MapView() {
   const containerRef = useRef<HTMLDivElement>(null)
   const vision = useUi((s) => s.vision)
   const base = useUi((s) => s.base)
+  const back = useRecent((s) => s.back)
   const map = useMap()
   const error = useMapFailure()
 
@@ -35,9 +38,9 @@ export function MapView() {
   // have a flight to stop, which a map already removed must not be asked to do.
   useEffect(() => {
     if (!map) return
-    applyBaseMode(map, base)
+    applyBaseMode(map, base, base === 'recent' ? recentEnd(new Date(), back) : new Date())
     return applyZoomCeiling(map, zoomCeiling(base))
-  }, [map, base])
+  }, [map, base, back])
 
   useEffect(() => {
     // Someone following a shared link wants that view, not the opening fly-in.

@@ -1017,4 +1017,11 @@ export const lv: Record<string, string> = {
   'As of {date}, no recent headline mentions {name}.': 'Pēc stāvokļa {date}: {name} nav minēta nevienā nesenā virsrakstā.',
   'This reads indicators and headline counts; it is not a threat assessment.':
     'Šeit tiek nolasīti rādītāji un virsrakstu skaits; tas nav draudu novērtējums.',
+  'New': 'Jauns',
+  'Landsat and Sentinel-2 passes of the last few days (NASA HLS)': 'Landsat un Sentinel-2 pārlidojumi pēdējās dienās (NASA HLS)',
+  'About 30 m per pixel, two days old at best, clouds included. Older imagery shows where no pass saw the ground.': 'Aptuveni 30 m uz pikseli, labākajā gadījumā divas dienas veci, ar mākoņiem. Kur pārlidojums zemi neredzēja, redzami vecāki attēli.',
+  'Passes': 'Pārlidojumi',
+  '{from} to {to}': '{from} līdz {to}',
+  'Imagery date': 'Attēlu datums',
+  'Experimental': 'Eksperimentāls',
 }

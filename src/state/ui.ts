@@ -19,6 +19,12 @@ interface UiState {
   setBase(base: BaseMode): void
 }
 
+/** How many days into the past the recent imagery is turned back. Starts at the newest on every visit. */
+export const useRecent = create<{ back: number; setBack(back: number): void }>()((set) => ({
+  back: 0,
+  setBack: (back) => set({ back }),
+}))
+
 /** Small, slow-changing UI choices only. Live entities never go through React state. */
 export const useUi = create<UiState>()(
   persist(

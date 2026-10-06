@@ -1018,4 +1018,11 @@ export const et: Record<string, string> = {
     'Seisuga {date} toetab hiljutiste pealkirjade märksõnapõhine hindamine taset {level} ({name}). Arvesse võetud pealkirju: {n}.',
   'As of {date}, no recent headline mentions {name}.': 'Seisuga {date} ei ole hiljutistes pealkirjades mainitud: {name}.',
   'This reads indicators and headline counts; it is not a threat assessment.': 'See tugineb näitajatele ja pealkirjade arvule; see ei ole ohuhinnang.',
+  'New': 'Uus',
+  'Landsat and Sentinel-2 passes of the last few days (NASA HLS)': 'Landsati ja Sentinel-2 viimaste päevade ülelennud (NASA HLS)',
+  'About 30 m per pixel, two days old at best, clouds included. Older imagery shows where no pass saw the ground.': 'Umbes 30 m piksli kohta, parimal juhul kaks päeva vana, koos pilvedega. Kus ülelend maad ei näinud, on näha vanem pilt.',
+  'Passes': 'Ülelennud',
+  '{from} to {to}': '{from} kuni {to}',
+  'Imagery date': 'Piltide kuupäev',
+  'Experimental': 'Katseline',
 }

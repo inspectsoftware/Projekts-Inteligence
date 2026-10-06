@@ -2,8 +2,9 @@ import { type Attribution, LITHUANIA_ENABLED, LITHUANIA_ORIGIN, TILE_ORIGINS } f
 import { LATVIA_BBOX } from '../../shared/region'
 import { t } from '../i18n'
 import { CLIP_SCHEME, TRIM_SCHEME } from './orthoClip'
+import { PATIENT_SCHEME } from './patientTiles'
 
-export type BaseMode = 'dark' | 'imagery' | 'daily' | 'night'
+export type BaseMode = 'dark' | 'imagery' | 'recent' | 'daily' | 'night'
 
 /** The camera never goes deeper: the sharpest imagery there is runs out at about 0.25 m per pixel. */
 export const MAX_ZOOM = 19
@@ -48,6 +49,41 @@ const GIBS_ATTRIBUTION: Attribution = {
 export function gibsDate(now: Date): string {
   return new Date(now.getTime() - 24 * 3600 * 1000).toISOString().slice(0, 10)
 }
+
+const DAY_MS = 24 * 3600 * 1000
+
+/** The 30 m passes take about two days to be processed and published. */
+export const RECENT_LAG_DAYS = 2
+/** Several days are laid over each other: a satellite comes by every few days, single scenes are sometimes missing from a day, and cloud hides much of the rest. Each day is two more layers of tiles, which the patient loader spreads out. */
+export const RECENT_STACK_DAYS = 5
+/** How far back the Display window lets the reader go. */
+export const RECENT_REACH_DAYS = 60
+
+/** The newest day shown when the reader has stepped `back` days into the past. */
+export function recentEnd(now: Date, back = 0): Date {
+  return new Date(now.getTime() - (RECENT_LAG_DAYS + back) * DAY_MS)
+}
+
+const dayOf = (date: Date) => date.toISOString().slice(0, 10)
+
+/** The days a recent view is made of, oldest first, as the reader sees them named. */
+export function recentDays(end: Date): string[] {
+  return Array.from({ length: RECENT_STACK_DAYS }, (_, i) => dayOf(new Date(end.getTime() - (RECENT_STACK_DAYS - 1 - i) * DAY_MS)))
+}
+
+/**
+ * Landsat and Sentinel-2 passes at 30 m, one layer per satellite and day. Oldest at the bottom,
+ * so wherever a newer pass saw the ground it covers the older one, and cloud-free gaps fill in.
+ */
+const RECENT_SOURCES: RasterSource[] = Array.from({ length: RECENT_STACK_DAYS }, (_, i) =>
+  (['L30', 'S30'] as const).map((satellite) => ({
+    id: `recent-${satellite.toLowerCase()}-${i}`,
+    tiles: (end: Date) =>
+      `${PATIENT_SCHEME}://wmts/epsg3857/best/HLS_${satellite}_Nadir_BRDF_Adjusted_Reflectance/default/${recentDays(end)[i]}/GoogleMapsCompatible_Level12/{z}/{y}/{x}.png`,
+    maxzoom: 12,
+    attribution: GIBS_ATTRIBUTION,
+  })),
+).flat()
 
 // The national orthophotos start at tile level 14 together, so the switch from the 10 m mosaic
 // happens at one zoom everywhere. Estonia must not start lower: below 14 its service hands out
@@ -109,6 +145,23 @@ export const RASTER_BASES: Record<Exclude<BaseMode, 'dark'>, RasterBase> = {
     brightnessMax: 0.7,
     saturation: -0.25,
   },
+  recent: {
+    // The yearly mosaic underneath, so a week of cloud leaves no hole.
+    sources: [
+      {
+        id: 'recent-under',
+        tiles: () => `${TILE_ORIGINS.eox}/wmts/1.0.0/s2cloudless-2025_3857/default/g/{z}/{y}/{x}.jpg`,
+        maxzoom: 15,
+        attribution: {
+          label: 'Sentinel-2 cloudless 2025 by EOX (Contains modified Copernicus Sentinel data 2025), CC BY-NC-SA 4.0',
+          href: 'https://s2maps.eu',
+        },
+      },
+      ...RECENT_SOURCES,
+    ],
+    brightnessMax: 0.85,
+    saturation: -0.1,
+  },
   daily: {
     sources: [
       {
@@ -144,7 +197,9 @@ export const RASTER_BASES: Record<Exclude<BaseMode, 'dark'>, RasterBase> = {
 export function zoomCeiling(mode: BaseMode): number {
   if (mode === 'dark') return MAX_ZOOM
   // Tiles are 256 px, so those of level z are shown 1:1 at map zoom z - 1.
-  const sharpest = Math.max(...RASTER_BASES[mode].sources.map((source) => source.maxzoom)) - 1
+  // The recent view is as sharp as its passes, not as the older mosaic under them.
+  const sources = mode === 'recent' ? RECENT_SOURCES : RASTER_BASES[mode].sources
+  const sharpest = Math.max(...sources.map((source) => source.maxzoom)) - 1
   return Math.min(MAX_ZOOM, sharpest + OVERZOOM)
 }
 
@@ -163,6 +218,12 @@ export const BASE_MODES: readonly { id: BaseMode; label: string; hint: string; d
     detail: LITHUANIA_ENABLED
       ? t('Air photos of the Baltic states, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.')
       : t('Air photos of Latvia and Estonia, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.'),
+  },
+  {
+    id: 'recent',
+    label: t('New'),
+    hint: t('Experimental') + ': ' + t('Landsat and Sentinel-2 passes of the last few days (NASA HLS)'),
+    detail: t('About 30 m per pixel, two days old at best, clouds included. Older imagery shows where no pass saw the ground.'),
   },
   { id: 'daily', label: t('Daily'), hint: t("Yesterday's VIIRS true-colour pass"), detail: t('About 250 m per pixel: soft past zoom 8.') },
   { id: 'night', label: t('Night'), hint: t('VIIRS night lights composite (2016)'), detail: t('About 500 m per pixel: soft past zoom 7.') },

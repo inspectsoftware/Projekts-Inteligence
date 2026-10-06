@@ -22,6 +22,7 @@ import {
   setClipBorder,
   toWorld,
 } from '../../src/map/orthoClip'
+import { PATIENT_SCHEME, patientUrl } from '../../src/map/patientTiles'
 import { buildMask } from '../../src/map/spotlight'
 import { FIRST_LAYER_OVER_PHOTOS, FIRST_OVERLAY_LAYER, IMAGERY_TEXT_COLOR, buildStyle } from '../../src/map/style'
 
@@ -50,7 +51,7 @@ describe('content security policy', () => {
       ...Object.values(RASTER_BASES)
         .flatMap((base) => base.sources)
         .map((source) => source.tiles(now))
-        .map((tiles) => behind[tiles] ?? tiles),
+        .map((tiles) => behind[tiles] ?? (tiles.startsWith(PATIENT_SCHEME) ? patientUrl(tiles) : tiles)),
       RADAR_INDEX_URL,
       `${TILE_ORIGINS.rainViewerTiles}/v2/radar/abc123/256/6/36/19/2/1_1.png`,
     ]
@@ -96,7 +97,7 @@ describe('basemaps', () => {
   })
 
   it('stops each base two levels past its sharpest tiles, and never past the map limit', () => {
-    expect(BASE_MODES.map((mode) => zoomCeiling(mode.id))).toEqual([MAX_ZOOM, MAX_ZOOM, 10, 9])
+    expect(BASE_MODES.map((mode) => zoomCeiling(mode.id))).toEqual([MAX_ZOOM, MAX_ZOOM, 13, 10, 9])
     expect(MAX_ZOOM).toBe(19)
   })
 
