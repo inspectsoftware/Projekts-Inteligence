@@ -1,0 +1,22 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+
+node_modules
+dist
+*.local
+
+# Secrets: keys live in .env locally and in hPanel on Hostinger, never in git
+.env
+.env.*
+!.env.example
+
+# Caches written by the data bakers
+scripts/.cache
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store

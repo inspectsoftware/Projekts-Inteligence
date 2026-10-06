@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#04070a" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>WHITE HORNEY // Latvia</title>
+    <style>
+      /* Boot screen: painted before any script loads, faded out by the app once it is ready. */
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #04070a;
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(ellipse at center, #0a1118 0%, #04070a 70%);
+        color: #d5e1ea;
+        font: 11px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: 0.14em;
+        transition: opacity 0.6s ease;
+      }
+      #boot.done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .boot-box {
+        width: min(420px, 80vw);
+      }
+      .boot-flag {
+        display: grid;
+        grid-template-rows: 2fr 1fr 2fr;
+        width: 34px;
+        height: 17px;
+        margin-bottom: 18px;
+      }
+      .boot-flag i:nth-child(odd) {
+        background: #9e3039;
+      }
+      .boot-flag i:nth-child(2) {
+        background: #f4f6f8;
+      }
+      .boot-title {
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.32em;
+        color: #f4f6f8;
+      }
+      .boot-sub {
+        margin-top: 4px;
+        color: #8499a8;
+      }
+      .boot-bar {
+        position: relative;
+        height: 1px;
+        margin: 22px 0 16px;
+        overflow: hidden;
+        background: #1b2a35;
+      }
+      .boot-bar span {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 30%;
+        background: #4fd6ff;
+        animation: boot-sweep 1.4s ease-in-out infinite;
+      }
+      .boot-log {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        color: #566a78;
+      }
+      .boot-log li {
+        opacity: 0;
+        animation: boot-in 0.3s ease forwards;
+      }
+      .boot-log li:nth-child(2) {
+        animation-delay: 0.25s;
+      }
+      .boot-log li:nth-child(3) {
+        animation-delay: 0.5s;
+      }
+      @keyframes boot-sweep {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(340%);
+        }
+      }
+      @keyframes boot-in {
+        to {
+          opacity: 1;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-bar span,
+        .boot-log li {
+          animation: none;
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="boot" role="status" aria-label="Loading">
+      <div class="boot-box">
+        <div class="boot-flag" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div class="boot-title">WHITE HORNEY</div>
+        <div class="boot-sub">LATVIA // OPEN-SOURCE SITUATIONAL AWARENESS</div>
+        <div class="boot-bar"><span></span></div>
+        <ul class="boot-log">
+          <li>UPLINK ........ ESTABLISHING</li>
+          <li>BASEMAP ....... STANDBY</li>
+          <li>FEEDS ......... STANDBY</li>
+        </ul>
+      </div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
