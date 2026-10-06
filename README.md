@@ -75,6 +75,7 @@ Listed here as each layer lands, with the attribution its licence requires.
 | Ships                          | [Digitraffic](https://www.digitraffic.fi/en/marine-traffic/) (Fintraffic), plus [AISStream](https://aisstream.io) when a key is set | CC BY 4.0 / free key, AISStream's terms |
 | Sanctioned-vessel flag         | [OpenSanctions](https://www.opensanctions.org/datasets/maritime/) maritime list                | CC BY-NC 4.0                                    |
 | Buses and trams                | Operators' public live maps on [marsruti.lv](https://www.marsruti.lv) (Liepāja, Rēzekne, regional buses) | No published terms; used lightly      |
+| Road cameras, roadworks, incidents | Latvia's National Access Point for road data, [transportdata.gov.lv](https://transportdata.gov.lv) (Latvijas Valsts ceļi) | Public map data; read every 5 min |
 
 Baked data in `public/data/` is rebuilt by hand with the scripts in `scripts/`
 (`node scripts/bake-boundaries.mjs`, `node scripts/bake-osm.mjs`), never as part of the build.
@@ -85,6 +86,8 @@ Baked data in `public/data/` is rebuilt by hand with the scripts in `scripts/`
   are covered, because that is as far as the open Finnish receivers reach.
 - **Rīga public transport:** Rīgas Satiksme's vehicle-position file has been unreachable from
   outside its own site, so Rīga's buses, trams and trolleybuses are not on the map.
+- **Road weather:** the road authority's road-weather layer is published empty, so only its
+  cameras, roadworks and incidents are shown.
 - **Defence sites** are simply what OpenStreetMap maps as military land: a public map's view, not an
   inventory.
 

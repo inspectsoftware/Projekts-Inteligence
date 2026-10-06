@@ -35,6 +35,8 @@ export interface InspectorModel {
   kicker: string
   title: string
   subtitle?: string
+  /** A picture of the thing itself, such as a camera's latest frame. */
+  image?: { src: string; alt: string }
   badges: { text: string; tone: Tone }[]
   rows: { label: string; value: string }[]
   links: { label: string; href: string }[]

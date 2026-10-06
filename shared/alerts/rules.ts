@@ -1,3 +1,4 @@
+import { type RoadEvent, plainWords } from '../adapters/roads'
 import type { Ship } from '../adapters/ships'
 import { type Aircraft, Flag } from '../entity'
 import type { WarningLevel } from '../feeds'
@@ -142,10 +143,28 @@ export const sanctionedVesselRule: AlertRule = {
       })),
 }
 
+/** Accidents on the state roads, as reported by the road authority. */
+export const roadAccidentRule: AlertRule = {
+  id: 'road-accident',
+  clearAfterMs: 10 * 60_000,
+  evaluate: ({ entities }) =>
+    (entities('roads') as RoadEvent[])
+      .filter((event) => event.props.category === 'accident')
+      .map((event) => ({
+        key: `road-accident:${event.id}`,
+        severity: 'warn' as const,
+        title: `Road accident: ${event.props.road}`,
+        detail: event.props.restrictions.map(plainWords).join(', ') || undefined,
+        at: { lon: event.lon, lat: event.lat },
+        entityId: event.id,
+      })),
+}
+
 export const RULES: readonly AlertRule[] = [
   emergencyRule,
   militaryInsideRule,
   gpsInterferenceRule,
   sanctionedVesselRule,
+  roadAccidentRule,
   weatherWarningRule,
 ]

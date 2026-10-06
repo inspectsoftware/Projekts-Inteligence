@@ -4,6 +4,7 @@ import { APP } from '../../shared/meta'
 import type { BuildInfo } from '../buildInfo'
 import { type FeedCache, type FeedState, FeedUnavailable } from '../core/cache'
 import type { FeedRegistry } from '../feeds/registry'
+import { cameraFrame } from '../feeds/roads'
 import type { FeedDef } from '../feeds/types'
 
 export interface ApiDeps {
@@ -98,6 +99,18 @@ export function apiRoutes(deps: ApiDeps): Hono {
     if (encoding) c.header('Content-Encoding', encoding)
     c.header('Content-Type', 'application/json; charset=utf-8')
     return c.body(new Uint8Array(body))
+  })
+
+  /** Latest still from one road camera. The frames arrive inside the cameras feed and are kept in memory. */
+  api.get('/camera/:id', async (c) => {
+    const def = deps.feeds.cameras
+    // After a restart nothing is held yet: loading the feed brings the frames back.
+    if (def) await deps.cache.get(def).catch(() => undefined)
+    const frame = cameraFrame(c.req.param('id'))
+    if (!frame) return c.json({ error: 'not_found' }, 404)
+    c.header('Content-Type', 'image/jpeg')
+    c.header('Cache-Control', 'public, max-age=120')
+    return c.body(new Uint8Array(frame))
   })
 
   api.all('*', (c) => c.json({ error: 'not_found' }, 404))

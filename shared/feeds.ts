@@ -12,6 +12,8 @@ export const FEED_IDS = [
   'warnings',
   'stations',
   'fires',
+  'cameras',
+  'roads',
 ] as const
 export type FeedId = (typeof FEED_IDS)[number]
 

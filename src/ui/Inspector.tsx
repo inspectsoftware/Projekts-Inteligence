@@ -92,6 +92,10 @@ export function Inspector() {
         )}
       </header>
 
+      {model.image && (
+        <img src={model.image.src} alt={model.image.alt} className="block w-full shrink-0 border-b border-line bg-ink-850" />
+      )}
+
       <dl className="min-h-0 overflow-y-auto px-3 py-2 text-[11px]">
         {model.rows.map((row) => (
           <div key={row.label} className="flex justify-between gap-3 border-b border-line/50 py-1 last:border-0">

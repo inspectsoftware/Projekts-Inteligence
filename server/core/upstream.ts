@@ -32,6 +32,8 @@ export interface RequestOptions {
 export interface Upstream {
   json<T = unknown>(url: string, options?: RequestOptions): Promise<T>
   text(url: string, options?: RequestOptions): Promise<string>
+  /** For binary bodies such as vector tiles. */
+  bytes(url: string, options?: RequestOptions): Promise<Uint8Array>
 }
 
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>
@@ -49,7 +51,7 @@ function parseRetryAfter(value: string | null): number | undefined {
  * requests a URL chosen by a visitor, so it cannot be used as an open proxy.
  */
 export function createUpstream(origins: readonly string[], signal: AbortSignal, fetchImpl: FetchLike = fetch): Upstream {
-  async function request(url: string, options: RequestOptions = {}): Promise<string> {
+  async function request(url: string, options: RequestOptions = {}): Promise<Uint8Array> {
     const { origin, host } = new URL(url)
     if (!origins.includes(origin)) {
       throw new UpstreamError('forbidden-origin', `${host} is not an allowed origin for this feed`)
@@ -84,13 +86,16 @@ export function createUpstream(origins: readonly string[], signal: AbortSignal, 
     if (body.byteLength > maxBytes) {
       throw new UpstreamError('too-large', `${host} sent ${body.byteLength} bytes, more than this feed accepts`)
     }
-    return new TextDecoder().decode(body)
+    return new Uint8Array(body)
   }
 
+  const text = async (url: string, options?: RequestOptions) => new TextDecoder().decode(await request(url, options))
+
   return {
-    text: request,
+    bytes: request,
+    text,
     async json<T>(url: string, options?: RequestOptions): Promise<T> {
-      const body = await request(url, options)
+      const body = await text(url, options)
       try {
         return JSON.parse(body) as T
       } catch {
