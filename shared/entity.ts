@@ -2,7 +2,10 @@
  * One moving (or fixed) object on the map, whatever feed it came from.
  * WGS84 coordinates, SI units, bearings in degrees true.
  */
-export type EntityKind = 'aircraft' | 'ship' | 'transit' | 'train' | 'satellite'
+export type EntityKind = 'aircraft' | 'ship' | 'transit' | 'train' | 'satellite' | 'station' | 'fire'
+
+/** Kinds that travel, and so get a trail and dead reckoning. */
+export const MOVING_KINDS: ReadonlySet<EntityKind> = new Set(['aircraft', 'ship', 'transit', 'train'])
 
 /** Bit flags, so a whole entity list can be filtered and styled cheaply. */
 export const Flag = {

@@ -42,7 +42,7 @@ function LayerRow({ layer, on, feed, onToggle }: { layer: LayerDef; on: boolean;
           style={{ borderColor: layer.swatch, background: on ? layer.swatch : 'transparent' }}
         />
         <span className={on ? 'text-fg' : 'text-fg-mute group-hover:text-fg-dim'}>{layer.label}</span>
-        {on && (
+        {on && layer.feeds.length > 0 && (
           <span className="ml-auto flex items-center gap-2">
             <span className="text-fg tabular-nums">{feed?.count ?? '–'}</span>
             <span

@@ -1,6 +1,8 @@
 import type { Layer } from '@deck.gl/core'
+import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { Entity } from '../../shared/entity'
 import type { FeedId } from '../../shared/feeds'
+import type { Attribution } from '../../shared/origins'
 import type { Stat } from '../state/feeds'
 
 export type LayerGroup = 'air' | 'sea' | 'land' | 'space' | 'signals' | 'environment'
@@ -51,6 +53,10 @@ export interface LayerDef {
   swatch: string
   /** Polled while the layer is visible. */
   feeds: readonly FeedId[]
+  /** Credits for data the browser loads directly, which no feed lists. */
+  attribution?: readonly Attribution[]
+  /** For layers the map draws itself (raster tiles) instead of deck.gl. */
+  native?: { show(map: MapLibreMap): void; hide(): void }
   /**
    * Called before every frame while the layer is visible, for layers that work out
    * their own entities (satellite positions). Must throttle itself.

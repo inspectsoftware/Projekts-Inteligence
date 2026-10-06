@@ -1,7 +1,7 @@
 import type { Entity } from './entity'
 import type { Attribution } from './origins'
 
-export const FEED_IDS = ['aircraft', 'trains', 'satellites'] as const
+export const FEED_IDS = ['aircraft', 'trains', 'satellites', 'gps-hex', 'warnings', 'stations', 'fires'] as const
 export type FeedId = (typeof FEED_IDS)[number]
 
 export function isFeedId(value: string): value is FeedId {
@@ -33,16 +33,54 @@ export interface OrbitalElement {
   GROUP: SatGroup
 }
 
+/** One H3 cell with how many aircraft passed through it with healthy and with degraded GPS. */
+export interface GpsCell {
+  id: string
+  /** Closed ring of [lon, lat]. */
+  boundary: [number, number][]
+  good: number
+  bad: number
+}
+
+export type WarningLevel = 'yellow' | 'orange' | 'red'
+
+/** One official weather warning that is in force or about to be. */
+export interface WeatherWarning {
+  id: string
+  /** What it is about: "Wind", "Fog", "Rain"... */
+  type: string
+  level: WarningLevel
+  description: string
+  /** Epoch ms. */
+  onset: number
+  expires: number
+  sent: number
+  areas: string[]
+  /** Outer rings of the affected areas as [lon, lat], simplified. Empty for sea areas, which come without geometry. */
+  polygons: [number, number][][]
+}
+
 /** What a feed delivers. One entity list cannot describe orbits, hexes or news, hence the union. */
 export type FeedPayload =
   | { shape: 'entities'; entities: Entity[] }
   | { shape: 'elements'; sats: OrbitalElement[] }
+  | { shape: 'cells'; windowStart: number; cells: GpsCell[] }
+  | { shape: 'warnings'; warnings: WeatherWarning[] }
 
 export type PayloadOf<S extends FeedPayload['shape']> = Extract<FeedPayload, { shape: S }>
 
 /** How many things a payload holds, for the layer list. */
 export function countOf(payload: FeedPayload): number {
-  return payload.shape === 'entities' ? payload.entities.length : payload.sats.length
+  switch (payload.shape) {
+    case 'entities':
+      return payload.entities.length
+    case 'elements':
+      return payload.sats.length
+    case 'cells':
+      return payload.cells.length
+    case 'warnings':
+      return payload.warnings.length
+  }
 }
 
 /**

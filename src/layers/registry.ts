@@ -1,12 +1,26 @@
 import type { Entity } from '../../shared/entity'
 import type { FeedId } from '../../shared/feeds'
 import { aircraftLayer } from './aircraft'
+import { firesLayer } from './fires'
+import { gpsHexLayer } from './gpsHex'
+import { radarLayer } from './radar'
 import { satellitesLayer } from './satellites'
+import { stationsLayer } from './stations'
 import { trainsLayer } from './trains'
 import type { LayerDef, LayerGroup } from './types'
+import { warningsLayer } from './warnings'
 
 /** Draw order, bottom to top. Also the order of the layer list within each group. */
-export const LAYERS: readonly LayerDef[] = [trainsLayer, satellitesLayer, aircraftLayer]
+export const LAYERS: readonly LayerDef[] = [
+  radarLayer,
+  warningsLayer,
+  gpsHexLayer,
+  firesLayer,
+  stationsLayer,
+  trainsLayer,
+  satellitesLayer,
+  aircraftLayer,
+]
 
 export const GROUP_ORDER: readonly LayerGroup[] = ['air', 'sea', 'land', 'space', 'signals', 'environment']
 

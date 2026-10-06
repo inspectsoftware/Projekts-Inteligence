@@ -1,5 +1,6 @@
 import { type ReadsbResponse, normaliseAircraft } from '../../shared/adapters/aircraft'
 import { LATVIA_CENTER } from '../../shared/region'
+import { observeAircraft } from './gpsHex'
 import type { FeedDef } from './types'
 
 // 250 nm is the largest radius adsb.fi serves, and it covers all of Latvia from the
@@ -31,6 +32,9 @@ export const aircraftFeed: FeedDef = {
     } catch {
       raw = await http.json<ReadsbResponse>(FALLBACK, { timeoutMs: 4000 })
     }
-    return { shape: 'entities', entities: normaliseAircraft(raw, Date.now()) }
+    const receivedAt = Date.now()
+    const entities = normaliseAircraft(raw, receivedAt)
+    observeAircraft(entities, receivedAt)
+    return { shape: 'entities', entities }
   },
 }

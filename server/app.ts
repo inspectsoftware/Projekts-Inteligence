@@ -20,6 +20,7 @@ export interface AppOptions {
 export function createApp(options: AppOptions = {}): Hono {
   const app = new Hono()
   const env = options.env ?? process.env
+  const feeds = options.feeds ?? FEEDS
 
   app.use('*', securityHeaders())
   app.route(
@@ -27,8 +28,8 @@ export function createApp(options: AppOptions = {}): Hono {
     apiRoutes({
       build: readBuildInfo(),
       startedAt: Date.now(),
-      feeds: options.feeds ?? FEEDS,
-      cache: options.cache ?? new FeedCache({ env, disk: createDiskStore() }),
+      feeds,
+      cache: options.cache ?? new FeedCache({ env, disk: createDiskStore(), resolve: (id) => feeds[id] }),
       env,
     }),
   )

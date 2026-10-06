@@ -5,6 +5,7 @@ import { Hud } from './ui/Hud'
 import { Inspector } from './ui/Inspector'
 import { LeftRail } from './ui/LeftRail'
 import { MapButtons } from './ui/MapButtons'
+import { RadarControl } from './ui/RadarControl'
 import { TopBar } from './ui/TopBar'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
       <MapButtons />
       <AlertStack />
       <Inspector />
+      <RadarControl />
       <Hud />
       <Attribution />
     </div>

@@ -9,7 +9,12 @@ export const TILE_ORIGINS = {
   eox: 'https://tiles.maps.eox.at',
   /** NASA GIBS daily imagery and night lights. */
   gibs: 'https://gibs.earthdata.nasa.gov',
+  /** RainViewer: the list of radar scans, and the radar tiles themselves. */
+  rainViewerApi: 'https://api.rainviewer.com',
+  rainViewerTiles: 'https://tilecache.rainviewer.com',
 } as const
+
+export const RADAR_INDEX_URL = `${TILE_ORIGINS.rainViewerApi}/public/weather-maps.json`
 
 export const BROWSER_ORIGINS: readonly string[] = Object.values(TILE_ORIGINS)
 

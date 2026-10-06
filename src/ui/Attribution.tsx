@@ -15,6 +15,7 @@ export function Attribution() {
   if (base !== 'dark') credits.push(RASTER_BASES[base].attribution)
   for (const layer of LAYERS) {
     if (!isLayerOn(visible, layer.id, layer.defaultOn)) continue
+    credits.push(...(layer.attribution ?? []))
     for (const feed of layer.feeds) credits.push(...(feeds[feed]?.attribution ?? []))
   }
   const unique = credits.filter((credit, index) => credits.findIndex((other) => other.href === credit.href) === index)

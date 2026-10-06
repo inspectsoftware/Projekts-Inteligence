@@ -2,8 +2,9 @@ import { readFileSync } from 'node:fs'
 import type { FeatureCollection, Polygon } from 'geojson'
 import { describe, expect, it } from 'vitest'
 import { type AlertInput, AlertEngine, type AlertRule } from '../../shared/alerts/engine'
-import { RULES, emergencyRule, gpsInterferenceRule, militaryInsideRule } from '../../shared/alerts/rules'
+import { RULES, emergencyRule, gpsInterferenceRule, militaryInsideRule, weatherWarningRule } from '../../shared/alerts/rules'
 import { type Aircraft, type Entity, Flag } from '../../shared/entity'
+import type { WeatherWarning } from '../../shared/feeds'
 import { createRegionTest, pointInRing } from '../../shared/geo/pip'
 
 const border = JSON.parse(
@@ -38,9 +39,10 @@ function aircraft(hex: string, at: { lon: number; lat: number }, flags = 0, squa
   }
 }
 
-const input = (entities: Entity[], now = 0): AlertInput => ({
+const input = (entities: Entity[], now = 0, warnings: WeatherWarning[] = []): AlertInput => ({
   now,
   entities: (slot) => (slot === 'aircraft' ? entities : []),
+  warnings: () => warnings,
   insideLatvia,
 })
 
@@ -117,6 +119,47 @@ describe('rules', () => {
     )
     expect(alert).toMatchObject({ key: 'gps-interference:latvia', detail: '3 aircraft reporting degraded or lost GPS' })
     expect(alert.at!.lon).toBeCloseTo(25)
+  })
+})
+
+describe('weather warning rule', () => {
+  const warning = (patch: Partial<WeatherWarning>): WeatherWarning => ({
+    id: 'w1',
+    type: 'Wind',
+    level: 'yellow',
+    description: '',
+    onset: Date.parse('2026-10-05T06:00:00Z'),
+    expires: Date.parse('2026-10-06T22:00:00Z'),
+    sent: 0,
+    areas: ['Gulf of Riga East', 'Gulf of Riga West', 'Southern Gulf of Riga'],
+    polygons: [],
+    ...patch,
+  })
+  const NOW = Date.parse('2026-10-06T10:00:00Z')
+
+  it('lists a yellow warning quietly, with where and until when', () => {
+    const [alert] = weatherWarningRule.evaluate(input([], NOW, [warning({})]))
+    expect(alert).toMatchObject({
+      severity: 'info',
+      title: 'Wind warning (yellow)',
+      detail: 'Gulf of Riga East, Gulf of Riga West +1 · until Wed 01:00',
+    })
+    // A sea area has no outline, so the alert has nowhere to fly to.
+    expect(alert.at).toBeUndefined()
+  })
+
+  it('escalates orange and red, and points at the affected area', () => {
+    const land = warning({
+      level: 'red',
+      type: 'Rain',
+      areas: ['Riga'],
+      onset: Date.parse('2026-10-06T15:00:00Z'),
+      polygons: [[[24, 56.8], [24.4, 56.8], [24.4, 57.1], [24, 57.1]]],
+    })
+    const [alert] = weatherWarningRule.evaluate(input([], NOW, [land]))
+    expect(alert).toMatchObject({ severity: 'critical', title: 'Rain warning (red)', detail: 'Riga · from Tue 18:00' })
+    expect(alert.at!.lon).toBeCloseTo(24.2)
+    expect(weatherWarningRule.evaluate(input([], NOW, [warning({ level: 'orange' })]))[0].severity).toBe('warn')
   })
 })
 

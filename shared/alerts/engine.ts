@@ -1,4 +1,5 @@
 import type { Entity } from '../entity'
+import type { WeatherWarning } from '../feeds'
 
 export type Severity = 'info' | 'warn' | 'critical'
 
@@ -17,6 +18,8 @@ export interface AlertCandidate {
 export interface AlertInput {
   now: number
   entities(slot: string): readonly Entity[]
+  /** Official weather warnings in force or imminent. */
+  warnings(): readonly WeatherWarning[]
   insideLatvia(lon: number, lat: number): boolean
 }
 

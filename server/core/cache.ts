@@ -13,6 +13,8 @@ export class Snapshot {
   readonly updatedAt: number
   readonly count: number
   readonly etag: string
+  /** The data itself, for feeds that are derived from this one. */
+  readonly payload: FeedPayload
   readonly json: Buffer
   private br?: Buffer
   private gzip?: Buffer
@@ -21,6 +23,7 @@ export class Snapshot {
     const body: FeedBody = { id, updatedAt, payload }
     this.updatedAt = updatedAt
     this.count = count
+    this.payload = payload
     this.json = Buffer.from(JSON.stringify(body))
     this.etag = `W/"${createHash('sha1').update(this.json).digest('base64url').slice(0, 20)}"`
   }
@@ -83,6 +86,8 @@ export interface CacheDeps {
   log?(message: string): void
   /** Where feeds marked `persist` keep their last good copy. Omit to keep everything in memory. */
   disk?: DiskStore
+  /** Looks up another feed's definition, for feeds that are derived from one. */
+  resolve?(id: FeedId): FeedDef | undefined
 }
 
 /**
@@ -97,6 +102,7 @@ export class FeedCache {
   private readonly env: NodeJS.ProcessEnv
   private readonly log: (message: string) => void
   private readonly disk?: DiskStore
+  private readonly resolve?: (id: FeedId) => FeedDef | undefined
 
   constructor(deps: CacheDeps = {}) {
     this.now = deps.now ?? Date.now
@@ -104,6 +110,7 @@ export class FeedCache {
     this.env = deps.env ?? process.env
     this.log = deps.log ?? ((message) => console.log(message))
     this.disk = deps.disk
+    this.resolve = deps.resolve
   }
 
   private entry(id: FeedId): Entry {
@@ -183,6 +190,12 @@ export class FeedCache {
           now: startedAt,
           env: this.env,
           http: createUpstream(def.origins, controller.signal, this.fetchImpl),
+          feed: async (id) => {
+            const source = this.resolve?.(id)
+            if (!source) throw new UpstreamError('network', `The ${id} feed is not available here`)
+            const { snapshot } = await this.get(source)
+            return { id, updatedAt: snapshot.updatedAt, payload: snapshot.payload }
+          },
         })
         entry.snapshot = new Snapshot(def.id, payload, this.now(), this.countFor(def, payload))
         if (def.persist) void this.disk?.write(def.id, { updatedAt: entry.snapshot.updatedAt, payload })

@@ -56,10 +56,13 @@ export function startScene(map: MapLibreMap): () => void {
     for (const layer of LAYERS) {
       const on = isLayerOn(visible, layer.id, layer.defaultOn)
       const releases = held.get(layer.id)
-      if (on && !releases) held.set(layer.id, layer.feeds.map(acquireFeed))
-      else if (!on && releases) {
+      if (on && !releases) {
+        held.set(layer.id, layer.feeds.map(acquireFeed))
+        layer.native?.show(map)
+      } else if (!on && releases) {
         for (const release of releases) release()
         held.delete(layer.id)
+        layer.native?.hide()
         layer.dispose?.()
       }
     }
@@ -125,7 +128,10 @@ export function startScene(map: MapLibreMap): () => void {
     map.off('dragstart', stopFollowing)
     for (const releases of held.values()) for (const release of releases) release()
     held.clear()
-    for (const layer of LAYERS) layer.dispose?.()
+    for (const layer of LAYERS) {
+      layer.native?.hide()
+      layer.dispose?.()
+    }
     map.removeControl(overlay)
   }
 }

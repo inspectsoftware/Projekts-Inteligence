@@ -1,6 +1,7 @@
 import type { FeatureCollection, Polygon } from 'geojson'
 import { describe, expect, it } from 'vitest'
 import { buildCsp } from '../../shared/csp'
+import { RADAR_INDEX_URL, TILE_ORIGINS } from '../../shared/origins'
 import { formatLat, formatLon, formatMgrs, scaleBar } from '../../src/lib/coords'
 import { RASTER_BASES, gibsDate } from '../../src/map/basemaps'
 import { buildMask } from '../../src/map/spotlight'
@@ -19,7 +20,12 @@ function urlsIn(value: unknown, found: string[] = []): string[] {
 describe('content security policy', () => {
   it('allows every origin the map loads from', () => {
     const now = new Date('2026-10-06T08:00:00Z')
-    const urls = [...urlsIn(buildStyle()), ...Object.values(RASTER_BASES).map((base) => base.tiles(now))]
+    const urls = [
+      ...urlsIn(buildStyle()),
+      ...Object.values(RASTER_BASES).map((base) => base.tiles(now)),
+      RADAR_INDEX_URL,
+      `${TILE_ORIGINS.rainViewerTiles}/v2/radar/abc123/256/6/36/19/2/1_1.png`,
+    ]
     expect(urls.length).toBeGreaterThan(3)
 
     const connectSrc = buildCsp()

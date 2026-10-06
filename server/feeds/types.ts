@@ -1,4 +1,4 @@
-import type { FeedId, FeedPayload } from '../../shared/feeds'
+import type { FeedBody, FeedId, FeedPayload } from '../../shared/feeds'
 import type { Attribution } from '../../shared/origins'
 import type { Upstream } from '../core/upstream'
 
@@ -8,6 +8,11 @@ export interface FeedContext {
   /** Limited to the feed's declared origins, with the refresh timeout already applied. */
   http: Upstream
   env: NodeJS.ProcessEnv
+  /**
+   * Another feed's current snapshot, refreshed first if it is due. For feeds that are
+   * worked out from another feed's data rather than fetched from somewhere.
+   */
+  feed(id: FeedId): Promise<FeedBody>
 }
 
 /**

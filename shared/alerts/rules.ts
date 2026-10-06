@@ -1,5 +1,6 @@
 import { type Aircraft, Flag } from '../entity'
-import type { AlertRule } from './engine'
+import type { WarningLevel } from '../feeds'
+import type { AlertRule, Severity } from './engine'
 
 const SQUAWK_MEANING: Record<string, string> = {
   '7500': 'Squawk 7500: unlawful interference',
@@ -78,4 +79,46 @@ export const gpsInterferenceRule: AlertRule = {
   },
 }
 
-export const RULES: readonly AlertRule[] = [emergencyRule, militaryInsideRule, gpsInterferenceRule]
+const WARNING_SEVERITY: Record<WarningLevel, Severity> = { yellow: 'info', orange: 'warn', red: 'critical' }
+
+const RIGA_TIME = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/Riga',
+  weekday: 'short',
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+})
+
+/** "Kurzeme, Zemgale +3" */
+function summariseAreas(areas: readonly string[]): string {
+  if (areas.length === 0) return 'Latvia'
+  const shown = areas.slice(0, 2).join(', ')
+  return areas.length > 2 ? `${shown} +${areas.length - 2}` : shown
+}
+
+/** Official weather warnings. Yellow ones are listed quietly; orange and red stand out. */
+export const weatherWarningRule: AlertRule = {
+  id: 'weather-warning',
+  clearAfterMs: 10 * 60_000,
+  evaluate: ({ warnings, now }) =>
+    warnings().map((warning) => {
+      const ring = warning.polygons[0]
+      return {
+        key: `weather:${warning.type}:${warning.level}:${warning.areas.join(';')}`,
+        severity: WARNING_SEVERITY[warning.level],
+        title: `${warning.type} warning (${warning.level})`,
+        detail: `${summariseAreas(warning.areas)} · ${
+          warning.onset > now ? `from ${RIGA_TIME.format(warning.onset)}` : `until ${RIGA_TIME.format(warning.expires)}`
+        }`,
+        // Sea-area warnings come without outlines, so there is nowhere to fly to.
+        ...(ring && {
+          at: {
+            lon: ring.reduce((sum, point) => sum + point[0], 0) / ring.length,
+            lat: ring.reduce((sum, point) => sum + point[1], 0) / ring.length,
+          },
+        }),
+      }
+    }),
+}
+
+export const RULES: readonly AlertRule[] = [emergencyRule, militaryInsideRule, gpsInterferenceRule, weatherWarningRule]

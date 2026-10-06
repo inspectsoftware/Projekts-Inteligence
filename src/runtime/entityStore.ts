@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import type { Entity } from '../../shared/entity'
+import { type Entity, MOVING_KINDS } from '../../shared/entity'
 import type { FeedBody, FeedId, FeedPayload, PayloadOf } from '../../shared/feeds'
 import { serverNow } from './clock'
 import { recordTrails } from './trails'
@@ -35,8 +35,9 @@ function replaceSlot(slot: string, entities: Entity[]): void {
 export function ingest(body: FeedBody): void {
   payloads.set(body.id, body.payload)
   if (body.payload.shape === 'entities') {
-    replaceSlot(body.id, body.payload.entities)
-    recordTrails(body.payload.entities, serverNow())
+    const { entities } = body.payload
+    replaceSlot(body.id, entities)
+    if (entities.length > 0 && MOVING_KINDS.has(entities[0].kind)) recordTrails(entities, serverNow())
   }
   notify()
 }

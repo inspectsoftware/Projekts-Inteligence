@@ -65,6 +65,11 @@ Listed here as each layer lands, with the attribution its licence requires.
 | Aircraft                       | [adsb.lol](https://www.adsb.lol) first, [adsb.fi](https://adsb.fi) as fallback                | ODbL / non-commercial with credit               |
 | Trains                         | [Vivi live train map](https://trainmap.vivi.lv) (the operator's public map feed)               | No published terms; used lightly                |
 | Satellites                     | Orbital elements from [CelesTrak](https://celestrak.org), propagated in the browser            | Free; fetched at most every 2 h                 |
+| GPS interference               | Worked out from the aircraft feed's own integrity reports, per H3 cell                         | As the aircraft feed                            |
+| Weather warnings               | LVĢMC via [MeteoAlarm](https://meteoalarm.org)                                                 | Attribution required; may lag the official site |
+| Weather stations               | [LVĢMC](https://videscentrs.lvgmc.lv) observation files                                        | No published terms; cached, read every 10 min   |
+| Rain radar                     | [RainViewer](https://www.rainviewer.com)                                                       | Personal / non-commercial use, credit required  |
+| Fires                          | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov) (VIIRS, last 24 h)                          | Free to use with acknowledgement                |
 | National border, municipalities | [Administratīvās teritorijas 2026](https://data.gov.lv/dati/dataset/7bb04db9-97ce-4a30-b93a-10ba8dafd104), data.gov.lv | CC0 |
 
 Baked data in `public/data/` is rebuilt by hand with the scripts in `scripts/` (for example

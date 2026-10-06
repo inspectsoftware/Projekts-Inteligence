@@ -3,7 +3,7 @@ import { RULES } from '../../shared/alerts/rules'
 import { useAlerts } from '../state/alerts'
 import { insideLatvia } from './border'
 import { serverNow } from './clock'
-import { getEntities, subscribeEntities } from './entityStore'
+import { getEntities, getPayload, subscribeEntities } from './entityStore'
 
 /** Entities change up to once a second; alert conditions do not need checking that often. */
 const MIN_INTERVAL_MS = 2000
@@ -19,7 +19,12 @@ export function startAlerts(): () => void {
   const run = () => {
     pending = null
     lastRun = Date.now()
-    const result = engine.evaluate({ now: serverNow(), entities: getEntities, insideLatvia })
+    const result = engine.evaluate({
+      now: serverNow(),
+      entities: getEntities,
+      warnings: () => getPayload('warnings', 'warnings')?.warnings ?? [],
+      insideLatvia,
+    })
     if (result.changed) useAlerts.getState().setActive(result.alerts)
   }
   const schedule = () => {
