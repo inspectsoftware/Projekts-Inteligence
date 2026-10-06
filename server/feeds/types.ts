@@ -28,10 +28,12 @@ export interface FeedDef<T extends FeedPayload = FeedPayload> {
   waitMs?: number
   /** Upstream time budget for one refresh. */
   timeoutMs?: number
+  /** Keep the last good copy on disk, for data that is slow to change and costly to re-fetch. */
+  persist?: boolean
   /** Environment variables that must be set, or the feed reports "needs-key" and never calls out. */
   requiresEnv?: readonly string[]
   attribution: readonly Attribution[]
   load(ctx: FeedContext): Promise<T>
-  /** Number shown next to the layer; defaults to the entity count. */
+  /** Number shown next to the layer; defaults to how many things the payload holds. */
   count?(payload: T): number
 }

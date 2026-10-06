@@ -5,6 +5,7 @@ import { formatLat, formatLon, formatMgrs } from '../lib/coords'
 import { formatAge, formatBearing, formatInt } from '../lib/format'
 import { type IconName, getIconAtlas } from '../map/icons'
 import { positionAt } from '../map/motion'
+import { insideLatvia } from '../runtime/border'
 import { getEntities } from '../runtime/entityStore'
 import { getTrail } from '../runtime/trails'
 import type { InspectorModel, LayerDef } from './types'
@@ -123,7 +124,9 @@ export const aircraftLayer: LayerDef = {
 
   stats(entities) {
     const count = (flag: number) => entities.reduce((n, e) => n + (is(e, flag) ? 1 : 0), 0)
+    const overLatvia = entities.filter((e) => !is(e, Flag.ON_GROUND) && insideLatvia(e.lon, e.lat)).length
     return [
+      { label: 'over Latvia', value: overLatvia, tone: 'info' },
       { label: 'Military', value: count(Flag.MIL), tone: 'mil' },
       { label: 'GPS degraded', value: count(Flag.GPS_DEGRADED), tone: 'warn' },
       { label: 'Emergency', value: count(Flag.EMERGENCY), tone: 'danger' },

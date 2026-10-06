@@ -3,6 +3,7 @@ import { Map as MapLibreMap, setWorkerUrl } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef } from 'react'
+import { setBorder } from '../runtime/border'
 import { useUi } from '../state/ui'
 import { finishBoot } from '../ui/boot'
 import { applyBaseMode } from './baseMode'
@@ -55,6 +56,7 @@ export function MapView() {
           const border = (await res.json()) as FeatureCollection<Polygon | MultiPolygon>
           if (cancelled) return
           addSpotlight(created, border)
+          setBorder(border)
         } catch (err) {
           console.error('[map] border overlay failed to load:', err)
         }

@@ -44,14 +44,20 @@ async function poll(id: FeedId, job: Job): Promise<void> {
     if (result.kind === 'data') {
       job.etag = result.etag
       ingest(result.body)
-      const { entities } = result.body.payload
-      report(id, {
-        status,
-        updatedAt: result.body.updatedAt,
-        count: entities.length,
-        error: null,
-        stats: layersFedBy(id).flatMap((layer) => layer.stats?.(entities) ?? []),
-      })
+      const { payload, updatedAt } = result.body
+      if (payload.shape === 'entities') {
+        const { entities } = payload
+        report(id, {
+          status,
+          updatedAt,
+          count: entities.length,
+          error: null,
+          stats: layersFedBy(id).flatMap((layer) => layer.stats?.(entities) ?? []),
+        })
+      } else {
+        // Layers that compute their own entities (satellites) report their own numbers.
+        report(id, { status, updatedAt, error: null })
+      }
     } else if (useFeeds.getState().feeds[id]?.status !== status) {
       report(id, { status, error: null })
     }

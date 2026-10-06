@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { readBuildInfo } from './buildInfo'
 import { FeedCache } from './core/cache'
+import { createDiskStore } from './core/disk'
 import { FEEDS, type FeedRegistry } from './feeds/registry'
 import { apiRoutes } from './http/routes'
 import { securityHeaders } from './http/security'
@@ -27,7 +28,7 @@ export function createApp(options: AppOptions = {}): Hono {
       build: readBuildInfo(),
       startedAt: Date.now(),
       feeds: options.feeds ?? FEEDS,
-      cache: options.cache ?? new FeedCache({ env }),
+      cache: options.cache ?? new FeedCache({ env, disk: createDiskStore() }),
       env,
     }),
   )

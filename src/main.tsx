@@ -5,6 +5,8 @@ import '@fontsource-variable/jetbrains-mono/wght.css'
 import './styles/index.css'
 import App from './App'
 
+if (import.meta.env.DEV) void import('./dev')
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

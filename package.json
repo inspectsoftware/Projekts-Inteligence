@@ -33,6 +33,7 @@
     "mgrs": "^2.2.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "satellite.js": "7.1.0",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.2",
     "zustand": "^5.0.15"

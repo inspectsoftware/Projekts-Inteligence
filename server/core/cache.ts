@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto'
 import { brotliCompressSync, constants, gzipSync } from 'node:zlib'
-import type { FeedBody, FeedId, FeedPayload } from '../../shared/feeds'
+import { type FeedBody, type FeedId, type FeedPayload, countOf } from '../../shared/feeds'
 import type { FeedDef } from '../feeds/types'
+import type { DiskStore } from './disk'
 import { type FetchLike, UpstreamError, createUpstream } from './upstream'
 
 const DEFAULT_TIMEOUT_MS = 8000
@@ -67,6 +68,8 @@ export interface FeedState {
 
 interface Entry {
   snapshot: Snapshot | null
+  /** Whether the on-disk copy has been looked for yet (once per process). */
+  hydrated: boolean
   inFlight: Promise<void> | null
   error: string | null
   failures: number
@@ -78,6 +81,8 @@ export interface CacheDeps {
   fetch?: FetchLike
   env?: NodeJS.ProcessEnv
   log?(message: string): void
+  /** Where feeds marked `persist` keep their last good copy. Omit to keep everything in memory. */
+  disk?: DiskStore
 }
 
 /**
@@ -91,18 +96,20 @@ export class FeedCache {
   private readonly fetchImpl?: FetchLike
   private readonly env: NodeJS.ProcessEnv
   private readonly log: (message: string) => void
+  private readonly disk?: DiskStore
 
   constructor(deps: CacheDeps = {}) {
     this.now = deps.now ?? Date.now
     this.fetchImpl = deps.fetch
     this.env = deps.env ?? process.env
     this.log = deps.log ?? ((message) => console.log(message))
+    this.disk = deps.disk
   }
 
   private entry(id: FeedId): Entry {
     let entry = this.entries.get(id)
     if (!entry) {
-      entry = { snapshot: null, inFlight: null, error: null, failures: 0, nextAttemptAt: 0 }
+      entry = { snapshot: null, hydrated: false, inFlight: null, error: null, failures: 0, nextAttemptAt: 0 }
       this.entries.set(id, entry)
     }
     return entry
@@ -116,6 +123,7 @@ export class FeedCache {
 
   async get(def: FeedDef): Promise<CacheHit> {
     const entry = this.entry(def.id)
+    if (!entry.snapshot && !entry.hydrated) await this.hydrate(def, entry)
     const age = entry.snapshot ? this.now() - entry.snapshot.updatedAt : Infinity
 
     if (entry.snapshot && age < def.ttlMs) {
@@ -143,6 +151,23 @@ export class FeedCache {
     )
   }
 
+  /** After a cold start, picks up the copy a previous process left on disk, if it is still usable. */
+  private async hydrate(def: FeedDef, entry: Entry): Promise<void> {
+    entry.hydrated = true
+    if (!def.persist || !this.disk) return
+    const stored = await this.disk.read(def.id)
+    if (!stored || entry.snapshot || this.now() - stored.updatedAt >= def.staleMs) return
+    try {
+      entry.snapshot = new Snapshot(def.id, stored.payload, stored.updatedAt, this.countFor(def, stored.payload))
+    } catch {
+      // A file from an older build with another shape: ignore it and ask the upstream.
+    }
+  }
+
+  private countFor(def: FeedDef, payload: FeedPayload): number {
+    return def.count ? def.count(payload) : countOf(payload)
+  }
+
   /** Starts a refresh unless one is running or the feed is backing off. Never rejects. */
   private refresh(def: FeedDef, entry: Entry): Promise<void> | null {
     if (entry.inFlight) return entry.inFlight
@@ -159,8 +184,8 @@ export class FeedCache {
           env: this.env,
           http: createUpstream(def.origins, controller.signal, this.fetchImpl),
         })
-        const count = def.count ? def.count(payload) : payload.entities.length
-        entry.snapshot = new Snapshot(def.id, payload, this.now(), count)
+        entry.snapshot = new Snapshot(def.id, payload, this.now(), this.countFor(def, payload))
+        if (def.persist) void this.disk?.write(def.id, { updatedAt: entry.snapshot.updatedAt, payload })
         entry.error = null
         entry.failures = 0
         entry.nextAttemptAt = 0

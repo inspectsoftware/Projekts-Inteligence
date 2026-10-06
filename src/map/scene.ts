@@ -3,6 +3,7 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { Entity } from '../../shared/entity'
 import { LAYERS } from '../layers/registry'
 import type { LayerContext } from '../layers/types'
+import { startAlerts } from '../runtime/alertRunner'
 import { fetchFeedList } from '../runtime/api'
 import { serverNow } from '../runtime/clock'
 import { getEntity, subscribeEntities } from '../runtime/entityStore'
@@ -59,6 +60,7 @@ export function startScene(map: MapLibreMap): () => void {
       else if (!on && releases) {
         for (const release of releases) release()
         held.delete(layer.id)
+        layer.dispose?.()
       }
     }
   }
@@ -71,9 +73,9 @@ export function startScene(map: MapLibreMap): () => void {
     const followed = followId ? getEntity(followId) : undefined
     if (followed && !map.isMoving()) map.setCenter(positionAt(followed, ctx.now))
 
-    overlay.setProps({
-      layers: LAYERS.filter((layer) => isLayerOn(visible, layer.id, layer.defaultOn)).flatMap((layer) => layer.build(ctx)),
-    })
+    const shown = LAYERS.filter((layer) => isLayerOn(visible, layer.id, layer.defaultOn))
+    for (const layer of shown) layer.update?.(ctx.now)
+    overlay.setProps({ layers: shown.flatMap((layer) => layer.build(ctx)) })
   }
 
   const loop = (time: number) => {
@@ -102,6 +104,7 @@ export function startScene(map: MapLibreMap): () => void {
   map.on('dragstart', stopFollowing)
 
   syncFeeds()
+  const stopAlerts = startAlerts()
   frame = requestAnimationFrame(loop)
 
   void document.fonts.load(LABEL_FONT_PROBE).then(() => {
@@ -117,10 +120,12 @@ export function startScene(map: MapLibreMap): () => void {
   return () => {
     stopped = true
     cancelAnimationFrame(frame)
+    stopAlerts()
     for (const off of unsubscribe) off()
     map.off('dragstart', stopFollowing)
     for (const releases of held.values()) for (const release of releases) release()
     held.clear()
+    for (const layer of LAYERS) layer.dispose?.()
     map.removeControl(overlay)
   }
 }

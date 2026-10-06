@@ -63,6 +63,8 @@ Listed here as each layer lands, with the attribution its licence requires.
 | Satellite mosaic               | [Sentinel-2 cloudless 2024](https://s2maps.eu) by EOX (modified Copernicus Sentinel data)     | CC BY-NC-SA 4.0                                 |
 | Daily imagery, night lights    | NASA EOSDIS GIBS                                                                              | Free to use with acknowledgement                |
 | Aircraft                       | [adsb.lol](https://www.adsb.lol) first, [adsb.fi](https://adsb.fi) as fallback                | ODbL / non-commercial with credit               |
+| Trains                         | [Vivi live train map](https://trainmap.vivi.lv) (the operator's public map feed)               | No published terms; used lightly                |
+| Satellites                     | Orbital elements from [CelesTrak](https://celestrak.org), propagated in the browser            | Free; fetched at most every 2 h                 |
 | National border, municipalities | [Administratīvās teritorijas 2026](https://data.gov.lv/dati/dataset/7bb04db9-97ce-4a30-b93a-10ba8dafd104), data.gov.lv | CC0 |
 
 Baked data in `public/data/` is rebuilt by hand with the scripts in `scripts/` (for example

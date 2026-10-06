@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createApp } from '../../server/app'
 import { FeedCache } from '../../server/core/cache'
 import type { FeedRegistry } from '../../server/feeds/registry'
+import type { FeedDef } from '../../server/feeds/types'
 import { FEED_HEADERS, type FeedBody, type FeedsResponse } from '../../shared/feeds'
 
 let clientDir: string
@@ -46,17 +47,16 @@ describe('api', () => {
 
 describe('feed api', () => {
   const entity = { id: 'aircraft:abc123', kind: 'aircraft' as const, lon: 24, lat: 57, ts: 1, flags: 0, props: {} }
-  const feeds: FeedRegistry = {
-    aircraft: {
-      id: 'aircraft',
-      title: 'Aircraft',
-      origins: [],
-      ttlMs: 10_000,
-      staleMs: 60_000,
-      attribution: [{ label: 'Test source', href: 'https://example.org' }],
-      load: async () => ({ shape: 'entities', entities: Array.from({ length: 40 }, () => entity) }),
-    },
+  const aircraft: FeedDef = {
+    id: 'aircraft',
+    title: 'Aircraft',
+    origins: [],
+    ttlMs: 10_000,
+    staleMs: 60_000,
+    attribution: [{ label: 'Test source', href: 'https://example.org' }],
+    load: async () => ({ shape: 'entities', entities: Array.from({ length: 40 }, () => entity) }),
   }
+  const feeds: FeedRegistry = { aircraft }
   const app = () => createApp({ clientDir: null, feeds, cache: new FeedCache({ log: () => {} }) })
 
   it('serves a feed with timing headers and a validator', async () => {
@@ -68,7 +68,8 @@ describe('feed api', () => {
     expect(res.headers.get('etag')).toMatch(/^W\/"/)
     const body = (await res.json()) as FeedBody
     expect(body.id).toBe('aircraft')
-    expect(body.payload.entities).toHaveLength(40)
+    expect(body.payload).toMatchObject({ shape: 'entities' })
+    expect(body.payload.shape === 'entities' && body.payload.entities).toHaveLength(40)
   })
 
   it('answers 304 when the client already has the snapshot', async () => {
@@ -88,16 +89,16 @@ describe('feed api', () => {
     expect(res.headers.get('vary')).toContain('Accept-Encoding')
   })
 
-  it('rejects unknown feeds', async () => {
-    const res = await app().request('/api/feed/passwords')
-    expect(res.status).toBe(404)
+  it('rejects unknown feeds, and known ones this server does not carry', async () => {
+    expect((await app().request('/api/feed/passwords')).status).toBe(404)
+    expect((await app().request('/api/feed/trains')).status).toBe(404)
   })
 
   it('reports a locked feed without calling it', async () => {
     let called = false
     const locked: FeedRegistry = {
       aircraft: {
-        ...feeds.aircraft,
+        ...aircraft,
         requiresEnv: ['SOME_KEY'],
         load: async () => {
           called = true
@@ -126,7 +127,7 @@ describe('feed api', () => {
   it('answers 503 with Retry-After when a feed has never loaded', async () => {
     const failing: FeedRegistry = {
       aircraft: {
-        ...feeds.aircraft,
+        ...aircraft,
         load: async () => {
           throw new Error('boom')
         },

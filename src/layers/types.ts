@@ -51,6 +51,13 @@ export interface LayerDef {
   swatch: string
   /** Polled while the layer is visible. */
   feeds: readonly FeedId[]
+  /**
+   * Called before every frame while the layer is visible, for layers that work out
+   * their own entities (satellite positions). Must throttle itself.
+   */
+  update?(now: number): void
+  /** Called when the layer is switched off, to drop whatever update() published. */
+  dispose?(): void
   /** deck.gl layers for this frame. Must be cheap: it runs on every animation tick. */
   build(ctx: LayerContext): Layer[]
   /** Entity kinds this layer can describe in the inspector. */

@@ -1,4 +1,5 @@
 import { MapView } from './map/MapView'
+import { AlertStack } from './ui/AlertStack'
 import { Attribution } from './ui/Attribution'
 import { Hud } from './ui/Hud'
 import { Inspector } from './ui/Inspector'
@@ -13,6 +14,7 @@ export default function App() {
       <TopBar />
       <LeftRail />
       <MapButtons />
+      <AlertStack />
       <Inspector />
       <Hud />
       <Attribution />

@@ -70,8 +70,8 @@ export function apiRoutes(deps: ApiDeps): Hono {
 
   api.get('/feed/:id', async (c) => {
     const id = c.req.param('id')
-    if (!isFeedId(id)) return c.json({ error: 'unknown_feed' }, 404)
-    const def = deps.feeds[id]
+    const def = isFeedId(id) ? deps.feeds[id] : undefined
+    if (!def) return c.json({ error: 'unknown_feed' }, 404)
 
     c.header('Cache-Control', 'no-store')
     c.header(FEED_HEADERS.serverTime, String(Date.now()))

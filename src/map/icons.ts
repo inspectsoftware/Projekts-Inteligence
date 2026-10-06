@@ -16,6 +16,10 @@ const SHAPES = {
   heli: 'M32 13C36.5 13 39 18 39 25C39 32 36.5 38 33.5 38L33.5 54L38 54L38 57L26 57L26 54L30.5 54L30.5 38C27.5 38 25 32 25 25C25 18 27.5 13 32 13ZM11.5 6.5L13.5 4.5L52.5 43.5L50.5 45.5ZM50.5 4.5L52.5 6.5L13.5 45.5L11.5 43.5Z',
   // Anything on the ground or of unknown shape.
   dot: 'M32 20L44 32L32 44L20 32Z',
+  // Satellite: a bus with a solar panel on each side.
+  sat: 'M26 24H38V40H26ZM4 27H22V37H4ZM42 27H60V37H42ZM22 30.5H26V33.5H22ZM38 30.5H42V33.5H38Z',
+  // Train seen from above, rounded nose forward.
+  train: 'M32 4C38 4 41 9 41 15L41 54C41 57.5 38.5 60 35 60L29 60C25.5 60 23 57.5 23 54L23 15C23 9 26 4 32 4Z',
 } as const
 
 export type IconName = keyof typeof SHAPES

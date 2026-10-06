@@ -1,53 +1,73 @@
 import { useSyncExternalStore } from 'react'
 import type { Entity } from '../../shared/entity'
-import type { FeedBody, FeedId } from '../../shared/feeds'
+import type { FeedBody, FeedId, FeedPayload, PayloadOf } from '../../shared/feeds'
 import { serverNow } from './clock'
 import { recordTrails } from './trails'
 
 /**
- * Live entities, kept outside React. Feeds deliver hundreds of moving objects every
- * few seconds; the map scene reads them imperatively, and only the few components
- * that show a single entity subscribe.
+ * Live data, kept outside React. Feeds deliver hundreds of moving objects every few
+ * seconds; the map scene reads them imperatively, and only the few components that
+ * show a single entity subscribe.
  */
-interface FeedSlot {
-  /** Same array identity until the next snapshot, so the map layers can tell "nothing changed". */
-  entities: Entity[]
-  updatedAt: number
-  version: number
-}
-
 const EMPTY: Entity[] = []
-const slots = new Map<FeedId, FeedSlot>()
+
+/** Latest payload per feed, whatever its shape. */
+const payloads = new Map<FeedId, FeedPayload>()
+/**
+ * Entity lists by slot: a feed id for feeds that deliver entities, or a layer's own
+ * key for entities worked out in the browser (satellite positions). Each list keeps
+ * its array identity until it is replaced, so layers can tell "nothing changed".
+ */
+const slots = new Map<string, Entity[]>()
 const byId = new Map<string, Entity>()
 const listeners = new Set<() => void>()
 
-export function ingest(body: FeedBody): void {
-  const previous = slots.get(body.id)
-  if (previous) for (const entity of previous.entities) byId.delete(entity.id)
+function notify(): void {
+  for (const listener of listeners) listener()
+}
 
-  const { entities } = body.payload
+function replaceSlot(slot: string, entities: Entity[]): void {
+  for (const entity of slots.get(slot) ?? EMPTY) byId.delete(entity.id)
   for (const entity of entities) byId.set(entity.id, entity)
-  slots.set(body.id, { entities, updatedAt: body.updatedAt, version: (previous?.version ?? 0) + 1 })
-  recordTrails(entities, serverNow())
-
-  for (const listener of listeners) listener()
+  slots.set(slot, entities)
 }
 
-/** Drops a feed's entities, for example when its layer is switched off. */
+export function ingest(body: FeedBody): void {
+  payloads.set(body.id, body.payload)
+  if (body.payload.shape === 'entities') {
+    replaceSlot(body.id, body.payload.entities)
+    recordTrails(body.payload.entities, serverNow())
+  }
+  notify()
+}
+
+/** Publishes entities a layer computed itself, so selection and the inspector treat them like any other. */
+export function publishEntities(slot: string, entities: Entity[]): void {
+  replaceSlot(slot, entities)
+  notify()
+}
+
+/** Drops everything a feed delivered, for example when its layer is switched off. */
 export function clearFeed(id: FeedId): void {
-  const slot = slots.get(id)
-  if (!slot) return
-  for (const entity of slot.entities) byId.delete(entity.id)
+  if (!payloads.has(id) && !slots.has(id)) return
+  payloads.delete(id)
+  replaceSlot(id, EMPTY)
   slots.delete(id)
-  for (const listener of listeners) listener()
+  notify()
 }
 
-export function getEntities(id: FeedId): Entity[] {
-  return slots.get(id)?.entities ?? EMPTY
+export function getEntities(slot: string): Entity[] {
+  return slots.get(slot) ?? EMPTY
 }
 
 export function getEntity(id: string): Entity | undefined {
   return byId.get(id)
+}
+
+/** The feed's latest payload, if it has the expected shape. */
+export function getPayload<S extends FeedPayload['shape']>(id: FeedId, shape: S): PayloadOf<S> | undefined {
+  const payload = payloads.get(id)
+  return payload?.shape === shape ? (payload as PayloadOf<S>) : undefined
 }
 
 export function subscribeEntities(listener: () => void): () => void {

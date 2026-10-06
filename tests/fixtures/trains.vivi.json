@@ -1,0 +1,358 @@
+{
+ "type": "back-end",
+ "timeStamp": "2026-10-06T10:13:56.550Z",
+ "data": [
+  {
+   "name": "Daugavpils - Rīga",
+   "trainColor": {
+    "color": "#B388FF",
+    "svg": "aizkraukleD",
+    "loadingSvg": "aizkraukleStop",
+    "fuelType": "D"
+   },
+   "returnValue": {
+    "pixelsTraveled": 55.14176245210728,
+    "i": 2141,
+    "id": "819718",
+    "train": "801",
+    "animatedCoord": [
+     56.721744612500004,
+     24.8117358875
+    ],
+    "nextTime": 4106,
+    "stopped": false,
+    "currentStop": [
+     56.6469692,
+     25.1240592
+    ],
+    "position": [
+     56.721560825000005,
+     24.813233775
+    ],
+    "waitingTime": 30000,
+    "arrivingTime": 0,
+    "nextStopObj": {
+     "title": "Lielvārde",
+     "departure": "2026-10-06 13:14:00"
+    },
+    "currentStopIndex": 7,
+    "updaterTimeStamp": "2026-10-06T10:13:55.403Z",
+    "departureTime": "2026-10-06 10:52:00",
+    "arrivalTime": "2026-10-06 13:59:00",
+    "finished": false,
+    "currentI": 2141,
+    "isGpsActive": true,
+    "carrier": "vivi",
+    "customArrivingTime": null
+   }
+  },
+  {
+   "name": "Rīga - Valga",
+   "trainColor": {
+    "color": "#8BC34A",
+    "svg": "valgaD",
+    "loadingSvg": "valgaStop",
+    "fuelType": "D"
+   },
+   "returnValue": {
+    "pixelsTraveled": 2.769230769230769,
+    "i": 1531,
+    "id": "819729",
+    "train": "874",
+    "animatedCoord": [
+     57.317864799999995,
+     25.28765345
+    ],
+    "nextTime": 3423,
+    "stopped": false,
+    "currentStop": [
+     57.3139814,
+     25.2831614
+    ],
+    "position": [
+     57.3174068,
+     25.2871309
+    ],
+    "waitingTime": 30000,
+    "arrivingTime": 1,
+    "nextStopObj": {
+     "title": "Lode",
+     "departure": "2026-10-06 13:24:00"
+    },
+    "currentStopIndex": 6,
+    "updaterTimeStamp": "2026-10-06T10:13:56.535Z",
+    "departureTime": "2026-10-06 11:53:00",
+    "arrivalTime": "2026-10-06 14:13:00",
+    "finished": false,
+    "currentI": 1532,
+    "isGpsActive": false,
+    "carrier": "vivi",
+    "customArrivingTime": null
+   }
+  },
+  {
+   "name": "Rīga - Ludza",
+   "trainColor": {
+    "color": "#B388FF",
+    "svg": "aizkraukleD",
+    "loadingSvg": "aizkraukleStop",
+    "fuelType": "D"
+   },
+   "returnValue": {
+    "pixelsTraveled": 21.326781326781326,
+    "i": 1257,
+    "id": "819731",
+    "train": "704",
+    "animatedCoord": [
+     56.6523952,
+     25.4319872
+    ],
+    "nextTime": 3390,
+    "stopped": false,
+    "currentStop": [
+     56.62264915,
+     25.275455649999998
+    ],
+    "position": [
+     56.6526088,
+     25.4308315
+    ],
+    "waitingTime": 30000,
+    "arrivingTime": 0,
+    "nextStopObj": {
+     "title": "Pļaviņas",
+     "departure": "2026-10-06 13:28:00"
+    },
+    "currentStopIndex": 2,
+    "updaterTimeStamp": "2026-10-06T10:13:55.434Z",
+    "departureTime": "2026-10-06 12:01:00",
+    "arrivalTime": "2026-10-06 15:10:00",
+    "finished": false,
+    "currentI": 1257,
+    "isGpsActive": true,
+    "carrier": "vivi",
+    "customArrivingTime": null
+   }
+  },
+  {
+   "name": "Skulte - Rīga",
+   "trainColor": {
+    "color": "#F8DB22",
+    "svg": "skulteS",
+    "loadingSvg": "skulteStop",
+    "fuelType": "Š"
+   },
+   "returnValue": {
+    "pixelsTraveled": 31.73333333333333,
+    "i": 979,
+    "id": "819733",
+    "train": "6131",
+    "animatedCoord": [
+     56.9694883,
+     24.1542165
+    ],
+    "nextTime": 10589,
+    "stopped": false,
+    "currentStop": [
+     56.97729676666667,
+     24.14648306666667
+    ],
+    "position": [
+     56.9700664,
+     24.1536244
+    ],
+    "waitingTime": 30000,
+    "arrivingTime": 0,
+    "nextStopObj": {
+     "title": "Zemitāni",
+     "departure": "2026-10-06 13:16:00"
+    },
+    "currentStopIndex": 18,
+    "updaterTimeStamp": "2026-10-06T10:13:55.491Z",
+    "departureTime": "2026-10-06 12:09:00",
+    "arrivalTime": "2026-10-06 13:23:00",
+    "finished": false,
+    "currentI": 979,
+    "isGpsActive": false,
+    "carrier": "vivi",
+    "customArrivingTime": null
+   }
+  },
+  {
+   "name": "Sigulda - Rīga",
+   "trainColor": {
+    "color": "#8BC34A",
+    "svg": "valgaD",
+    "loadingSvg": "valgaStop",
+    "fuelType": "D"
+   },
+   "returnValue": {
+    "pixelsTraveled": 8.35820895522388,
+    "i": 598,
+    "id": "819734",
+    "train": "833",
+    "animatedCoord": [
+     56.9908586,
+     24.2302202
+    ],
+    "nextTime": 3044,
+    "stopped": false,
+    "currentStop": [
+     56.9924368,
+     24.2358786
+    ],
+    "position": [
+     56.9909753,
+     24.2307114
+    ],
+    "waitingTime": 30000,
+    "arrivingTime": 1,
+    "nextStopObj": {
+     "title": "Šmerlis",
+     "departure": "2026-10-06 13:16:00"
+    },
+    "currentStopIndex": 6,
+    "updaterTimeStamp": "2026-10-06T10:13:55.439Z",
+    "departureTime": "2026-10-06 12:29:00",
+    "arrivalTime": "2026-10-06 13:36:00",
+    "finished": false,
+    "currentI": 598,
+    "isGpsActive": true,
+    "carrier": "vivi",
+    "customArrivingTime": null
+   }
+  },
+  {
+   "name": "Ķemeri - Rīga",
+   "trainColor": {
+    "color": "#38B6FC",
+    "svg": "tukumsS",
+    "loadingSvg": "tukumsStop",
+    "fuelType": "Š"
+   },
+   "returnValue": {
+    "pixelsTraveled": 54.72727272727273,
+    "i": 701,
+    "id": "819735",
+    "train": "6522",
+    "animatedCoord": [
+     56.9503604,
+     23.9992182
+    ],
+    "nextTime": 2850,
+    "stopped": false,
+    "currentStop": [
+     56.9572217,
+     23.9532901
+    ],
+    "position": [
+     56.9503846,
+     23.9983064
+    ],
+    "waitingTime": 30000,
+    "arrivingTime": 0,
+    "nextStopObj": {
+     "title": "Imanta",
+     "departure": "2026-10-06 13:14:00"
+    },
+    "currentStopIndex": 14,
+    "updaterTimeStamp": "2026-10-06T10:13:55.491Z",
+    "departureTime": "2026-10-06 12:30:00",
+    "arrivalTime": "2026-10-06 13:29:00",
+    "finished": false,
+    "currentI": 701,
+    "isGpsActive": false,
+    "carrier": "vivi",
+    "customArrivingTime": null
+   }
+  },
+  {
+   "name": "Rīga - Tukums II",
+   "trainColor": {
+    "color": "#38B6FC",
+    "svg": "tukumsS",
+    "loadingSvg": "tukumsStop",
+    "fuelType": "Š"
+   },
+   "returnValue": {
+    "pixelsTraveled": 43.75,
+    "i": 717,
+    "id": "819736",
+    "train": "6515",
+    "animatedCoord": [
+     56.9575337,
+     23.6944763
+    ],
+    "nextTime": 1994,
+    "stopped": false,
+    "currentStop": [
+     56.958803,
+     23.7138444
+    ],
+    "position": [
+     56.9575658,
+     23.6949796
+    ],
+    "waitingTime": 30000,
+    "arrivingTime": 0,
+    "nextStopObj": {
+     "title": "Asari",
+     "departure": "2026-10-06 13:14:00"
+    },
+    "currentStopIndex": 15,
+    "updaterTimeStamp": "2026-10-06T10:13:55.491Z",
+    "departureTime": "2026-10-06 12:30:00",
+    "arrivalTime": "2026-10-06 13:53:00",
+    "finished": false,
+    "currentI": 717,
+    "isGpsActive": false,
+    "carrier": "vivi",
+    "customArrivingTime": null
+   }
+  },
+  {
+   "name": "Rīga - Sigulda",
+   "trainColor": {
+    "color": "#8BC34A",
+    "svg": "valgaD",
+    "loadingSvg": "valgaStop",
+    "fuelType": "D"
+   },
+   "returnValue": {
+    "pixelsTraveled": 36.654545454545456,
+    "i": 602,
+    "id": "819737",
+    "train": "836",
+    "animatedCoord": [
+     57.07369583529412,
+     24.559988541176473
+    ],
+    "nextTime": 6561,
+    "stopped": false,
+    "currentStop": [
+     57.06484354,
+     24.51024156
+    ],
+    "position": [
+     57.07342605882353,
+     24.55846863529412
+    ],
+    "waitingTime": 30000,
+    "arrivingTime": 0,
+    "nextStopObj": {
+     "title": "Vangaži",
+     "departure": "2026-10-06 13:16:00"
+    },
+    "currentStopIndex": 6,
+    "updaterTimeStamp": "2026-10-06T10:13:55.447Z",
+    "departureTime": "2026-10-06 12:30:00",
+    "arrivalTime": "2026-10-06 13:38:00",
+    "finished": false,
+    "currentI": 602,
+    "isGpsActive": true,
+    "carrier": "vivi",
+    "customArrivingTime": null
+   }
+  }
+ ]
+}
