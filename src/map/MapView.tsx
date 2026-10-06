@@ -8,6 +8,7 @@ import { finishBoot } from '../ui/boot'
 import { applyBaseMode } from './baseMode'
 import { INTRO_START, runIntro } from './camera'
 import { setMap, setMapFailure, useMap, useMapFailure } from './instance'
+import { startScene } from './scene'
 import { addSpotlight } from './spotlight'
 import { buildStyle } from './style'
 
@@ -43,6 +44,7 @@ export function MapView() {
     }
 
     let cancelled = false
+    let stopScene: (() => void) | undefined
     // Never leave the boot screen up if the style or tiles cannot be reached.
     const bootTimeout = setTimeout(finishBoot, 8000)
 
@@ -58,6 +60,7 @@ export function MapView() {
         }
         if (cancelled) return
         setMap(created)
+        stopScene = startScene(created)
         finishBoot()
         runIntro(created)
       })()
@@ -66,6 +69,7 @@ export function MapView() {
     return () => {
       cancelled = true
       clearTimeout(bootTimeout)
+      stopScene?.()
       setMap(null)
       created.remove()
     }

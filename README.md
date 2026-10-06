@@ -62,6 +62,7 @@ Listed here as each layer lands, with the attribution its licence requires.
 | Vector basemap                 | [OpenFreeMap](https://openfreemap.org), © OpenMapTiles, © OpenStreetMap contributors          | ODbL (data)                                     |
 | Satellite mosaic               | [Sentinel-2 cloudless 2024](https://s2maps.eu) by EOX (modified Copernicus Sentinel data)     | CC BY-NC-SA 4.0                                 |
 | Daily imagery, night lights    | NASA EOSDIS GIBS                                                                              | Free to use with acknowledgement                |
+| Aircraft                       | [adsb.lol](https://www.adsb.lol) first, [adsb.fi](https://adsb.fi) as fallback                | ODbL / non-commercial with credit               |
 | National border, municipalities | [Administratīvās teritorijas 2026](https://data.gov.lv/dati/dataset/7bb04db9-97ce-4a30-b93a-10ba8dafd104), data.gov.lv | CC0 |
 
 Baked data in `public/data/` is rebuilt by hand with the scripts in `scripts/` (for example

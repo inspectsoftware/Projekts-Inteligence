@@ -2,6 +2,7 @@ import { BASE_MODES } from '../map/basemaps'
 import { VIEWS, flyHome, flyToView } from '../map/camera'
 import { useMap } from '../map/instance'
 import { VISION_MODES, useUi } from '../state/ui'
+import { LayerTree } from './LayerTree'
 import { Panel, SectionTitle, Segmented } from './kit'
 
 export function LeftRail() {
@@ -13,7 +14,11 @@ export function LeftRail() {
 
   return (
     <aside className="pointer-events-none absolute top-13 bottom-14 left-3 z-10 hidden w-60 flex-col gap-3 font-mono md:flex">
-      <Panel className="p-3">
+      <Panel className="min-h-0 shrink overflow-y-auto p-3">
+        <LayerTree />
+      </Panel>
+
+      <Panel className="shrink-0 p-3">
         <SectionTitle>Base</SectionTitle>
         <Segmented label="Basemap" value={base} options={BASE_MODES} onChange={setBase} />
         <div className="h-3" />
@@ -21,7 +26,7 @@ export function LeftRail() {
         <Segmented label="Vision mode" value={vision} options={VISION_MODES} onChange={setVision} />
       </Panel>
 
-      <Panel className="min-h-0 overflow-y-auto p-3">
+      <Panel className="min-h-0 shrink overflow-y-auto p-3">
         <SectionTitle>Views</SectionTitle>
         <ul className="grid grid-cols-2 gap-px bg-line p-px">
           <li className="col-span-2">
