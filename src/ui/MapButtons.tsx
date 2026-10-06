@@ -18,13 +18,13 @@ function MapButton({ title, onClick, children }: { title: string; onClick(): voi
   )
 }
 
-/** Zoom, north-up and home, for mouse users without a wheel and for touch. */
+/** Zoom, north-up and home, for mouse users without a wheel. Phones pinch, and find home in the layer rail. */
 export function MapButtons() {
   const map = useMap()
   if (!map) return null
 
   return (
-    <div className="pointer-events-auto absolute top-13 right-3 z-10 grid gap-px border border-line bg-line">
+    <div className="pointer-events-auto absolute top-13 right-3 z-10 grid gap-px border border-line bg-line max-md:hidden">
       <MapButton title="Zoom in" onClick={() => map.zoomIn()}>
         <path d="M8 3v10M3 8h10" />
       </MapButton>

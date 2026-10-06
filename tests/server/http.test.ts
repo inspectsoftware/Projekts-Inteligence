@@ -29,6 +29,17 @@ describe('api', () => {
     expect(await res.json()).toMatchObject({ ok: true, commit: expect.any(String) })
   })
 
+  it('turns away a client that asks too often, and only that client', async () => {
+    const app = createApp({ clientDir: null, requestsPerMinute: 2 })
+    const from = (address: string) => app.request('/api/health', { headers: { 'x-forwarded-for': address } })
+    expect((await from('203.0.113.7')).status).toBe(200)
+    expect((await from('203.0.113.7, 10.0.0.1')).status).toBe(200)
+    const refused = await from('203.0.113.7')
+    expect(refused.status).toBe(429)
+    expect(Number(refused.headers.get('retry-after'))).toBeGreaterThan(0)
+    expect((await from('203.0.113.8')).status).toBe(200)
+  })
+
   it('answers unknown api routes with a json 404, not the app shell', async () => {
     const res = await createApp({ clientDir }).request('/api/nope')
     expect(res.status).toBe(404)

@@ -28,7 +28,7 @@ export function Clock() {
         <span className="mr-1.5 text-fg-mute">Rīga</span>
         <span className="text-fg">{RIGA_TIME.format(now)}</span>
       </span>
-      <span>
+      <span className="max-sm:hidden">
         <span className="mr-1.5 text-fg-mute">UTC</span>
         <span className="text-fg">{UTC_TIME.format(now)}Z</span>
       </span>

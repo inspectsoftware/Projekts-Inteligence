@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { BASE_MODES } from '../map/basemaps'
 import { VIEWS, flyHome, flyToView } from '../map/camera'
 import { useMap } from '../map/instance'
@@ -11,9 +12,22 @@ export function LeftRail() {
   const vision = useUi((s) => s.vision)
   const setBase = useUi((s) => s.setBase)
   const setVision = useUi((s) => s.setVision)
+  // Only matters on narrow screens, where the rail would otherwise cover the map.
+  const [open, setOpen] = useState(false)
 
   return (
-    <aside className="pointer-events-none absolute top-13 bottom-14 left-3 z-10 hidden w-60 flex-col gap-3 font-mono md:flex">
+    <>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="pointer-events-auto absolute top-13 left-3 z-30 border border-line bg-ink-850 px-2 py-1.5 font-mono text-[10px] tracking-[0.16em] text-fg-dim uppercase md:hidden"
+      >
+        {open ? 'Close' : 'Layers'}
+      </button>
+      <aside
+        className={`pointer-events-none absolute bottom-14 left-3 w-60 flex-col gap-3 font-mono max-md:top-23 max-md:z-30 md:top-13 md:z-10 md:flex ${open ? 'flex' : 'hidden'}`}
+      >
       <Panel className="min-h-0 shrink overflow-y-auto p-3">
         <LayerTree />
       </Panel>
@@ -53,6 +67,7 @@ export function LeftRail() {
           ))}
         </ul>
       </Panel>
-    </aside>
+      </aside>
+    </>
   )
 }

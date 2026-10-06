@@ -3,6 +3,7 @@ import { readBuildInfo } from './buildInfo'
 import { FeedCache } from './core/cache'
 import { createDiskStore } from './core/disk'
 import { FEEDS, type FeedRegistry } from './feeds/registry'
+import { rateLimit } from './http/ratelimit'
 import { apiRoutes } from './http/routes'
 import { securityHeaders } from './http/security'
 import { mountClient } from './http/static'
@@ -15,6 +16,8 @@ export interface AppOptions {
   feeds?: FeedRegistry
   cache?: FeedCache
   env?: NodeJS.ProcessEnv
+  /** API requests allowed per client address per minute. An open tab makes about forty. */
+  requestsPerMinute?: number
 }
 
 export function createApp(options: AppOptions = {}): Hono {
@@ -23,6 +26,7 @@ export function createApp(options: AppOptions = {}): Hono {
   const feeds = options.feeds ?? FEEDS
 
   app.use('*', securityHeaders())
+  app.use('/api/*', rateLimit(options.requestsPerMinute ?? 600))
   app.route(
     '/api',
     apiRoutes({

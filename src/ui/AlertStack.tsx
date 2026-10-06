@@ -49,7 +49,7 @@ export function AlertStack() {
   }
 
   return (
-    <div className="pointer-events-none absolute top-13 left-1/2 z-10 grid w-[min(26rem,calc(100%-1.5rem))] -translate-x-1/2 gap-1.5 font-mono">
+    <div className="pointer-events-none absolute top-13 left-1/2 z-10 grid w-[min(26rem,calc(100%-1.5rem))] -translate-x-1/2 gap-1.5 font-mono max-md:top-23 max-md:*:nth-[n+3]:hidden">
       {active.slice(0, MAX_SHOWN).map((alert) => (
         <Panel key={alert.key}>
           <button

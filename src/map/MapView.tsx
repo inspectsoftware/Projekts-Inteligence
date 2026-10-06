@@ -44,7 +44,7 @@ export function MapView() {
       })
     } catch (err) {
       // Thrown when the browser cannot give us WebGL2.
-      setMapFailure(err instanceof Error ? err.message : String(err))
+      setMapFailure(`This browser could not start WebGL2. ${err instanceof Error ? err.message : String(err)}`)
       finishBoot()
       return () => setMapFailure(null)
     }
@@ -60,6 +60,24 @@ export function MapView() {
       if (view) created.jumpTo(view)
     }
     window.addEventListener('hashchange', followLink)
+
+    // A lost graphics context (driver reset, memory pressure) leaves the overlay canvas dead for
+    // good. Starting over is the cure; a second loss within a minute means it would only loop.
+    const container = containerRef.current!
+    const onContextLost = () => {
+      let recent = false
+      try {
+        recent = Date.now() - Number(sessionStorage.getItem('pwh-gl-lost')) < 60_000
+        sessionStorage.setItem('pwh-gl-lost', String(Date.now()))
+      } catch {
+        // Storage can be switched off; then the page is simply not reloaded automatically.
+        recent = true
+      }
+      if (recent) setMapFailure('The graphics context was lost. Reload the page to try again.')
+      else window.location.reload()
+    }
+    // The event does not bubble, so it is caught on its way down to whichever canvas lost it.
+    container.addEventListener('webglcontextlost', onContextLost, true)
 
     created.once('load', () => {
       void (async () => {
@@ -89,6 +107,7 @@ export function MapView() {
       cancelled = true
       clearTimeout(bootTimeout)
       window.removeEventListener('hashchange', followLink)
+      container.removeEventListener('webglcontextlost', onContextLost, true)
       stopScene?.()
       setMap(null)
       created.remove()
@@ -108,7 +127,7 @@ export function MapView() {
       {error && (
         <div className="absolute inset-0 grid place-items-center p-8 text-center font-mono text-xs tracking-widest text-danger uppercase">
           <p>
-            Map unavailable: this browser could not start WebGL2.
+            Map unavailable
             <span className="mt-2 block text-fg-mute normal-case">{error}</span>
           </p>
         </div>
