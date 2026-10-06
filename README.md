@@ -37,7 +37,7 @@ hPanel → Websites → Add Website → Node.js web app → Import Git repositor
 | Application type | `Hono`                 |
 | Node.js version  | `22`                   |
 | Branch           | `main`                 |
-| Entry file       | `dist/server/index.js` |
+| Entry file       | `dist/index.js`        |
 
 Every push to `main` redeploys. `GET /api/health` reports the running commit.
 

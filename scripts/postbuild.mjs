@@ -1,6 +1,7 @@
 // Runs after both Vite builds:
 //  - writes .br and .gz siblings for the client files so the server can send them as-is
 //  - records which commit was built, for /api/health
+//  - writes dist/index.js, a second way in for hosts that expect the entry file there
 import { execFileSync } from 'node:child_process'
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, extname, join, resolve } from 'node:path'
@@ -54,6 +55,9 @@ writeFileSync(
   join(serverDir, 'build-info.json'),
   JSON.stringify({ commit: currentCommit(), builtAt: new Date().toISOString() }),
 )
+
+// Hostinger's Hono preset looks for dist/index.js whatever entry file is configured, so one exists.
+writeFileSync(join(root, 'dist/index.js'), "import './server/index.js'\n")
 
 const kb = (bytes) => `${(bytes / 1024).toFixed(0)} kB`
 console.log(`postbuild: precompressed ${count} client files (${kb(before)} -> ${kb(after)} brotli)`)
