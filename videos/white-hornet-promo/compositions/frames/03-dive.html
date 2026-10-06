@@ -1,0 +1,271 @@
+<template>
+  <style>
+    @font-face{
+      font-family: 'Inter Variable';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url("assets/fonts/captured-inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+    }
+    @font-face{
+      font-family: 'Inter Variable';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url("assets/fonts/captured-inter-latin-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+    }
+    @font-face{
+      font-family: 'JetBrains Mono Variable';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 800;
+      src: url("assets/fonts/captured-jetbrains-mono-latin-ext-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+    }
+    @font-face{
+      font-family: 'JetBrains Mono Variable';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 800;
+      src: url("assets/fonts/captured-jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+    }
+
+    /* ids/classes start with a digit (frame_id prefix), so they are matched by attribute selectors */
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      color: #d5e1ea;
+      font-family: 'JetBrains Mono Variable', monospace;
+    }
+    #root [class~="03-dive-layer"] {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+    }
+    #root [id="03-dive-world"] { background: #04070a; }
+    /* blur layer overscans the frame by 60px so the blur never pulls in a transparent edge */
+    #root [id="03-dive-blur"] { position: absolute; inset: -60px; }
+    #root [class~="03-dive-plate"] {
+      position: absolute;
+      left: 60px;
+      top: 60px;
+      width: 1920px;
+      height: 1080px;
+      display: block;
+      transform-origin: 960px 540px;
+    }
+
+    /* reticle: 150px ring locked at 960,540 for the whole frame */
+    #root [id="03-dive-reticle"] { position: absolute; left: 885px; top: 465px; width: 150px; height: 150px; }
+    #root [id="03-dive-ring"] {
+      position: absolute;
+      inset: 0;
+      box-sizing: border-box;
+      border: 2px solid #4fd6ff;
+      border-radius: 50%;
+    }
+    #root [class~="03-dive-tick"] { position: absolute; background: #4fd6ff; }
+    #root [id="03-dive-tick-n"] { left: 74px; top: -20px; width: 2px; height: 20px; }
+    #root [id="03-dive-tick-s"] { left: 74px; top: 150px; width: 2px; height: 20px; }
+    #root [id="03-dive-tick-w"] { left: -20px; top: 74px; width: 20px; height: 2px; }
+    #root [id="03-dive-tick-e"] { left: 150px; top: 74px; width: 20px; height: 2px; }
+    #root [id="03-dive-plane"] { position: absolute; left: 912px; top: 492px; width: 96px; height: 96px; display: block; overflow: visible; }
+
+    /* chrome */
+    #root [class~="03-dive-panel"] {
+      position: absolute;
+      background: rgba(10, 16, 22, 0.85);
+      border: 1px solid #1b2a35;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    #root [class~="03-dive-row"] { white-space: pre; } /* keeps the padded mono columns */
+    #root [id="03-dive-kicker"] {
+      left: 106px;
+      top: 84px;
+      padding: 12px 20px;
+      font-size: 22px;
+      line-height: 28px;
+      color: #4fd6ff;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    #root [id="03-dive-kicker"] svg { display: block; }
+    #root [id="03-dive-hud"] {
+      left: 106px;
+      top: 330px;
+      padding: 24px 28px;
+      font-size: 26px;
+      line-height: 34px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    #root [class~="03-dive-dim"] { color: #8499a8; }
+    #root [id="03-dive-tag"] {
+      display: inline-block;
+      min-width: 390px; /* >= widest state, stops right-edge jitter on the hard cuts */
+      color: #4fd6ff;
+    }
+    #root [id="03-dive-title"] {
+      left: 106px;
+      bottom: 200px; /* bottom edge at y=880, inside the 900 keep-out */
+      padding: 30px 40px 32px;
+    }
+    #root [id="03-dive-rule"] { width: 36px; height: 2px; background: #4fd6ff; margin-bottom: 22px; }
+    #root [id="03-dive-head"] {
+      font-family: 'Inter Variable', sans-serif;
+      font-weight: 800;
+      font-size: 86px;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      color: #d5e1ea;
+    }
+    #root [id="03-dive-sub"] { margin-top: 20px; font-size: 26px; line-height: 32px; color: #4fd6ff; }
+  </style>
+
+  <div data-hf-id="hf-qvdf" id="root" data-composition-id="03-dive" data-width="1920" data-height="1080">
+    <!-- five plates, one shared centre pixel; scale/opacity are a pure function of the zoom proxy -->
+    <div data-hf-id="hf-kbsc" id="03-dive-world" class="clip 03-dive-layer" data-start="0" data-duration="5" data-track-index="0">
+      <div data-hf-id="hf-xmw5" id="03-dive-blur">
+        <img data-hf-id="hf-wviy" class="03-dive-plate" data-z="8" src="assets/stack-2-dark-z8.png" alt="">
+        <img data-hf-id="hf-4iif" class="03-dive-plate" data-z="11" src="assets/stack-3-sat-z11.png" alt="">
+        <img data-hf-id="hf-goyi" class="03-dive-plate" data-z="14" src="assets/stack-4-sat-z14.png" alt="">
+        <img data-hf-id="hf-z676" class="03-dive-plate" data-z="16.3" src="assets/stack-5-ortho-z16.png" alt="">
+        <img data-hf-id="hf-d4zm" class="03-dive-plate" data-z="18" src="assets/stack-6-ortho-z18.png" alt="">
+      </div>
+    </div>
+
+    <div data-hf-id="hf-aqvb" id="03-dive-focus" class="clip 03-dive-layer" data-start="0" data-duration="5" data-track-index="1">
+      <div data-hf-id="hf-nnqu" id="03-dive-reticle">
+        <div data-hf-id="hf-jm1g" id="03-dive-ring"></div>
+        <div data-hf-id="hf-1yf7" id="03-dive-tick-n" class="03-dive-tick"></div>
+        <div data-hf-id="hf-znc0" id="03-dive-tick-e" class="03-dive-tick"></div>
+        <div data-hf-id="hf-8vwu" id="03-dive-tick-s" class="03-dive-tick"></div>
+        <div data-hf-id="hf-lhwq" id="03-dive-tick-w" class="03-dive-tick"></div>
+      </div>
+      <svg data-hf-id="hf-nhr7" id="03-dive-plane" viewBox="0 0 64 64" aria-hidden="true">
+        <path data-hf-id="hf-fluw" d="M32 3C35 3 36.5 8 36.5 14L36.5 24L60 41L60 46L36.5 39L36 52L44 58L44 61L32 58L20 61L20 58L28 52L27.5 39L4 46L4 41L27.5 24L27.5 14C27.5 8 29 3 32 3Z" fill="#ffffff" stroke="#04070a" stroke-opacity="0.85" stroke-width="4" stroke-linejoin="round" paint-order="stroke" />
+      </svg>
+    </div>
+
+    <div data-hf-id="hf-so18" id="03-dive-chrome" class="clip 03-dive-layer" data-start="0" data-duration="5" data-track-index="2">
+      <div data-hf-id="hf-tt0l" id="03-dive-kicker" class="03-dive-panel">
+        <span data-hf-id="hf-k0e3">DISPLAY // DARK</span>
+        <svg data-hf-id="hf-oul3" width="26" height="12" viewBox="0 0 26 12" fill="none" stroke="#4fd6ff" stroke-width="2" aria-hidden="true">
+          <path data-hf-id="hf-qv8l" d="M0 6H24M19 1L24 6L19 11" />
+        </svg>
+        <span data-hf-id="hf-gdeb">SAT</span>
+      </div>
+
+      <div data-hf-id="hf-q0hl" id="03-dive-hud" class="03-dive-panel">
+        <div data-hf-id="hf-lk4t" class="03-dive-row"><span data-hf-id="hf-co2e" class="03-dive-dim">Z   </span><span data-hf-id="hf-0mw0" id="03-dive-zval">08.00</span></div>
+        <div data-hf-id="hf-cxsw" class="03-dive-row"><span data-hf-id="hf-8uar" class="03-dive-dim">ALT </span><span data-hf-id="hf-3cix" id="03-dive-alt">11 278</span> M</div>
+        <div data-hf-id="hf-spv9" class="03-dive-row">56.9475° N  024.1064° E</div>
+        <div data-hf-id="hf-jdgh" class="03-dive-row"><span data-hf-id="hf-z10e" class="03-dive-dim">MAP </span><span data-hf-id="hf-r8eb" id="03-dive-tag">DARK</span></div>
+      </div>
+
+      <div data-hf-id="hf-2qk8" id="03-dive-title" class="03-dive-panel">
+        <div data-hf-id="hf-vl9c" id="03-dive-rule"></div>
+        <div data-hf-id="hf-uaaf" id="03-dive-head">RĀTSLAUKUMS, RĪGA</div>
+        <div data-hf-id="hf-mg4w" id="03-dive-sub">25 CM PER PIXEL</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      var $ = function (id) { return document.getElementById("03-dive-" + id); };
+      var all = function (cls) { return Array.prototype.slice.call(document.querySelectorAll('[class~="03-dive-' + cls + '"]')); };
+
+      var plates = all("plate");
+      var ZP = plates.map(function (p) { return Number(p.dataset.z); }); // 8, 11, 14, 16.3, 18
+      var FADE = 0.6; // zoom levels of cross-dissolve before the next plate takes over
+      var blurEl = $("blur"), zEl = $("zval"), altEl = $("alt"), tagEl = $("tag");
+      var clamp01 = function (v) { return v < 0 ? 0 : v > 1 ? 1 : v; };
+
+      // Basemap tag: hard cuts at the midpoint of each basemap change (discrete-text-sequence, keyed on Z).
+      var TAGS = [{ z: 8, text: "DARK" }, { z: 10.7, text: "SENTINEL-2" }, { z: 13.7, text: "ORTHOPHOTO 0.25 M" }];
+
+      var cam = { Z: 8 };
+
+      // Pure function of cam.Z: plates, blur and HUD readouts. Safe to call at any seek position.
+      function render() {
+        var Z = cam.Z, i;
+        for (i = 0; i < plates.length; i++) {
+          var s = Math.pow(2, Z - ZP[i]);
+          var o = i === 0 ? 1 : clamp01((Z - (ZP[i] - FADE)) / FADE);
+          // the plate below stays until the next one overscans the blur margin, then drops out
+          var covered = i < plates.length - 1 && Z >= ZP[i + 1] + 0.15;
+          var st = plates[i].style;
+          st.visibility = o > 0 && !covered && s <= 12 ? "inherit" : "hidden";
+          st.opacity = o.toFixed(4);
+          // True scale keeps each incoming plate in register with the one beneath; while it is still
+          // smaller than the frame its edge is feathered away, and the feather is gone by scale 1.
+          st.transform = "scale(" + s.toFixed(5) + ")";
+          var t = clamp01((s - 0.6) / 0.4);
+          var m = s >= 1 ? "none" : "radial-gradient(ellipse at center, #000 " + (45 + 65 * t).toFixed(1) + "%, transparent " + (70 + 65 * t).toFixed(1) + "%)";
+          st.webkitMaskImage = m;
+          st.maskImage = m;
+        }
+
+        // motion-blur-streak, camera-travel form: symmetric blur, 0 at both ends, peak mid-dive
+        var f = (Z - 8) / 10;
+        var b = 14 * Math.pow(Math.sin(Math.PI * f), 3);
+        blurEl.style.filter = b < 0.1 ? "none" : "blur(" + b.toFixed(2) + "px)";
+
+        var zs = Z.toFixed(2);
+        zEl.textContent = zs.length < 5 ? "0" + zs : zs;
+        var alt = Math.round((11278 * (Math.pow(2, 18 - Z) - 1)) / 1023);
+        var a = ("     " + alt).slice(-5);
+        altEl.textContent = a.slice(0, 2) + " " + a.slice(2);
+        for (i = TAGS.length - 1; i >= 0; i--) {
+          if (Z >= TAGS[i].z) { tagEl.textContent = TAGS[i].text; break; }
+        }
+      }
+
+      var tl = gsap.timeline({ paused: true });
+
+      // The dive: one proxy, Z 8 -> 18, slow start, fast middle, dead stop at 4.5s then a 0.5s hold.
+      tl.to(cam, { Z: 18, duration: 4.5, ease: "power1.inOut" }, 0);
+      tl.eventCallback("onUpdate", render);
+
+      // Scene 1 (0-0.7s): the camera passes down through the aircraft.
+      var plane = $("plane");
+      tl.fromTo(plane, { rotation: 35, scale: 1 }, { rotation: 35, scale: 7, duration: 0.7, ease: "power2.in" }, 0);
+      tl.fromTo(plane, { opacity: 1 }, { opacity: 0, duration: 0.45, ease: "power1.in" }, 0.25);
+      tl.fromTo($("kicker"), { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.35, ease: "power3.out" }, 0.15);
+
+      // Scene 2 (0.7-3.6s): HUD stack arrives row by row, then ticks live from the proxy.
+      tl.fromTo($("hud"), { opacity: 0, x: -24 }, { opacity: 1, x: 0, duration: 0.35, ease: "power3.out" }, 0.7);
+      tl.fromTo(all("row"), { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "none", stagger: 0.15 }, 0.8);
+
+      // Scene 3 (3.6-5.0s): reticle gains its ticks, headline lands, then stillness.
+      [["tick-n", "50% 100%"], ["tick-e", "0% 50%"], ["tick-s", "50% 0%"], ["tick-w", "100% 50%"]].forEach(function (t, i) {
+        tl.fromTo($(t[0]), { opacity: 0, scale: 0, transformOrigin: t[1] }, { opacity: 1, scale: 1, duration: 0.3, ease: "power3.out" }, 3.65 + i * 0.06);
+      });
+      tl.fromTo($("title"), { opacity: 0, x: -40 }, { opacity: 1, x: 0, duration: 0.45, ease: "power3.out" }, 3.85);
+      tl.fromTo($("head"), { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: "power3.out" }, 3.95);
+      tl.fromTo($("sub"), { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "none" }, 4.25);
+
+      tl.set({}, {}, 5); // pin the timeline length to the 5s slot
+
+      render(); // t=0 state (handoff_in) without waiting for the first seek
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["03-dive"] = tl;
+    })();
+  </script>
+</template>

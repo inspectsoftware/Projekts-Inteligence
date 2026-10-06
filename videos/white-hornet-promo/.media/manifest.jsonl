@@ -1,0 +1,7 @@
+{"id":"sfx_001","type":"sfx","path":"assets/sfx/typing.mp3","source":"search","description":"typing","duration":44.4,"provenance":{"provider":"heygen","prompt":"typing"}}
+{"id":"sfx_002","type":"sfx","path":"assets/sfx/whoosh.mp3","source":"search","description":"whoosh","duration":1.6,"provenance":{"provider":"heygen","prompt":"whoosh"}}
+{"id":"sfx_003","type":"sfx","path":"assets/sfx/impact.mp3","source":"search","description":"impact","duration":5.4,"provenance":{"provider":"heygen","prompt":"impact"}}
+{"id":"sfx_004","type":"sfx","path":"assets/sfx/ui-click.mp3","source":"search","description":"ui-click","duration":0.6,"provenance":{"provider":"heygen","prompt":"ui-click"}}
+{"id":"bgm_001","type":"bgm","path":"assets/bgm/track.mp3","source":"search","description":"tense pulsing cinematic electronic, dark synth, driving","duration":25,"provenance":{"provider":"heygen","prompt":"tense pulsing cinematic electronic, dark synth, driving"}}
+{"id":"sfx_005","type":"sfx","path":"assets/sfx/riser.mp3","source":"search","description":"riser","duration":5,"provenance":{"provider":"heygen","prompt":"riser"}}
+{"id":"sfx_006","type":"sfx","path":"assets/sfx/glitch.mp3","source":"search","description":"glitch","duration":1.4,"provenance":{"provider":"heygen","prompt":"glitch"}}

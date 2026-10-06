@@ -1,18 +1,26 @@
 import { describe, expect, it } from 'vitest'
-import { parseSanctionedVessels, splitCsvLine } from '../../shared/adapters/sanctions'
+import { parseVesselRisks, splitCsvLine } from '../../shared/adapters/sanctions'
 import {
+  type Ship,
+  type VesselLists,
   VesselTable,
+  type WarshipList,
   flagStateOf,
+  inLatvianWaters,
   parseAisStreamMessage,
   parseDigitrafficLocations,
   parseDigitrafficVessels,
+  serviceOf,
   shipTypeOf,
 } from '../../shared/adapters/ships'
-import { sanctionedVesselRule } from '../../shared/alerts/rules'
+import type { AlertInput } from '../../shared/alerts/engine'
+import { vesselRule } from '../../shared/alerts/rules'
+import { WARSHIPS } from '../../shared/data/warships'
 import { Flag } from '../../shared/entity'
 
 const SEA = [18.5, 55.3, 25.6, 59.7] as const
-const NONE = { mmsi: new Set<number>(), imo: new Set<number>() }
+const NO_IDS = { mmsi: new Set<number>(), imo: new Set<number>() }
+const NONE: VesselLists = { sanctioned: NO_IDS, shadow: NO_IDS, warships: {} }
 const T0 = Date.parse('2026-10-06T11:00:00Z')
 
 describe('ship classification', () => {
@@ -118,22 +126,9 @@ describe('AISStream', () => {
     const table = new VesselTable()
     table.position(parseAisStreamMessage(position, T0)!.position!)
     table.describe(parseAisStreamMessage(staticData, T0)!.static!)
-    const [ship] = table.view(SEA, { mmsi: new Set(), imo: new Set([9123456]) })
-    expect(ship.props).toMatchObject({ type: 'tanker', destination: 'RIGA', callSign: 'YLAB', imo: 9123456 })
-    expect(ship.flags & Flag.SANCTIONED).toBeTruthy()
-
-    const [alert] = sanctionedVesselRule.evaluate({
-      now: T0,
-      entities: (slot) => (slot === 'ships' ? [ship] : []),
-      warnings: () => [],
-      insideLatvia: () => false,
-    })
-    expect(alert).toMatchObject({
-      severity: 'warn',
-      title: 'Sanctioned vessel: BALTIC TEST',
-      detail: 'Latvia · bound for RIGA',
-      entityId: 'ship:275000111',
-    })
+    const [ship] = table.view(SEA, { ...NONE, sanctioned: { mmsi: new Set(), imo: new Set([9123456]) } })
+    expect(ship.props).toMatchObject({ type: 'tanker', destination: 'RIGA', callSign: 'YLAB', imo: 9123456, service: null })
+    expect(ship.flags).toBe(Flag.SANCTIONED)
   })
 
   it('rejects junk', () => {
@@ -172,12 +167,147 @@ describe('VesselTable', () => {
   })
 })
 
+describe('state vessels', () => {
+  const LIST: WarshipList = { 273546520: ['Yantar', 'Russian Navy'], 277005000: ['HNoMS Vidar', ''] }
+  const vessel = (name: string | undefined, shipType?: number, mmsi = 265500350) => ({ mmsi, name, shipType })
+
+  it('takes the AIS type code at its word', () => {
+    expect(serviceOf(vessel('FINNISH WARSHIP 02', 35), LIST)).toBe('navy')
+    expect(serviceOf(vessel('AXEL VON FERSEN', 35), LIST)).toBe('navy')
+    expect(serviceOf(vessel('RV90', 55), LIST)).toBe('government')
+    expect(serviceOf(vessel('KAIE', 70), LIST)).toBeNull()
+  })
+
+  it('recognises a warship that reports no type by what it calls itself', () => {
+    // Seen on Digitraffic on 2026-10-06, reporting type 0.
+    expect(serviceOf(vessel('SWEDISH WARSHIP K35', 0), LIST)).toBe('navy')
+    expect(serviceOf(vessel('ORP GEN K PULASKI'), LIST)).toBe('navy')
+    expect(serviceOf(vessel('KBV 181', 0), LIST)).toBe('government')
+    expect(serviceOf(vessel(undefined, 0), LIST)).toBeNull()
+  })
+
+  it('does not take a merchant ship for a warship because of its name', () => {
+    // "SENATOR" contains NATO, and FS is also how shipping companies start a name.
+    expect(serviceOf(vessel('HANSA SENATOR', 0), LIST)).toBeNull()
+    expect(serviceOf(vessel('FS CHARLOTTE', 70), LIST)).toBeNull()
+    expect(serviceOf(vessel('NAVY PIER', 60), LIST)).toBeNull()
+  })
+
+  it('takes a vessel that declares a civil type at its word, though the navy list has it', () => {
+    // Wikidata had the bunker tanker Hilda and the 1938 steamer Ukkopekka under a navy on 2026-10-06.
+    const listed: WarshipList = { ...LIST, 273444560: ['Hilda', 'Russian Navy'], 230938590: ['Ukkopekka', 'Finnish Navy'] }
+    expect(serviceOf(vessel('HILDA', 80, 273444560), listed)).toBeNull()
+    expect(serviceOf(vessel('UKKOPEKKA', 60, 230938590), listed)).toBeNull()
+
+    // The list's entry is still shown, as the hint it is.
+    const table = new VesselTable()
+    table.position({ mmsi: 273444560, lon: 21.9, lat: 57.7, at: T0, source: 'aisstream', name: 'HILDA' })
+    table.describe({ mmsi: 273444560, shipType: 80, name: undefined, callSign: undefined, imo: undefined, destination: undefined })
+    const [hilda] = table.view(SEA, { ...NONE, warships: listed })
+    expect(hilda.props).toMatchObject({ type: 'tanker', service: null, listedAs: 'Hilda, Russian Navy' })
+    expect(vesselRule.evaluate({ now: T0, entities: () => [hilda], warnings: () => [], news: () => [], insideLatvia: () => false })).toEqual([])
+  })
+
+  it('leaves the bunker tankers and tourist steamers out of the baked navy list', () => {
+    for (const mmsi of [273444560, 273317910, 230938590, 265514680]) expect(Object.hasOwn(WARSHIPS, mmsi), String(mmsi)).toBe(false)
+    expect(WARSHIPS[273546520]).toEqual(['Yantar', 'Russian Navy'])
+  })
+
+  it('recognises a vessel on the navy list when it reports no type or an unspecific one, and says what the list calls it', () => {
+    expect(serviceOf(vessel('YANTAR', 90, 273546520), LIST)).toBe('navy')
+    expect(serviceOf(vessel('YANTAR', undefined, 273546520), LIST)).toBe('navy')
+
+    const table = new VesselTable()
+    table.position({ mmsi: 273546520, lon: 21.9, lat: 57.7, at: T0, source: 'aisstream', name: 'YANTAR' })
+    table.position({ mmsi: 277005000, lon: 21.0, lat: 56.0, at: T0, source: 'aisstream', name: 'JOTVINGIS' })
+    const [yantar, jotvingis] = table.view(SEA, { ...NONE, warships: LIST })
+    expect(yantar.props).toMatchObject({ service: 'navy', listedAs: 'Yantar, Russian Navy', flagState: 'Russia' })
+    // The list still has this hull under its former name: shown as it is, next to the name on AIS.
+    expect(jotvingis.props).toMatchObject({ name: 'JOTVINGIS', service: 'navy', listedAs: 'HNoMS Vidar', flagState: 'Lithuania' })
+  })
+
+  it('has a baked navy list keyed by nine-digit MMSI', () => {
+    const keys = Object.keys(WARSHIPS)
+    expect(keys.length).toBeGreaterThan(300)
+    expect(keys.every((mmsi) => /^\d{9}$/.test(mmsi))).toBe(true)
+  })
+})
+
+describe('vessel alerts', () => {
+  const LISTS: VesselLists = {
+    sanctioned: { mmsi: new Set([273000001]), imo: new Set() },
+    shadow: { mmsi: new Set([667000002]), imo: new Set() },
+    warships: { 273546520: ['Yantar', 'Russian Navy'] },
+  }
+  const IRBE_STRAIT = { lon: 21.9, lat: 57.7 }
+  const GULF_OF_FINLAND = { lon: 24.5, lat: 59.6 }
+  const VENTSPILS_HARBOUR = { lon: 21.545, lat: 57.398 }
+
+  function ship(mmsi: number, name: string, at: { lon: number; lat: number }, shipType?: number): Ship {
+    const table = new VesselTable()
+    table.position({ mmsi, ...at, at: T0, source: 'aisstream', name })
+    table.describe({ mmsi, shipType, name: undefined, callSign: undefined, imo: undefined, destination: undefined })
+    return table.view(SEA, LISTS)[0]
+  }
+  const input = (ships: Ship[], insideLatvia: AlertInput['insideLatvia']): AlertInput => ({
+    now: T0,
+    entities: (slot) => (slot === 'ships' ? ships : []),
+    warnings: () => [],
+    news: () => [],
+    insideLatvia,
+  })
+  const alertsFor = (ships: Ship[], insideLatvia: AlertInput['insideLatvia'] = () => false) =>
+    vesselRule.evaluate(input(ships, insideLatvia)).map((alert) => [alert.severity, alert.title])
+
+  it('knows where Latvian waters end', () => {
+    expect(inLatvianWaters(IRBE_STRAIT.lon, IRBE_STRAIT.lat)).toBe(true)
+    expect(inLatvianWaters(23.5, 57.4)).toBe(true) // Gulf of Rīga, Latvian side
+    expect(inLatvianWaters(20.5, 56.5)).toBe(true) // open sea west of Liepāja
+    expect(inLatvianWaters(23.5, 58.0)).toBe(false) // Gulf of Rīga, Estonian side
+    expect(inLatvianWaters(20.8, 55.8)).toBe(false) // off Klaipėda
+    expect(inLatvianWaters(GULF_OF_FINLAND.lon, GULF_OF_FINLAND.lat)).toBe(false)
+    expect(inLatvianWaters(24.105, 56.949)).toBe(false) // Rīga itself: land
+  })
+
+  it('warns once a listed vessel or a non-NATO warship is inside Latvian waters, and only notes it elsewhere', () => {
+    expect(alertsFor([ship(273546520, 'YANTAR', IRBE_STRAIT)])).toEqual([['warn', 'Naval vessel (Russia) in Latvian waters: YANTAR']])
+    expect(alertsFor([ship(273546520, 'YANTAR', GULF_OF_FINLAND)])).toEqual([['info', 'Naval vessel (Russia): YANTAR']])
+    expect(alertsFor([ship(273000001, 'KAPITAN', IRBE_STRAIT, 80)])).toEqual([['warn', 'Sanctioned vessel in Latvian waters: KAPITAN']])
+    expect(alertsFor([ship(667000002, 'MIRES', GULF_OF_FINLAND, 80)])).toEqual([['info', 'Shadow-fleet vessel: MIRES']])
+  })
+
+  it('counts a harbour inside the land border as Latvian waters', () => {
+    const moored = ship(667000002, 'MIRES', VENTSPILS_HARBOUR, 80)
+    expect(inLatvianWaters(moored.lon, moored.lat)).toBe(false)
+    expect(alertsFor([moored], () => true)).toEqual([['warn', 'Shadow-fleet vessel in Latvian waters: MIRES']])
+  })
+
+  it('says nothing about allied warships, or about a warship whose flag it cannot tell', () => {
+    expect(alertsFor([ship(230997210, 'FINNISH WARSHIP 02', IRBE_STRAIT, 35)])).toEqual([])
+    expect(alertsFor([ship(999000001, 'WARSHIP', IRBE_STRAIT, 35)])).toEqual([])
+  })
+
+  it('names the flag and what the navy list says in the detail', () => {
+    const [alert] = vesselRule.evaluate(input([ship(273546520, 'YANTAR', IRBE_STRAIT)], () => false))
+    expect(alert).toMatchObject({
+      key: 'vessel:ship:273546520',
+      detail: 'Russia · listed as Yantar, Russian Navy',
+      entityId: 'ship:273546520',
+    })
+  })
+})
+
 describe('sanctions list', () => {
   const CSV = [
     'type,caption,imo,risk,countries,flag,mmsi,id,url,datasets,aliases',
-    'Vessel,"KAPITAN, THE",IMO9427366,sanction,ru,ru,273123456;273999888,x1,https://example.org,eu_fsf,',
-    'Vessel,DETAINED ONE,IMO9000001,mare.detained,pa,pa,351000001,x2,https://example.org,paris_mou,',
-    'Vessel,"SAYS ""HELLO""",IMO9555555;IMO9555556,reg.warn;sanction,,,,x3,https://example.org,us_ofac_sdn,',
+    'VESSEL,"KAPITAN, THE",IMO9427366,sanction,ru,ru,273123456;273999888,x1,https://example.org,eu_fsf,',
+    'VESSEL,DETAINED ONE,IMO9000001,mare.detained,pa,pa,351000001,x2,https://example.org,paris_mou,',
+    'VESSEL,"SAYS ""HELLO""",IMO9555555;IMO9555556,reg.warn;sanction,,,,x3,https://example.org,us_ofac_sdn,',
+    // As published on 2026-10-06: the shadow fleet is tagged as such, not as sanctioned.
+    '"VESSEL","VOLGONEFT-111","IMO8230663","mare.shadow;poi","kn;ru","ru","273436920","imo-vsl-8230663","https://example.org","ua_war_sanctions",""',
+    'VESSEL,BOTH LISTS,IMO9111111,sanction;mare.shadow,ru,ru,273000009,x5,https://example.org,eu_fsf,',
+    // A company, under a company IMO number that could just as well be a ship's.
+    '"ORGANIZATION","Prominent Shipmanagement Ltd","IMO6378969","sanction","ae","","","x6","https://example.org","us_ofac_sdn",""',
     '',
   ].join('\n')
 
@@ -185,14 +315,29 @@ describe('sanctions list', () => {
     expect(splitCsvLine('a,"b, c","d ""e""",')).toEqual(['a', 'b, c', 'd "e"', ''])
   })
 
-  it('keeps sanctioned vessels only, by IMO and MMSI', () => {
-    const { imo, mmsi } = parseSanctionedVessels(CSV)
-    expect(imo.sort()).toEqual([9427366, 9555555, 9555556])
-    expect(mmsi.sort()).toEqual([273123456, 273999888])
+  it('keeps sanctioned and shadow-fleet vessels, by IMO and MMSI, and leaves companies out', () => {
+    const risks = parseVesselRisks(CSV)
+    expect(risks.imo.sort()).toEqual([9111111, 9427366, 9555555, 9555556])
+    expect(risks.mmsi.sort()).toEqual([273000009, 273123456, 273999888])
+    expect(risks.shadowImo.sort()).toEqual([8230663, 9111111])
+    expect(risks.shadowMmsi.sort()).toEqual([273000009, 273436920])
+  })
+
+  it('flags a vessel on both lists with both', () => {
+    const table = new VesselTable()
+    table.position({ mmsi: 273000009, lon: 22, lat: 57.5, at: T0, source: 'digitraffic' })
+    const risks = parseVesselRisks(CSV)
+    const [ship] = table.view(SEA, {
+      ...NONE,
+      sanctioned: { mmsi: new Set(risks.mmsi), imo: new Set(risks.imo) },
+      shadow: { mmsi: new Set(risks.shadowMmsi), imo: new Set(risks.shadowImo) },
+    })
+    expect(ship.flags).toBe(Flag.SANCTIONED | Flag.SHADOW_FLEET)
   })
 
   it('returns nothing for a file it does not recognise', () => {
-    expect(parseSanctionedVessels('a,b\n1,2')).toEqual({ imo: [], mmsi: [] })
-    expect(parseSanctionedVessels('')).toEqual({ imo: [], mmsi: [] })
+    const nothing = { imo: [], mmsi: [], shadowImo: [], shadowMmsi: [] }
+    expect(parseVesselRisks('a,b\n1,2')).toEqual(nothing)
+    expect(parseVesselRisks('')).toEqual(nothing)
   })
 })

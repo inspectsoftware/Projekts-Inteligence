@@ -3,6 +3,7 @@ import { FEED_HEADERS, type FeedMeta, type FeedStatus, type FeedsResponse, isFee
 import { APP } from '../../shared/meta'
 import type { BuildInfo } from '../buildInfo'
 import { type FeedCache, type FeedState, FeedUnavailable } from '../core/cache'
+import { camStill } from '../feeds/cams'
 import type { FeedRegistry } from '../feeds/registry'
 import { cameraFrame } from '../feeds/roads'
 import type { FeedDef } from '../feeds/types'
@@ -111,6 +112,20 @@ export function apiRoutes(deps: ApiDeps): Hono {
     c.header('Content-Type', 'image/jpeg')
     c.header('Cache-Control', 'public, max-age=120')
     return c.body(new Uint8Array(frame))
+  })
+
+  /** Latest still of a live camera whose publisher only serves it to its own pages. Cameras on our own list only. */
+  api.get('/cam/:id', async (c) => {
+    let still
+    try {
+      still = await camStill(c.req.param('id'))
+    } catch {
+      return c.json({ error: 'unavailable' }, 503)
+    }
+    if (!still) return c.json({ error: 'not_found' }, 404)
+    c.header('Content-Type', 'image/jpeg')
+    c.header('Cache-Control', 'public, max-age=30')
+    return c.body(new Uint8Array(still))
   })
 
   api.all('*', (c) => c.json({ error: 'not_found' }, 404))

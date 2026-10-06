@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normaliseEnergy, normaliseInternet, parseRss } from '../../shared/adapters/panels'
+import { normaliseEnergy, normaliseInternet } from '../../shared/adapters/panels'
 import { normaliseGauges, normaliseRadiation } from '../../shared/adapters/sensors'
 import { radiationRule } from '../../shared/alerts/rules'
 
@@ -53,22 +53,6 @@ describe('internet reachability', () => {
   })
 })
 
-describe('news', () => {
-  const rss = `<rss><channel><title>LSM</title>
-    <item><title>Fuel prices &amp; taxes: up nearly 10%&nbsp;in a month</title><link>https://eng.lsm.lv/article/a1/?utm_source=rss&amp;utm_medium=links</link><pubDate>Tue, 06 Oct 2026 10:19:25 GMT</pubDate></item>
-    <item><title><![CDATA[<b>Older</b> story]]></title><link>https://eng.lsm.lv/article/a0/</link><pubDate>Tue, 06 Oct 2026 09:00:00 GMT</pubDate></item>
-    <item><title>Elsewhere</title><link>https://example.org/x</link><pubDate>Tue, 06 Oct 2026 10:30:00 GMT</pubDate></item>
-    <item><title>No date</title><link>https://eng.lsm.lv/article/a2/</link></item>
-  </channel></rss>`
-
-  it('keeps plain-text headlines that link back to the source, newest first', () => {
-    expect(parseRss(rss, 'https://eng.lsm.lv/')).toEqual([
-      { title: 'Fuel prices & taxes: up nearly 10% in a month', link: 'https://eng.lsm.lv/article/a1/', at: Date.parse('2026-10-06T10:19:25Z') },
-      { title: 'Older story', link: 'https://eng.lsm.lv/article/a0/', at: Date.parse('2026-10-06T09:00:00Z') },
-    ])
-  })
-})
-
 describe('sensors', () => {
   it('reads radiation stations and alerts on a raised one', () => {
     const feature = (id: string, value: number) => ({
@@ -80,7 +64,7 @@ describe('sensors', () => {
       { id: 'radiation:LV0001', label: 'Demene', ts: T0 - HOUR * 1000, props: { usvh: 0.079 } },
       { id: 'radiation:LV0002', props: { usvh: 0.41 } },
     ])
-    const alerts = radiationRule.evaluate({ now: T0, entities: () => stations, warnings: () => [], insideLatvia: () => true })
+    const alerts = radiationRule.evaluate({ now: T0, entities: () => stations, warnings: () => [], news: () => [], insideLatvia: () => true })
     expect(alerts).toMatchObject([{ severity: 'critical', title: 'Raised radiation: Elsewhere', entityId: 'radiation:LV0002' }])
   })
 

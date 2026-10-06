@@ -1,0 +1,27 @@
+WHITE HORNET
+LATVIA // INTELLIGENCE PANEL
+PUBLIC SOURCES ONLY
+
+A Latvia-only intelligence panel: one dark tactical map that fuses live OSINT data about the
+country (air, sea, land, space, signals, weather, energy, internet, news).
+
+Everything comes from public, open feeds. No individuals are tracked or profiled. Only
+officially published cameras are used.
+
+Boot log:
+UPLINK ........ ESTABLISHING
+BASEMAP ....... STANDBY
+FEEDS ......... STANDBY
+
+Layers: Aircraft (ADS-B/MLAT), Airspace restrictions, Ships (AIS), Sea warnings, Trains,
+Public transport, Road cameras, Roadworks and incidents, Live cameras, Satellites,
+GPS interference, Weather warnings, Fires, Rain radar, Weather stations, Radiation,
+River gauges, Airfields, Ports, Undersea cables, Power grid, Military sites.
+
+Windows: Layers, Display, Situation, Alerts, Intel feed, Views, Radar, Live TV, Live CCTV,
+Country briefs, Military, Inspector.
+
+Live TV channels: LTV news, Saeima, Cabinet of Ministers, President of Latvia, LRT, Seimas,
+Riigikogu, Government of Estonia, ETV.
+
+Basemaps: Dark, Sat (0.25 m orthophotos), Daily, Night. Vision modes: NVG, FLIR, CRT.

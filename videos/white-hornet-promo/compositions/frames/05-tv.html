@@ -1,0 +1,286 @@
+<template>
+  <div data-hf-id="hf-3yin" id="root" data-composition-id="05-tv" data-width="1920" data-height="1080" data-duration="6.4">
+    <style>
+      @font-face{
+        font-family: 'Inter Variable';
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 900;
+        src: url("assets/fonts/captured-inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+        unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+      }
+      @font-face{
+        font-family: 'Inter Variable';
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 900;
+        src: url("assets/fonts/captured-inter-latin-wght-normal.woff2") format("woff2-variations");
+        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+      }
+      @font-face{
+        font-family: 'JetBrains Mono Variable';
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 800;
+        src: url("assets/fonts/captured-jetbrains-mono-latin-ext-wght-normal.woff2") format("woff2-variations");
+        unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+      }
+      @font-face{
+        font-family: 'JetBrains Mono Variable';
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 800;
+        src: url("assets/fonts/captured-jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+      }
+
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+
+      .f05-tv-bg, .f05-tv-stage { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: hidden; }
+      .f05-tv-bg { background: #04070a; }
+      .f05-tv-map { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.6; }
+
+      .f05-tv-kicker {
+        position: absolute; left: 190px; top: 11px; height: 18px; white-space: nowrap;
+        font-family: 'JetBrains Mono Variable', monospace; font-weight: 500; font-size: 14px; line-height: 18px;
+        letter-spacing: 0.14em; text-transform: uppercase; color: #4fd6ff;
+      }
+
+      /* window plate: outer animates, inner carries the static 1.4x scale (window-local native px inside) */
+      .f05-tv-win { position: absolute; left: 190px; top: 40px; width: 1540px; height: 896px; }
+      .f05-tv-scale { position: absolute; left: 0; top: 0; width: 1100px; height: 640px; transform: scale(1.4); transform-origin: 0 0; }
+      .f05-tv-plate { position: absolute; left: 0; top: 0; width: 1100px; height: 640px; display: block; }
+
+      .f05-tv-hl {
+        position: absolute; left: 8px; top: 0; width: 162px; height: 24px; box-sizing: border-box;
+        border: 1px solid #4fd6ff; background: rgba(79,214,255,0.10);
+      }
+
+      .f05-tv-player { position: absolute; left: 177px; top: 30px; width: 923px; height: 610px; overflow: hidden; }
+      .f05-tv-shot { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 42%, #0c1826 0%, #08111b 55%, #03070b 100%); }
+
+      .f05-tv-flags { position: absolute; inset: 0; }
+      .f05-tv-pole { position: absolute; top: 80px; width: 3px; height: 530px; background: #566a78; }
+      .f05-tv-flag {
+        position: absolute; top: 92px; width: 70px; height: 230px;
+        background: linear-gradient(90deg, #9e3039 0 40%, #e8e4dc 40% 60%, #9e3039 60% 100%);
+      }
+
+      .f05-tv-sil { position: absolute; left: 311px; top: 0; width: 300px; height: 610px; }
+      .f05-tv-head { position: absolute; left: 95px; top: 118px; width: 110px; height: 124px; border-radius: 50%; background: #1b2a35; }
+      .f05-tv-neck { position: absolute; left: 128px; top: 225px; width: 44px; height: 40px; background: #1b2a35; }
+      .f05-tv-body { position: absolute; left: 0; top: 252px; width: 300px; height: 358px; border-radius: 130px 130px 0 0 / 90px 90px 0 0; background: #1b2a35; }
+
+      .f05-tv-lec { position: absolute; left: 351px; top: 390px; width: 220px; height: 220px; }
+      .f05-tv-lec-block { position: absolute; left: 0; top: 10px; width: 220px; height: 210px; box-sizing: border-box; background: #0a1016; border: 1px solid #2a3f4e; }
+      .f05-tv-lec-top { position: absolute; left: -14px; top: 0; width: 248px; height: 10px; background: #2a3f4e; }
+      .f05-tv-mic { position: absolute; bottom: 220px; width: 2px; height: 72px; background: #566a78; transform-origin: 50% 100%; }
+      .f05-tv-mic-a { left: 92px; transform: rotate(-11deg); }
+      .f05-tv-mic-b { left: 126px; transform: rotate(11deg); }
+
+      .f05-tv-bars { position: absolute; left: 440px; right: 24px; top: 420px; height: 80px; display: flex; align-items: flex-end; justify-content: space-between; }
+      .f05-tv-bar { width: 5px; height: 80px; background: #4fd6ff; opacity: 0.85; transform-origin: 50% 100%; }
+
+      .f05-tv-l3 {
+        position: absolute; left: 24px; top: 440px; width: 392px; height: 60px; box-sizing: border-box;
+        padding: 9px 12px; background: rgba(10,16,22,0.92); border: 1px solid #1b2a35; border-left: 2px solid #4fd6ff;
+      }
+      .f05-tv-l3-row { display: flex; align-items: center; gap: 10px; height: 24px; white-space: nowrap; }
+      .f05-tv-live {
+        font-family: 'JetBrains Mono Variable', monospace; font-weight: 700; font-size: 10px; line-height: 16px;
+        letter-spacing: 0.14em; color: #04070a; background: #ff4d5e; padding: 0 6px;
+      }
+      .f05-tv-l3-title { font-family: 'Inter Variable', sans-serif; font-weight: 800; font-size: 20px; line-height: 24px; letter-spacing: -0.01em; text-transform: uppercase; color: #d5e1ea; }
+      .f05-tv-l3-sub { margin-top: 4px; font-family: 'JetBrains Mono Variable', monospace; font-weight: 500; font-size: 10px; line-height: 14px; letter-spacing: 0.2em; text-transform: uppercase; color: #8499a8; white-space: nowrap; }
+
+      .f05-tv-tag {
+        position: absolute; right: 12px; top: 12px; padding: 3px 7px;
+        font-family: 'JetBrains Mono Variable', monospace; font-weight: 500; font-size: 9px; line-height: 12px;
+        letter-spacing: 0.2em; color: #8499a8; background: rgba(10,16,22,0.85); border: 1px solid #2a3f4e;
+      }
+
+      .f05-tv-gl { position: absolute; left: 0; width: 923px; background: #4fd6ff; opacity: 0; }
+
+      .f05-tv-head-scrim {
+        position: absolute; left: 105px; top: 794px; height: 102px; box-sizing: border-box; padding: 20px 28px;
+        background: rgba(4,7,10,0.92); border: 1px solid #1b2a35;
+      }
+      .f05-tv-headline {
+        min-width: 1060px; height: 60px; white-space: nowrap;
+        font-family: 'Inter Variable', sans-serif; font-weight: 800; font-size: 60px; line-height: 60px;
+        letter-spacing: -0.02em; text-transform: uppercase; color: #d5e1ea;
+      }
+      .f05-tv-headline-b { color: #4fd6ff; }
+    </style>
+
+    <!-- full-bleed ground: dimmed map -->
+    <div data-hf-id="hf-4ddk" class="clip f05-tv-bg" data-start="0" data-duration="6.4" data-track-index="0">
+      <img data-hf-id="hf-67xa" class="f05-tv-map" src="assets/map-baltic-dark.png" alt="">
+    </div>
+
+    <div data-hf-id="hf-zmzk" class="clip f05-tv-stage" data-start="0" data-duration="6.4" data-track-index="1">
+      <div data-hf-id="hf-p3ck" class="f05-tv-kicker"></div>
+
+      <div data-hf-id="hf-n06z" class="f05-tv-win">
+        <div data-hf-id="hf-sf4j" class="f05-tv-scale">
+          <img data-hf-id="hf-k28c" class="f05-tv-plate" src="assets/win-tv.png" alt="">
+          <div data-hf-id="hf-pg3n" class="f05-tv-hl"></div>
+
+          <!-- stand-in player content: abstract illustration, no footage, no likeness, no logos -->
+          <div data-hf-id="hf-ga7s" class="f05-tv-player">
+            <div data-hf-id="hf-ncr3" class="f05-tv-shot">
+              <div data-hf-id="hf-d05w" class="f05-tv-flags">
+                <div data-hf-id="hf-amjr" class="f05-tv-pole" style="left:236px"></div>
+                <div data-hf-id="hf-tpm4" class="f05-tv-flag" style="left:239px"></div>
+                <div data-hf-id="hf-pvs0" class="f05-tv-pole" style="left:684px"></div>
+                <div data-hf-id="hf-rd4f" class="f05-tv-flag" style="left:614px"></div>
+              </div>
+              <div data-hf-id="hf-zehh" class="f05-tv-sil">
+                <div data-hf-id="hf-2sm9" class="f05-tv-head"></div>
+                <div data-hf-id="hf-a1b2" class="f05-tv-neck"></div>
+                <div data-hf-id="hf-3edb" class="f05-tv-body"></div>
+              </div>
+              <div data-hf-id="hf-5tbl" class="f05-tv-lec">
+                <div data-hf-id="hf-9k2u" class="f05-tv-mic f05-tv-mic-a"></div>
+                <div data-hf-id="hf-5lyt" class="f05-tv-mic f05-tv-mic-b"></div>
+                <div data-hf-id="hf-d17j" class="f05-tv-lec-top"></div>
+                <div data-hf-id="hf-yhbp" class="f05-tv-lec-block"></div>
+              </div>
+              <div data-hf-id="hf-p1t5" class="f05-tv-bars"></div>
+              <div data-hf-id="hf-i2js" class="f05-tv-l3">
+                <div data-hf-id="hf-k2qf" class="f05-tv-l3-row">
+                  <span data-hf-id="hf-6sqv" class="f05-tv-live">● LIVE</span>
+                  <span data-hf-id="hf-lnbq" class="f05-tv-l3-title"></span>
+                </div>
+                <div data-hf-id="hf-fmmx" class="f05-tv-l3-sub"></div>
+              </div>
+              <div data-hf-id="hf-yorj" class="f05-tv-tag">ILLUSTRATION</div>
+            </div>
+            <div data-hf-id="hf-70ie" class="f05-tv-gl f05-tv-gl-a"></div>
+            <div data-hf-id="hf-32ed" class="f05-tv-gl f05-tv-gl-b"></div>
+          </div>
+        </div>
+      </div>
+
+      <div data-hf-id="hf-018g" class="f05-tv-head-scrim">
+        <div data-hf-id="hf-c9e3" class="f05-tv-headline"><span data-hf-id="hf-j8h6" class="f05-tv-headline-a"></span><span data-hf-id="hf-d2rd" class="f05-tv-headline-b"></span></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        var root = document.querySelector('[data-composition-id="05-tv"]');
+        var q = function (s) { return root.querySelector(s); };
+        var D = 6;
+
+        var tl = gsap.timeline({ paused: true });
+        window.__timelines = window.__timelines || {};
+        window.__timelines["05-tv"] = tl;
+
+        // --- Scene 1: slow map drift under everything + window rises into place
+        tl.fromTo(q(".f05-tv-map"), { scale: 1.06 }, { scale: 1, duration: D, ease: "none" }, 0);
+        tl.fromTo(q(".f05-tv-win"), { y: 60, opacity: 0 }, { y: 0, opacity: 1, duration: 1.1, ease: "expo.out" }, 0);
+
+        // --- audio bars: heights from a fixed index-derived table, finite tweens only
+        var N = 40, STEP = 0.2, T0 = 1.2;
+        var LEVELS = [];
+        for (var i = 0; i < N; i++) LEVELS.push(0.14 + 0.86 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.6)));
+        var barsEl = q(".f05-tv-bars");
+        var steps = Math.round((D - T0) / STEP);
+        for (var b = 0; b < N; b++) {
+          var bar = document.createElement("div");
+          bar.className = "f05-tv-bar";
+          barsEl.appendChild(bar);
+          for (var k = 0; k < steps; k++) {
+            var from = k === 0 ? 0.06 : LEVELS[(b * 3 + (k - 1) * 7) % N];
+            tl.fromTo(bar, { scaleY: from }, { scaleY: LEVELS[(b * 3 + k * 7) % N], duration: STEP, ease: "sine.inOut", immediateRender: k === 0 }, T0 + k * STEP);
+          }
+        }
+
+        // --- channel states (Scenes 2-5): one table, applied discretely from one driver
+        // row = rail row centre in window-local px; sil / lec = x offset of silhouette / lectern (a different "shot")
+        var CUTS = [
+          { t: 1.2,  row: 96,  title: "SAEIMA",               sub: "PLENARY SITTING", sil: 0,    lec: 0,    flags: 0 },
+          { t: 2.4,  row: 120, title: "CABINET OF MINISTERS", sub: "PRESS BRIEFING",  sil: 150,  lec: -170, flags: 0 },
+          { t: 3.5,  row: 145, title: "PRESIDENT OF LATVIA",  sub: "ADDRESS",         sil: 0,    lec: 0,    flags: 1 },
+          { t: 4.6,  row: 419, title: "SEIMAS",               sub: "LT // PARLIAMENT", sil: -160, lec: -160, flags: 0 },
+          { t: 5.05, row: 521, title: "RIIGIKOGU",            sub: "EE // PARLIAMENT", sil: 170,  lec: 170,  flags: 0 }
+        ];
+        // headline: hard-cut word build (discrete-text-sequence)
+        var HEAD = [
+          { t: 4.85, a: "WHO", b: "" },
+          { t: 5.0,  a: "WHO IS", b: "" },
+          { t: 5.2,  a: "WHO IS SPEAKING.", b: "" },
+          { t: 5.45, a: "WHO IS SPEAKING.", b: " RIGHT" },
+          { t: 5.6,  a: "WHO IS SPEAKING.", b: " RIGHT NOW." }
+        ];
+        var KICKER = "LIVE TV // 24 CHANNELS · LV LT EE";
+
+        function latest(seq, time) {
+          for (var i = seq.length - 1; i >= 0; i--) if (time >= seq[i].t) return i;
+          return -1;
+        }
+
+        var el = {
+          kicker: q(".f05-tv-kicker"), hl: q(".f05-tv-hl"), player: q(".f05-tv-player"), shot: q(".f05-tv-shot"),
+          sil: q(".f05-tv-sil"), lec: q(".f05-tv-lec"), flags: q(".f05-tv-flags"),
+          title: q(".f05-tv-l3-title"), sub: q(".f05-tv-l3-sub"),
+          glA: q(".f05-tv-gl-a"), glB: q(".f05-tv-gl-b"),
+          scrim: q(".f05-tv-head-scrim"), ha: q(".f05-tv-headline-a"), hb: q(".f05-tv-headline-b")
+        };
+
+        function apply(t) {
+          // kicker types on (smooth slice) during Scene 1
+          var kp = Math.min(1, Math.max(0, (t - 0.15) / 0.9));
+          el.kicker.textContent = KICKER.substring(0, Math.floor(kp * KICKER.length));
+
+          var i = latest(CUTS, t);
+          if (i < 0) {
+            el.hl.style.opacity = "0";
+            el.player.style.opacity = "0";
+          } else {
+            var c = CUTS[i];
+            el.hl.style.opacity = "1";
+            el.hl.style.transform = "translateY(" + (c.row - 12) + "px)";
+            el.player.style.opacity = "1";
+            el.sil.style.transform = "translateX(" + c.sil + "px)";
+            el.lec.style.transform = "translateX(" + c.lec + "px)";
+            el.flags.style.opacity = c.flags ? "1" : "0";
+            el.title.textContent = c.title;
+            el.sub.textContent = c.sub;
+
+            // 2-frame horizontal glitch slice on each cut, then clean
+            var dt = t - c.t;
+            var phase = dt < 0.03 ? 1 : dt < 0.065 ? 2 : 0;
+            if (phase === 1) {
+              el.shot.style.clipPath = "inset(0 0 56% 0)";
+              el.shot.style.transform = "translateX(26px)";
+            } else if (phase === 2) {
+              el.shot.style.clipPath = "inset(37% 0 0 0)";
+              el.shot.style.transform = "translateX(-16px)";
+            } else {
+              el.shot.style.clipPath = "none";
+              el.shot.style.transform = "none";
+            }
+            el.glA.style.opacity = phase ? "0.8" : "0";
+            el.glB.style.opacity = phase ? "0.45" : "0";
+            el.glA.style.top = (phase === 1 ? 268 : 226) + (i * 13) % 40 + "px";
+            el.glA.style.height = (phase === 1 ? 3 : 2) + "px";
+            el.glB.style.top = (phase === 1 ? 120 : 430) + (i * 29) % 60 + "px";
+            el.glB.style.height = (phase === 1 ? 10 : 6) + "px";
+          }
+
+          var h = latest(HEAD, t);
+          el.scrim.style.opacity = h < 0 ? "0" : "1";
+          el.ha.textContent = h < 0 ? "" : HEAD[h].a;
+          el.hb.textContent = h < 0 ? "" : HEAD[h].b;
+        }
+
+        var driver = { t: 0 };
+        tl.to(driver, { t: D, duration: D, ease: "none", onUpdate: function () { apply(driver.t); } }, 0);
+        apply(0);
+      })();
+    </script>
+  </div>
+</template>

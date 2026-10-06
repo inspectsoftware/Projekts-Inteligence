@@ -33,19 +33,27 @@ const TYPE_LABEL: Record<ShipType, string> = {
   other: 'Vessel',
 }
 
-const SANCTIONED: Color = [255, 77, 94]
+const LISTED: Color = [255, 77, 94]
 const LABEL_ZOOM = 8
 
 const isSanctioned = (ship: Ship) => (ship.flags & Flag.SANCTIONED) !== 0
+const isShadowFleet = (ship: Ship) => (ship.flags & Flag.SHADOW_FLEET) !== 0
+/** Worth a second look wherever it is: drawn larger, and named at every zoom. */
+const isNotable = (ship: Ship) => (ship.flags & (Flag.SANCTIONED | Flag.SHADOW_FLEET)) !== 0 || ship.props.service !== null
 
 function describe(entity: Entity, now: number): InspectorModel {
   const ship = entity as Ship
   const { props } = ship
   const badges: InspectorModel['badges'] = []
   if (isSanctioned(ship)) badges.push({ text: 'On a sanctions list', tone: 'danger' })
+  if (isShadowFleet(ship)) badges.push({ text: 'Shadow fleet', tone: 'warn' })
+  if (props.service === 'navy') badges.push({ text: 'Navy', tone: 'mil' })
+  if (props.service === 'government') badges.push({ text: 'Government vessel', tone: 'mil' })
   if (props.status) badges.push({ text: props.status, tone: 'info' })
 
   const rows: InspectorModel['rows'] = [{ label: 'Type', value: TYPE_LABEL[props.type] }]
+  // Shown beside the name the ship itself broadcasts, so a stale list entry gives itself away.
+  if (props.listedAs) rows.push({ label: 'Navy list (Wikidata)', value: props.listedAs })
   if (props.flagState) rows.push({ label: 'Flag', value: props.flagState })
   if (props.destination) rows.push({ label: 'Destination', value: props.destination })
   rows.push({ label: 'Speed', value: `${((ship.spd ?? 0) / KNOTS_TO_MS).toFixed(1)} kn` })
@@ -76,7 +84,7 @@ export const shipsLayer: LayerDef = {
   id: 'ships',
   group: 'sea',
   label: 'Ships',
-  hint: 'Vessels broadcasting AIS. Without an AISStream key only the northern approaches are covered (open Finnish data); with one, all Latvian waters',
+  hint: 'Vessels broadcasting AIS, with navy, government, sanctioned and shadow-fleet vessels marked. Without an AISStream key only the northern approaches are covered (open Finnish data); with one, all Latvian waters',
   defaultOn: true,
   swatch: '#7ed6aa',
   feeds: ['ships'],
@@ -86,7 +94,10 @@ export const shipsLayer: LayerDef = {
   stats(entities) {
     const ships = entities as Ship[]
     return [
+      { label: 'navy', value: ships.filter((ship) => ship.props.service === 'navy').length, tone: 'mil' },
+      { label: 'government', value: ships.filter((ship) => ship.props.service === 'government').length, tone: 'mil' },
       { label: 'sanctioned', value: ships.filter(isSanctioned).length, tone: 'danger' },
+      { label: 'shadow fleet', value: ships.filter(isShadowFleet).length, tone: 'warn' },
       { label: 'tankers', value: ships.filter((ship) => ship.props.type === 'tanker').length, tone: 'info' },
     ]
   },
@@ -99,10 +110,11 @@ export const shipsLayer: LayerDef = {
     const highlight = `${selectedId}|${hoveredId}`
     const colorOf = (ship: Ship): Color => {
       if (ship.id === selectedId || ship.id === hoveredId) return SELECTED
-      return isSanctioned(ship) ? SANCTIONED : TYPE_COLOR[ship.props.type]
+      if (isSanctioned(ship) || isShadowFleet(ship)) return LISTED
+      // A warship that reports no type is still drawn as one.
+      return TYPE_COLOR[ship.props.service ? 'military' : ship.props.type]
     }
-    const labelled = (ship: Ship) =>
-      zoom >= LABEL_ZOOM || isSanctioned(ship) || ship.id === selectedId || ship.id === hoveredId
+    const labelled = (ship: Ship) => zoom >= LABEL_ZOOM || isNotable(ship) || ship.id === selectedId || ship.id === hoveredId
 
     const icons = {
       data,
@@ -116,7 +128,7 @@ export const shipsLayer: LayerDef = {
       billboard: false,
       updateTriggers: { getPosition: now },
     }
-    const sizeOf = (ship: Ship) => (isSanctioned(ship) ? 24 : 18)
+    const sizeOf = (ship: Ship) => (isNotable(ship) ? 24 : 18)
 
     return [
       new PathLayer<Ship>({

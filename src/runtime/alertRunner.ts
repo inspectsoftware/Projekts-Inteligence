@@ -23,6 +23,8 @@ export function startAlerts(): () => void {
       now: serverNow(),
       entities: getEntities,
       warnings: () => getPayload('warnings', 'warnings')?.warnings ?? [],
+      news: () => getPayload('news', 'news')?.items ?? [],
+      zones: () => [...(getPayload('navwarn', 'zones')?.zones ?? []), ...(getPayload('airspace', 'zones')?.zones ?? [])],
       insideLatvia,
     })
     if (result.changed) useAlerts.getState().setActive(result.alerts)

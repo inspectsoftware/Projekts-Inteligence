@@ -1,14 +1,16 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson'
-import { Map as MapLibreMap, setWorkerUrl } from 'maplibre-gl'
+import { Map as MapLibreMap, addProtocol, setWorkerUrl } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef } from 'react'
 import { setBorder } from '../runtime/border'
 import { useUi } from '../state/ui'
 import { finishBoot } from '../ui/boot'
-import { applyBaseMode } from './baseMode'
+import { applyBaseMode, applyZoomCeiling, rasterId } from './baseMode'
+import { ORTHO_LITHUANIA, clampZoom, zoomCeiling } from './basemaps'
 import { INTRO_START, lockToRegion, runIntro } from './camera'
 import { setMap, setMapFailure, useMap, useMapFailure } from './instance'
+import { CLIP_SCHEME, TRIM_SCHEME, loadEstoniaTile, loadLatviaTile, setClipBorder } from './orthoClip'
 import { startScene } from './scene'
 import { addSpotlight } from './spotlight'
 import { buildStyle } from './style'
@@ -16,6 +18,10 @@ import { readUrlView, writeUrlView } from './urlView'
 
 // MapLibre 6 is ESM-only: under a bundler its worker has to be given as a URL.
 setWorkerUrl(workerUrl)
+// Latvia's orthophoto tiles are cut to the national border on their way in, and Estonia's lose
+// the navy their service fills the edge of its coverage with.
+addProtocol(CLIP_SCHEME, loadLatviaTile)
+addProtocol(TRIM_SCHEME, loadEstoniaTile)
 
 export function MapView() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -24,19 +30,30 @@ export function MapView() {
   const map = useMap()
   const error = useMapFailure()
 
+  // Ahead of the effect that owns the map: cleanups run in this order, and this one may still
+  // have a flight to stop, which a map already removed must not be asked to do.
+  useEffect(() => {
+    if (!map) return
+    applyBaseMode(map, base)
+    return applyZoomCeiling(map, zoomCeiling(base))
+  }, [map, base])
+
   useEffect(() => {
     // Someone following a shared link wants that view, not the opening fly-in.
     const urlView = readUrlView()
+    // The base the visitor left on decides how deep the map may open; a link from deeper is pulled back.
+    const startBase = useUi.getState().base
     let created: MapLibreMap
     try {
       created = new MapLibreMap({
         container: containerRef.current!,
         style: buildStyle(),
         center: urlView?.center ?? INTRO_START.center,
-        zoom: urlView?.zoom ?? INTRO_START.zoom,
+        zoom: clampZoom(urlView?.zoom ?? INTRO_START.zoom, startBase),
         bearing: urlView?.bearing ?? 0,
         pitch: urlView?.pitch ?? 0,
         minZoom: 3,
+        maxZoom: zoomCeiling(startBase),
         maxPitch: 70,
         attributionControl: false,
         renderWorldCopies: false,
@@ -48,6 +65,12 @@ export function MapView() {
       finishBoot()
       return () => setMapFailure(null)
     }
+
+    // Lithuania's service answers 500 for tiles inside its box but past its border, where the layers
+    // below simply show through. That is not worth a console line a tile; everything else still is.
+    created.on('error', (event) => {
+      if ((event as { sourceId?: string }).sourceId !== rasterId(ORTHO_LITHUANIA.id)) console.error(event.error)
+    })
 
     let cancelled = false
     let stopScene: (() => void) | undefined
@@ -87,6 +110,7 @@ export function MapView() {
           if (cancelled) return
           addSpotlight(created, border)
           setBorder(border)
+          setClipBorder(border)
         } catch (err) {
           console.error('[map] border overlay failed to load:', err)
         }
@@ -113,10 +137,6 @@ export function MapView() {
       created.remove()
     }
   }, [])
-
-  useEffect(() => {
-    if (map) applyBaseMode(map, base)
-  }, [map, base])
 
   return (
     <div className="map-stage" data-vision={vision}>

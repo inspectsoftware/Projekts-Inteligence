@@ -72,7 +72,7 @@ export function LayerTree() {
   const feeds = useFeeds((s) => s.feeds)
 
   return (
-    <div className="grid gap-2.5">
+    <div className="grid gap-2.5 p-3">
       {GROUP_ORDER.map((group) => {
         const layers = LAYERS.filter((layer) => layer.group === group)
         if (layers.length === 0) return null

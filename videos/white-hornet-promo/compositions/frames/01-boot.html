@@ -1,0 +1,208 @@
+<template>
+  <div data-hf-id="hf-o3nj" id="root" data-composition-id="01-boot" data-width="1920" data-height="1080" data-start="0" data-duration="4.4">
+    <style>
+      @font-face{
+        font-family: 'Inter Variable';
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 900;
+        src: url("assets/fonts/captured-inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+        unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+      }
+      @font-face{
+        font-family: 'Inter Variable';
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 900;
+        src: url("assets/fonts/captured-inter-latin-wght-normal.woff2") format("woff2-variations");
+        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+      }
+      @font-face{
+        font-family: 'JetBrains Mono Variable';
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 800;
+        src: url("assets/fonts/captured-jetbrains-mono-latin-ext-wght-normal.woff2") format("woff2-variations");
+        unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+      }
+      @font-face{
+        font-family: 'JetBrains Mono Variable';
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 800;
+        src: url("assets/fonts/captured-jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+      }
+
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+
+      /* ids start with a digit, so attribute selectors instead of #01-… */
+      [id="01-boot-bg"], [id="01-boot-stage"] { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      [id="01-boot-bg"] {
+        background-color: #04070a;
+        background-image:
+          linear-gradient(to right, rgba(27,42,53,0.5) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(27,42,53,0.5) 1px, transparent 1px);
+        background-size: 80px 80px;
+      }
+
+      /* boot log: left-aligned block at (560, 400) */
+      [id="01-boot-log"] {
+        position: absolute; left: 560px; top: 400px; width: 620px;
+        transform-origin: 0 0;
+        font-family: 'JetBrains Mono Variable', monospace; font-weight: 500; font-size: 28px; line-height: 50px;
+        letter-spacing: 0.14em; text-transform: uppercase; color: #d5e1ea; white-space: pre;
+      }
+      [id="01-boot-log"] div:not([id]) { height: 50px; white-space: pre; }
+      [id="01-boot-log"] span { white-space: pre; }
+      [id="01-boot-log"] span[data-k="caret"] {
+        display: inline-block; width: 16px; height: 30px; background: #4fd6ff; vertical-align: -5px;
+      }
+      [id="01-boot-sweep"] {
+        position: absolute; left: 0; top: 172px; width: 620px; height: 2px; background: #4fd6ff;
+        transform-origin: 0 50%;
+      }
+
+      /* corner HUD brackets: frame (64,64)–(1856,880), arms 56 → path length 112 */
+      [id="01-boot-hud"] { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+      [id="01-boot-hud"] path { fill: none; stroke: #4fd6ff; stroke-width: 2; stroke-dasharray: 112; }
+
+      /* lockup: column centred inside the bracket frame, all above y=900 */
+      [id="01-boot-lockup"] {
+        position: absolute; left: 0; top: 64px; width: 1920px; height: 816px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+      }
+      [id="01-boot-mark"] { width: 120px; height: 120px; margin-bottom: 34px; }
+      [id="01-boot-word"] {
+        font-family: 'Inter Variable', sans-serif; font-weight: 800; font-size: 150px; line-height: 150px; height: 150px;
+        color: #d5e1ea; white-space: nowrap; perspective: 1500px;
+      }
+      /* tracking 0.18em split as symmetric margins so the word stays optically centred */
+      [id="01-boot-word"] > span {
+        display: inline-block; position: relative; margin: 0 0.09em;
+        transform-origin: bottom; transform-style: preserve-3d;
+      }
+      [id="01-boot-word"] > span[data-gap] { width: 0.26em; }
+      [id="01-boot-word"] i { font-style: normal; visibility: hidden; }  /* ghost: reserves the real glyph's width */
+      [id="01-boot-word"] b { font-weight: 800; position: absolute; left: -1em; right: -1em; top: 0; text-align: center; }
+      [id="01-boot-sub"] {
+        margin-top: 34px;
+        font-family: 'JetBrains Mono Variable', monospace; font-weight: 500; font-size: 28px; line-height: 34px;
+        letter-spacing: 0.3em; text-indent: 0.3em; text-transform: uppercase; color: #8499a8; white-space: nowrap;
+      }
+    </style>
+
+    <div data-hf-id="hf-t4xo" id="01-boot-bg" class="clip" data-start="0" data-duration="4.4" data-track-index="0"></div>
+
+    <div data-hf-id="hf-inje" id="01-boot-stage" class="clip" data-start="0" data-duration="4.4" data-track-index="1">
+      <div data-hf-id="hf-4xj8" id="01-boot-log">
+        <div data-hf-id="hf-yeow"><span data-hf-id="hf-uuwz" data-k="label"></span><span data-hf-id="hf-i36h" data-k="status"></span><span data-hf-id="hf-r358" data-k="caret"></span></div>
+        <div data-hf-id="hf-y7yw"><span data-hf-id="hf-2a9v" data-k="label"></span><span data-hf-id="hf-ner1" data-k="status"></span><span data-hf-id="hf-9078" data-k="caret"></span></div>
+        <div data-hf-id="hf-x11t"><span data-hf-id="hf-1vyu" data-k="label"></span><span data-hf-id="hf-olo4" data-k="status"></span><span data-hf-id="hf-7ta5" data-k="caret"></span></div>
+        <div data-hf-id="hf-23ta" id="01-boot-sweep"></div>
+      </div>
+
+      <svg data-hf-id="hf-rfu6" id="01-boot-hud" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+        <path data-hf-id="hf-j1yx" d="M64 120 L64 64 L120 64" />
+        <path data-hf-id="hf-lp9n" d="M1800 64 L1856 64 L1856 120" />
+        <path data-hf-id="hf-7sv6" d="M1856 824 L1856 880 L1800 880" />
+        <path data-hf-id="hf-l6ng" d="M120 880 L64 880 L64 824" />
+      </svg>
+
+      <div data-hf-id="hf-7d0k" id="01-boot-lockup">
+        <img data-hf-id="hf-skqd" id="01-boot-mark" src="assets/mark.svg" alt="">
+        <div data-hf-id="hf-nfre" id="01-boot-word" data-target="WHITE HORNET"></div>
+        <div data-hf-id="hf-3vpg" id="01-boot-sub">Latvia // Intelligence Panel</div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        var $ = function (id) { return document.getElementById("01-boot-" + id); };
+        var tl = gsap.timeline({ paused: true });
+        window.__timelines = window.__timelines || {};
+        window.__timelines["01-boot"] = tl;
+
+        var DUR = 4, CYAN = "#4fd6ff", DIM = "#8499a8", GREEN = "#3ddc97";
+
+        // ---- Scene 1–2: boot log, typed behind a block caret (pure function of time) ----
+        // t0–t1: the line types; done: its status word flips to `fin`.
+        var LINES = [
+          { label: "UPLINK ........ ", pending: "ESTABLISHING", t0: 0.10, t1: 0.62, done: 0.68, fin: "OK", finColor: GREEN },
+          { label: "BASEMAP ....... ", pending: "STANDBY",      t0: 0.68, t1: 1.14, done: 1.20, fin: "OK", finColor: GREEN },
+          { label: "FEEDS ......... ", pending: "STANDBY",      t0: 1.20, t1: 1.66, done: 2.45, fin: "24 FEEDS LIVE", finColor: CYAN }
+        ];
+        var TYPING_GRACE = 0.12, BLINK_PERIOD = 0.5; // 8 whole blink cycles in 4s
+        var rows = $("log").querySelectorAll("div:not([id])");
+        LINES.forEach(function (l, i) {
+          l.full = l.label + l.pending;
+          l.labelEl = rows[i].querySelector('[data-k="label"]');
+          l.statusEl = rows[i].querySelector('[data-k="status"]');
+          l.caretEl = rows[i].querySelector('[data-k="caret"]');
+        });
+
+        // ---- Scene 3: wordmark, per-char 3D flip-decode ----
+        var word = $("word");
+        var GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var FLIP_START = 2.7, FLIP_DUR = 0.5, CHAR_STAGGER = 0.035, REVEAL = 0.65, FLICKER = 0.1;
+        var chars = [];
+        word.dataset.target.split("").forEach(function (ch, i) {
+          var span = document.createElement("span");
+          if (ch === " ") { span.setAttribute("data-gap", ""); word.appendChild(span); return; }
+          var ghost = document.createElement("i"); ghost.textContent = ch;
+          var live = document.createElement("b"); live.textContent = ch;
+          span.appendChild(ghost); span.appendChild(live); word.appendChild(span);
+          chars.push({ el: span, live: live, target: ch, i: i });
+        });
+        function pseudoGlyph(seed) {
+          var h = ((seed * 9301 + 49297) % 233280) / 233280;
+          return GLYPHS[Math.floor(h * GLYPHS.length)];
+        }
+
+        function render(t) {
+          var active = 0;
+          LINES.forEach(function (l, i) { if (t >= l.t0) active = i; });
+          LINES.forEach(function (l, i) {
+            var n = Math.max(0, Math.min(l.full.length, Math.floor(((t - l.t0) / (l.t1 - l.t0)) * l.full.length)));
+            var isDone = t >= l.done;
+            l.labelEl.textContent = l.full.slice(0, Math.min(n, l.label.length));
+            l.statusEl.textContent = isDone ? l.fin : l.full.slice(l.label.length, n);
+            l.statusEl.style.color = isDone ? l.finColor : DIM;
+            var c = l.caretEl.style;
+            c.display = i === active ? "inline-block" : "none";
+            // caret colour follows the segment being typed: cyan on the label, dim on the pending status
+            c.background = n > l.label.length && !isDone ? DIM : CYAN;
+            var typing = t >= l.t0 && t < l.t1 + TYPING_GRACE;
+            c.opacity = typing || Math.sin((t / BLINK_PERIOD) * Math.PI * 2) > 0 ? "1" : "0";
+          });
+
+          chars.forEach(function (c) {
+            var local = t - (FLIP_START + c.i * CHAR_STAGGER);
+            var x = Math.max(0, Math.min(1, local / FLIP_DUR));
+            var p = 1 - (1 - x) * (1 - x); // power2.out
+            c.live.textContent = p < REVEAL ? pseudoGlyph(c.i * 1000 + Math.floor(Math.max(0, local) / FLICKER)) : c.target;
+            c.el.style.transform = "rotateX(" + (90 - p * 90) + "deg)";
+            c.el.style.opacity = String(Math.min(1, p * 2));
+          });
+        }
+
+        var driver = { t: 0 };
+        tl.to(driver, { t: DUR, duration: DUR, ease: "none", onUpdate: function () { render(driver.t); } }, 0);
+        render(0);
+
+        // Scene 2 (1.8–2.6): one finite cyan sweep under the log; status flips at 2.45 via render()
+        tl.fromTo($("sweep"), { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power2.inOut" }, 1.85);
+
+        // Scene 3 (2.6–4.0): log dims to 30% and docks into the top-left bracket, clearing the centre
+        tl.to($("log"), { opacity: 0.3, x: -440, y: -290, scale: 0.7, duration: 0.5, ease: "power2.inOut" }, 2.6);
+        tl.fromTo($("mark"), { opacity: 0, y: 14, scale: 0.92 }, { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "power2.out" }, 2.65);
+        $("hud").querySelectorAll("path").forEach(function (p, i) {
+          tl.fromTo(p, { strokeDashoffset: 112 }, { strokeDashoffset: 0, duration: 0.35, ease: "power2.out" }, 2.85 + i * 0.12);
+        });
+        tl.fromTo($("sub"), { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3, ease: "power1.out" }, 3.1);
+        // everything is landed by ~3.6s; holds still to the cut (caret keeps its idle blink)
+      })();
+    </script>
+  </div>
+</template>

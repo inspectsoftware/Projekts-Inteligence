@@ -190,11 +190,16 @@ export class FeedCache {
           now: startedAt,
           env: this.env,
           http: createUpstream(def.origins, controller.signal, this.fetchImpl),
-          feed: async (id) => {
+          feed: async (id, { fresh } = {}) => {
             const source = this.resolve?.(id)
             if (!source) throw new UpstreamError('network', `The ${id} feed is not available here`)
-            const { snapshot } = await this.get(source)
-            return { id, updatedAt: snapshot.updatedAt, payload: snapshot.payload }
+            let hit = await this.get(source)
+            if (fresh && hit.stale) {
+              // A stale copy means get() has a refresh running, unless the source is backing off.
+              await this.entry(id).inFlight
+              hit = await this.get(source)
+            }
+            return { id, updatedAt: hit.snapshot.updatedAt, payload: hit.snapshot.payload }
           },
         })
         entry.snapshot = new Snapshot(def.id, payload, this.now(), this.countFor(def, payload))

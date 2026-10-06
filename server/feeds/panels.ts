@@ -1,10 +1,4 @@
-import {
-  type ChartSeries,
-  type IodaSignals,
-  normaliseEnergy,
-  normaliseInternet,
-  parseRss,
-} from '../../shared/adapters/panels'
+import { type ChartSeries, type IodaSignals, normaliseEnergy, normaliseInternet } from '../../shared/adapters/panels'
 import { type EurdepFeatures, type RawGauge, normaliseGauges, normaliseRadiation } from '../../shared/adapters/sensors'
 import type { FeedDef } from './types'
 
@@ -55,23 +49,6 @@ export const internetFeed: FeedDef = {
       `https://api.ioda.inetintel.cc.gatech.edu/v2/signals/raw/country/LV?from=${until - 24 * 3600}&until=${until}`,
     )
     return { shape: 'internet', signals: normaliseInternet(ioda) }
-  },
-}
-
-const LSM = 'https://eng.lsm.lv'
-
-/** Headlines from the public broadcaster's English service: titles and links only. */
-export const newsFeed: FeedDef = {
-  id: 'news',
-  title: 'News',
-  origins: [LSM],
-  ttlMs: 10 * MINUTE,
-  staleMs: 12 * HOUR,
-  timeoutMs: 20_000,
-  persist: true,
-  attribution: [{ label: 'LSM (Latvian Public Media)', href: LSM }],
-  async load({ http }) {
-    return { shape: 'news', items: parseRss(await http.text(`${LSM}/rss/`, { maxBytes: 2 * 1024 * 1024 }), `${LSM}/`) }
   },
 }
 

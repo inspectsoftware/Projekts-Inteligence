@@ -62,6 +62,7 @@ describe('road events', () => {
       now: T0,
       entities: (slot) => (slot === 'roads' ? normaliseRoadEvents([accident, roadworks], T0) : []),
       warnings: () => [],
+      news: () => [],
       insideLatvia: () => true,
     })
     expect(alerts).toMatchObject([{ title: 'Road accident: A7 (36.793km)', detail: 'lanes blocked', entityId: 'road-event:u21411' }])

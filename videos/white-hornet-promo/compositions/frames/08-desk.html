@@ -1,0 +1,138 @@
+<template>
+  <div data-hf-id="hf-257f" id="root" data-composition-id="08-desk" data-width="1920" data-height="1080" data-start="0" data-duration="4.4">
+    <style>
+      @font-face{
+        font-family: 'JetBrains Mono Variable';
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 800;
+        src: url("assets/fonts/captured-jetbrains-mono-latin-ext-wght-normal.woff2") format("woff2-variations");
+        unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+      }
+      @font-face{
+        font-family: 'JetBrains Mono Variable';
+        font-style: normal;
+        font-display: swap;
+        font-weight: 100 800;
+        src: url("assets/fonts/captured-jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+        unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+      }
+
+      /* class names start with a digit (frame_id prefix), so select via [class~=] */
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+      #root [class~="08-desk-stage"] {
+        position: absolute; inset: 0; width: 1920px; height: 1080px;
+        overflow: hidden; background: #04070a;
+      }
+      /* desk = plate + windows; the layer that defocuses when the palette opens */
+      #root [class~="08-desk-desk"] {
+        position: absolute; inset: 0;
+        --dof: 0px; filter: blur(var(--dof)); will-change: filter;
+      }
+      #root [class~="08-desk-cam"] {
+        position: absolute; inset: 0;
+        transform-origin: 50% 50%; will-change: transform;
+      }
+      #root [class~="08-desk-cam"] img { display: block; width: 1920px; height: 1080px; }
+      #root [class~="08-desk-win"] { position: absolute; display: block; }
+      #root [class~="08-desk-guide"] { position: absolute; background: #4fd6ff; opacity: 0; }
+      #root [class~="08-desk-palette"] {
+        position: absolute; left: 687px; top: 129px; width: 546px; height: 426px; z-index: 2;
+      }
+      #root [class~="08-desk-palette"] img { display: block; width: 546px; height: 426px; }
+      #root [class~="08-desk-bar"] {
+        position: absolute; left: 1px; top: 50px; width: 544px; height: 31px;
+        box-sizing: border-box; border-left: 2px solid #4fd6ff;
+        background: rgba(79,214,255,0.16); opacity: 0;
+      }
+      #root [class~="08-desk-caret"] {
+        position: absolute; left: 57px; top: 15px; width: 9px; height: 19px; background: #4fd6ff;
+      }
+      #root [class~="08-desk-cap"] {
+        position: absolute; left: 0; right: 0; top: 584px; margin: 0 auto;
+        width: fit-content; height: 52px; padding: 0 28px; z-index: 2;
+        display: flex; align-items: center; white-space: pre;
+        background: rgba(10,16,22,0.85); border: 1px solid #1b2a35;
+        font-family: 'JetBrains Mono Variable', monospace; font-weight: 500; font-size: 24px;
+        letter-spacing: 0.2em; text-transform: uppercase; color: #d5e1ea;
+      }
+      #root [class~="08-desk-cap"] b { font-weight: 500; color: #4fd6ff; }
+    </style>
+
+    <div data-hf-id="hf-kr1f" class="clip 08-desk-stage" data-start="0" data-duration="4.4" data-track-index="0">
+      <div data-hf-id="hf-iwkg" class="08-desk-desk">
+        <div data-hf-id="hf-vldg" class="08-desk-cam"><img data-hf-id="hf-wn0s" src="assets/ui-bare.png" alt=""></div>
+
+        <img data-hf-id="hf-6uu9" class="08-desk-win" data-dx="-40" data-dy="0" style="left:57px;top:52px;width:240px;height:420px" src="assets/win-layers.png" alt="">
+        <img data-hf-id="hf-zu5l" class="08-desk-win" data-dx="0" data-dy="-40" style="left:752px;top:52px;width:417px;height:122px" src="assets/win-alerts.png" alt="">
+        <img data-hf-id="hf-4kyh" class="08-desk-win" data-dx="40" data-dy="0" style="left:1578px;top:52px;width:288px;height:220px" src="assets/win-situation.png" alt="">
+        <img data-hf-id="hf-bpty" class="08-desk-win" data-dx="-40" data-dy="0" style="left:57px;top:480px;width:240px;height:190px" src="assets/win-display.png" alt="">
+        <img data-hf-id="hf-qjut" class="08-desk-win" data-dx="40" data-dy="0" style="left:1568px;top:644px;width:341px;height:301px" src="assets/win-intel.png" alt="">
+
+        <!-- 1px snap guides along each window's aligned edge, same order as the windows -->
+        <div data-hf-id="hf-q2ne" class="08-desk-guide" style="left:56px;top:52px;width:1px;height:420px"></div>
+        <div data-hf-id="hf-74lk" class="08-desk-guide" style="left:752px;top:51px;width:417px;height:1px"></div>
+        <div data-hf-id="hf-ycle" class="08-desk-guide" style="left:1866px;top:52px;width:1px;height:220px"></div>
+        <div data-hf-id="hf-t7zv" class="08-desk-guide" style="left:56px;top:480px;width:1px;height:190px"></div>
+        <div data-hf-id="hf-415f" class="08-desk-guide" style="left:1909px;top:644px;width:1px;height:301px"></div>
+      </div>
+
+      <div data-hf-id="hf-dhq0" class="08-desk-palette">
+        <img data-hf-id="hf-9k3j" src="assets/win-palette.png" alt="">
+        <div data-hf-id="hf-siy6" class="08-desk-bar"></div>
+        <div data-hf-id="hf-dvd4" class="08-desk-caret"></div>
+      </div>
+
+      <div data-hf-id="hf-1sa5" class="08-desk-cap"><b data-hf-id="hf-ni70">CTRL + K</b>  ·  FIND ANYTHING</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script>
+      (function () {
+        var root = document.querySelector('[data-composition-id="08-desk"]');
+        var q = function (n) { return root.querySelector('[class~="08-desk-' + n + '"]'); };
+        var qa = function (n) { return root.querySelectorAll('[class~="08-desk-' + n + '"]'); };
+
+        var tl = gsap.timeline({ paused: true });
+        window.__timelines = window.__timelines || {};
+        window.__timelines["08-desk"] = tl;
+
+        // Scene 1 (0–1s): the ONE decelerating zoom-out, then the camera is locked.
+        tl.fromTo(q("cam"), { scale: 1.6 }, { scale: 1, duration: 1, ease: "expo.out" }, 0);
+
+        // Scene 2 (1.0–2.4s): windows snap home one per beat, guide flashes on landing.
+        var wins = qa("win"), guides = qa("guide");
+        wins.forEach(function (w, i) {
+          var t = 1.0 + i * 0.27;
+          tl.fromTo(w,
+            { x: Number(w.dataset.dx), y: Number(w.dataset.dy), opacity: 0 },
+            { x: 0, y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, t);
+          tl.set(guides[i], { opacity: 1 }, t + 0.16);
+          tl.to(guides[i], { opacity: 0, duration: 0.2, ease: "power1.in" }, t + 0.26);
+        });
+
+        // Scene 3 (2.4–4s): desk defocuses, palette drops in and searches.
+        tl.to(q("desk"), { "--dof": "3px", opacity: 0.45, duration: 0.5, ease: "power2.inOut" }, 2.4);
+        tl.fromTo(q("palette"), { y: -16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35, ease: "power3.out" }, 2.5);
+
+        // Two finite caret blinks: cos gate starts and ends visible (whole cycles).
+        var caret = q("caret"), blink = { p: 0 };
+        tl.to(blink, {
+          p: Math.PI * 4, duration: 1.2, ease: "none",
+          onUpdate: function () { caret.style.opacity = Math.cos(blink.p) >= 0 ? "1" : "0"; }
+        }, 2.8);
+
+        // Highlight steps down the first three rows (31px rows) — instant steps.
+        var bar = q("bar");
+        tl.set(bar, { opacity: 1, y: 0 }, 2.95);
+        tl.set(bar, { y: 31 }, 3.25);
+        tl.set(bar, { y: 62 }, 3.55);
+
+        tl.fromTo(q("cap"), { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: "power3.out" }, 3.1);
+
+        // pad the timeline to the full 4s so the hold is part of it
+        tl.set({}, {}, 4);
+      })();
+    </script>
+  </div>
+</template>

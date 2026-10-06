@@ -1,24 +1,14 @@
-import { type ReactNode, useEffect, useState, useSyncExternalStore } from 'react'
-import type { FeedId, FeedPayload } from '../../shared/feeds'
+import { type ReactNode, useState } from 'react'
 import { formatAge, formatInt } from '../lib/format'
 import { serverNow } from '../runtime/clock'
-import { getPayload, subscribeEntities } from '../runtime/entityStore'
-import { acquireFeed } from '../runtime/poller'
-import { useSelection } from '../state/selection'
-import { Panel, Segmented } from './kit'
+import { useFeed } from '../runtime/useFeed'
+import { Segmented } from './kit'
 
 const TABS = [
   { id: 'power', label: 'Power', hint: 'Electricity: load, generation, exchange and price' },
   { id: 'net', label: 'Internet', hint: "How much of the country's internet is reachable" },
-  { id: 'news', label: 'News', hint: 'Latest headlines from the public broadcaster' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
-
-/** Polls a feed for as long as the component showing it is mounted. */
-function useFeed<S extends FeedPayload['shape']>(id: FeedId, shape: S) {
-  useEffect(() => acquireFeed(id), [id])
-  return useSyncExternalStore(subscribeEntities, () => getPayload(id, shape))
-}
 
 const TONE = { ok: 'text-ok', warn: 'text-warn', danger: 'text-danger', plain: 'text-fg' }
 
@@ -89,54 +79,19 @@ function Internet() {
   )
 }
 
-function News() {
-  const news = useFeed('news', 'news')
-  if (!news) return <Waiting />
-  const now = serverNow()
-  return (
-    <ul className="grid gap-2">
-      {news.items.map((item) => (
-        <li key={item.link}>
-          <a href={item.link} target="_blank" rel="noreferrer noopener" className="text-fg hover:text-accent">
-            {item.title}
-          </a>
-          <span className="ml-1.5 text-[10px] whitespace-nowrap text-fg-mute">{formatAge(now - item.at)}</span>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-/** The country at a glance, for what has no place on a map. Steps aside while something is selected. */
+/** The country at a glance, for what has no place on a map. The body of the Situation window. */
 export function StatusPanel() {
   const [tab, setTab] = useState<Tab>('power')
-  const [open, setOpen] = useState(true)
-  const inspecting = useSelection((s) => s.selectedId !== null || s.feature !== null)
-  if (inspecting) return null
 
   return (
-    <Panel className="absolute top-13 right-14 z-10 hidden max-h-[calc(100%-7.5rem)] w-72 flex-col font-mono md:flex">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen(!open)}
-        className="flex items-center justify-between px-3 py-2 text-[10px] tracking-[0.22em] text-fg-mute uppercase hover:text-fg"
-      >
-        Situation
-        <span aria-hidden="true">{open ? '−' : '+'}</span>
-      </button>
-      {open && (
-        <>
-          <div className="px-3">
-            <Segmented<Tab> label="Situation panel" value={tab} options={TABS} onChange={setTab} />
-          </div>
-          <div className="min-h-0 overflow-y-auto p-3 text-[11px]">
-            {tab === 'power' && <Power />}
-            {tab === 'net' && <Internet />}
-            {tab === 'news' && <News />}
-          </div>
-        </>
-      )}
-    </Panel>
+    <>
+      <div className="shrink-0 px-3 pt-3">
+        <Segmented<Tab> label="Situation panel" value={tab} options={TABS} onChange={setTab} />
+      </div>
+      <div className="min-h-0 overflow-y-auto p-3 text-[11px]">
+        {tab === 'power' && <Power />}
+        {tab === 'net' && <Internet />}
+      </div>
+    </>
   )
 }

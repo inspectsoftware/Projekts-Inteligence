@@ -1,10 +1,11 @@
-import { parseSanctionedVessels } from '../../shared/adapters/sanctions'
+import { parseVesselRisks } from '../../shared/adapters/sanctions'
 import {
   VesselTable,
   parseAisStreamMessage,
   parseDigitrafficLocations,
   parseDigitrafficVessels,
 } from '../../shared/adapters/ships'
+import { WARSHIPS } from '../../shared/data/warships'
 import type { BBox } from '../../shared/region'
 import { LazyStream } from '../core/stream'
 import type { FeedDef } from './types'
@@ -14,9 +15,11 @@ const HOUR = 60 * 60 * 1000
 /** Latvian waters and their approaches: the Gulf of Rīga, the Irbe Strait and the open coast. */
 const SEA_BBOX: BBox = [18.5, 55.3, 25.6, 59.7]
 
+const OPEN_SANCTIONS = { label: 'OpenSanctions (CC BY-NC)', href: 'https://www.opensanctions.org/datasets/maritime/' }
+
 /**
- * Vessels under sanctions, by IMO number and MMSI, from OpenSanctions' maritime list.
- * A 5 MB download reduced to two lists of numbers, refreshed daily and kept on disk.
+ * Vessels under sanctions or listed as shadow fleet, by IMO number and MMSI, from OpenSanctions'
+ * maritime list. A 5 MB download reduced to four lists of numbers, refreshed daily and kept on disk.
  */
 export const sanctionsFeed: FeedDef = {
   id: 'sanctions',
@@ -26,13 +29,13 @@ export const sanctionsFeed: FeedDef = {
   staleMs: 14 * 24 * HOUR,
   timeoutMs: 45_000,
   persist: true,
-  attribution: [{ label: 'OpenSanctions (CC BY-NC)', href: 'https://www.opensanctions.org/datasets/maritime/' }],
+  attribution: [OPEN_SANCTIONS],
   async load({ http }) {
     const csv = await http.text('https://data.opensanctions.org/datasets/latest/maritime/maritime.csv', {
       maxBytes: 16 * 1024 * 1024,
       timeoutMs: 40_000,
     })
-    return { shape: 'vessel-list', ...parseSanctionedVessels(csv) }
+    return { shape: 'vessel-list', ...parseVesselRisks(csv) }
   },
 }
 
@@ -96,6 +99,10 @@ export const shipsFeed: FeedDef = {
   attribution: [
     { label: 'Fintraffic / digitraffic.fi (CC BY 4.0)', href: 'https://www.digitraffic.fi/en/marine-traffic/' },
     { label: 'AISStream', href: 'https://aisstream.io' },
+    // What the ships are checked against: the sanctions lists, the navy list, the edge of Latvian waters.
+    OPEN_SANCTIONS,
+    { label: 'Wikidata (CC0)', href: 'https://www.wikidata.org' },
+    { label: 'Marine Regions (CC BY)', href: 'https://www.marineregions.org' },
   ],
   async load({ http, env, now, feed }) {
     apiKey = env[KEY_NAME] ?? ''
@@ -123,12 +130,17 @@ export const shipsFeed: FeedDef = {
     }
     table.prune(now)
 
+    // Without the list (or with a copy kept from before it carried the shadow fleet) nothing is flagged.
     const listed = await feed('sanctions').catch(() => null)
-    const sanctioned =
-      listed?.payload.shape === 'vessel-list'
-        ? { mmsi: new Set(listed.payload.mmsi), imo: new Set(listed.payload.imo) }
-        : { mmsi: new Set<number>(), imo: new Set<number>() }
+    const risks = listed?.payload.shape === 'vessel-list' ? listed.payload : null
 
-    return { shape: 'entities', entities: table.view(SEA_BBOX, sanctioned) }
+    return {
+      shape: 'entities',
+      entities: table.view(SEA_BBOX, {
+        sanctioned: { mmsi: new Set(risks?.mmsi), imo: new Set(risks?.imo) },
+        shadow: { mmsi: new Set(risks?.shadowMmsi), imo: new Set(risks?.shadowImo) },
+        warships: WARSHIPS,
+      }),
+    }
   },
 }

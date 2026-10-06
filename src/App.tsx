@@ -1,27 +1,22 @@
 import { MapView } from './map/MapView'
-import { AlertStack } from './ui/AlertStack'
 import { Attribution } from './ui/Attribution'
 import { CommandPalette } from './ui/CommandPalette'
+import { Dock } from './ui/Dock'
 import { Hud } from './ui/Hud'
-import { Inspector } from './ui/Inspector'
-import { LeftRail } from './ui/LeftRail'
 import { MapButtons } from './ui/MapButtons'
-import { RadarControl } from './ui/RadarControl'
-import { StatusPanel } from './ui/StatusPanel'
 import { TopBar } from './ui/TopBar'
+import { WindowLayer } from './ui/windows/WindowLayer'
 
 export default function App() {
   return (
     <div className="relative h-full w-full overflow-hidden">
       <MapView />
       <TopBar />
-      <LeftRail />
+      <Dock />
       <MapButtons />
-      <AlertStack />
-      <StatusPanel />
-      <Inspector />
-      <RadarControl />
       <Hud />
+      <WindowLayer />
+      {/* After the windows, so the credits the licences ask for are never covered by one. */}
       <Attribution />
       <CommandPalette />
     </div>

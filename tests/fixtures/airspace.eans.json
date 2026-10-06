@@ -1,0 +1,325 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       23.5027800003082,
+       58.9105600006085
+      ],
+      [
+       23.5180600000655,
+       58.9105600006594
+      ],
+      [
+       23.5194400005747,
+       58.8825000007603
+      ],
+      [
+       23.4975000006057,
+       58.882500001165
+      ],
+      [
+       23.5027800003082,
+       58.9105600006085
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "name": "A2858/26",
+    "message": "DANGER AREA EED5 (KILTSI) ACTIVATED FOR MILITARY EXERCISE. [Schedule: 01-04 07-11 14-18 21-25 28-31 0700-1800]",
+    "lower": "SFC",
+    "upper": "2100 FT AGL",
+    "zoneAuthority": [
+     {
+      "name": "EANS NOTAM PIB"
+     }
+    ],
+    "applicability": [
+     {
+      "permanent": "NO",
+      "startDateTime": "2026-10-01T07:00:00.000Z",
+      "endDateTime": "2026-10-31T18:00:00.000Z"
+     }
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       26.8094444445539,
+       59.0169444448255
+      ],
+      [
+       26.8413888895896,
+       59.0375000002056
+      ],
+      [
+       26.8561111116307,
+       59.0302777776891
+      ],
+      [
+       26.8194444438852,
+       59.0116666664493
+      ],
+      [
+       26.8094444445539,
+       59.0169444448255
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "name": "A2780/26",
+    "message": "DANGER AREA EED25 (MURU) ACTIVATED FOR FIRING. [Schedule: 05-11 15-18 20-24 0700-1900]",
+    "lower": "SFC",
+    "upper": "2200 FT AGL",
+    "zoneAuthority": [
+     {
+      "name": "EANS NOTAM PIB"
+     }
+    ],
+    "applicability": [
+     {
+      "permanent": "NO",
+      "startDateTime": "2026-10-05T07:00:00.000Z",
+      "endDateTime": "2026-10-24T19:00:00.000Z"
+     }
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       24.1574999992248,
+       59.330560000737
+      ],
+      [
+       24.2188899998722,
+       59.3244400012613
+      ],
+      [
+       24.2480564125687,
+       59.2936115261064
+      ],
+      [
+       24.2175006873656,
+       59.2863903044089
+      ],
+      [
+       24.1902799993773,
+       59.2966700005058
+      ],
+      [
+       24.1538900006612,
+       59.3211100010187
+      ],
+      [
+       24.1574999992248,
+       59.330560000737
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "name": "A2802/26",
+    "message": "DANGER AREA EED16 (KLOOGA 1) ACTIVATED. INFO ABOUT ACTIVATION AVAILABLE FROM +372 5555 0100. [Schedule: 01 0500-1759, 02 0600-1359, 03-04 06-07 12-13 0500-1359, 08\n0500-1359 1900-2359, 09 0000-1659, ",
+    "lower": "SFC",
+    "upper": "2100 FT AGL",
+    "zoneAuthority": [
+     {
+      "name": "EANS NOTAM PIB"
+     }
+    ],
+    "applicability": [
+     {
+      "permanent": "NO",
+      "startDateTime": "2026-10-01T05:00:00.000Z",
+      "endDateTime": "2026-10-13T13:59:00.000Z"
+     }
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       26.9197200006959,
+       58.2797200005332
+      ],
+      [
+       26.9536099995181,
+       58.2594400012929
+      ],
+      [
+       26.9377800002163,
+       58.252780000992
+      ],
+      [
+       26.903889999546,
+       58.2719400008978
+      ],
+      [
+       26.9197200006959,
+       58.2797200005332
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "name": "A2951/26",
+    "message": "DANGER AREA EED2 (UNIKULA) ACTIVATED. INFO ABOUT ACTIVATION AVAILABLE FROM: +372 5555 0100. AREA DEACTIVATION IS POSSIBLE BY ATS.",
+    "lower": "SFC",
+    "upper": "1900 FT AGL",
+    "zoneAuthority": [
+     {
+      "name": "EANS NOTAM PIB"
+     }
+    ],
+    "applicability": [
+     {
+      "permanent": "NO",
+      "startDateTime": "2026-10-06T10:42:00.000Z",
+      "endDateTime": "2026-10-06T15:59:00.000Z"
+     }
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       26.92777777777778,
+       59.36083333333333
+      ],
+      [
+       26.92777777777778,
+       59.362500000000004
+      ],
+      [
+       26.954444444444444,
+       59.36277777777778
+      ],
+      [
+       26.954722222222223,
+       59.36083333333333
+      ],
+      [
+       26.92777777777778,
+       59.36083333333333
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "name": "A2092/26",
+    "message": "TEMPORARY DANGER AREA EED2519B ESTABLISHED FOR SLACKLINE BETWEEN KIVIOLI TUHAMAGI AND KIVIOLI UUS TUHAMAGI WITHIN: 592139N 0265540E - 592145N 0265540E - 592146N 0265716E - 592139N 0265717E - 592139N ",
+    "lower": "SFC",
+    "upper": "450 FT AGL",
+    "zoneAuthority": [
+     {
+      "name": "EANS NOTAM PIB"
+     }
+    ],
+    "applicability": [
+     {
+      "permanent": "NO",
+      "startDateTime": "2026-07-30T07:47:00.000Z",
+      "endDateTime": "2026-10-30T10:00:00.000Z"
+     }
+    ]
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       25.783610000190723,
+       59.59528000011618
+      ],
+      [
+       25.77777280797817,
+       59.58250016428039
+      ],
+      [
+       25.771939999772776,
+       59.569719999897785
+      ],
+      [
+       25.79111187544273,
+       59.56639139216799
+      ],
+      [
+       25.810280000024726,
+       59.56305999974287
+      ],
+      [
+       25.82888840588989,
+       59.565976311625505
+      ],
+      [
+       25.847499999403766,
+       59.568889999940815
+      ],
+      [
+       25.83153679131427,
+       59.57549042129854
+      ],
+      [
+       25.81556738994443,
+       59.582088895909884
+      ],
+      [
+       25.799591793500642,
+       59.588685422580646
+      ],
+      [
+       25.783610000190723,
+       59.59528000011618
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "name": "EER56FAUNA",
+    "message": "You must have a permission from the Estonian Environmental Board. The written application must be sent to info@keskkonnaamet.ee.",
+    "lower": "SFC",
+    "upper": "120 M AGL",
+    "zoneAuthority": [
+     {
+      "name": "Environmental Board"
+     }
+    ],
+    "applicability": [
+     {
+      "permanent": "NO",
+      "startDateTime": "2026-04-01T00:00:00.000Z",
+      "endDateTime": "2026-11-30T00:00:00.000Z"
+     }
+    ]
+   }
+  }
+ ]
+}

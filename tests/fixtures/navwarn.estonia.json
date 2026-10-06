@@ -1,0 +1,165 @@
+{
+ "note": "Cut from the Estonian Transport Administration navigational warning layers 7 (points) and 9 (areas) as served on 2026-10-06.",
+ "points": {
+  "type": "FeatureCollection",
+  "features": [
+   {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      24.12059780000004,
+      58.22657340000006
+     ]
+    },
+    "properties": {
+     "warning_number": 167,
+     "date_from": 1790861700000,
+     "date_to": null,
+     "ntfct_title_eng": "Dredging works",
+     "ntfct_text_eng": "Gulf of Riga <br><br>From 2 October dredging works are taking place in Munalaiu harbour and fairway in position 58°13.59′N, 024°07.24′E with dredger WATERMASTER.<br>When passing the dredger, follow the installed markings and navigate with increased caution!<br><br>Estonian charts 781, 632 (INT 1127), 516 (INT 1271)",
+     "area_eng": "lii"
+    }
+   },
+   {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      27.450500000000034,
+      58.362683333000064
+     ]
+    },
+    "properties": {
+     "warning_number": 168,
+     "date_from": 1790925780000,
+     "date_to": 1792098000000,
+     "ntfct_title_eng": "Floating AtoN missing",
+     "ntfct_text_eng": "Inland waters<br><br>Due to dredging works, the Eesti Värav spar buoys No. 4258–4267.1 are missing from their positions between 58°21.76′N, 027°27.03′E and 58°21.03′N, 027°28.63′E.<br><br>Estonian chart 653",
+     "area_eng": "sis"
+    }
+   },
+   {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      27.455606767000063,
+      58.36011255000005
+     ]
+    },
+    "properties": {
+     "warning_number": 168,
+     "date_from": 1790925780000,
+     "date_to": 1792098000000,
+     "ntfct_title_eng": "Floating AtoN missing",
+     "ntfct_text_eng": "Inland waters<br><br>Due to dredging works, the Eesti Värav spar buoys No. 4258–4267.1 are missing from their positions between 58°21.76′N, 027°27.03′E and 58°21.03′N, 027°28.63′E.<br><br>Estonian chart 653",
+     "area_eng": "sis"
+    }
+   },
+   {
+    "type": "Feature",
+    "geometry": {
+     "type": "Point",
+     "coordinates": [
+      27.465303273000075,
+      58.35596363600007
+     ]
+    },
+    "properties": {
+     "warning_number": 165,
+     "date_from": 1790692200000,
+     "date_to": null,
+     "ntfct_title_eng": "Dredging works",
+     "ntfct_text_eng": "Inland waters <br><br>From 29 September dredging works are taking place in Eesti Värav channel on Lake Lämmijärv in area bounded by: <br>58°20.99′N, 027°28.74′E<br>58°21.74′N, 027°27.00′E<br>58°21.76′N, 027°27.03′E<br>58°21.00′N, 027°28.76′E .<br>Navigate with caution!<br><br>Estonian chart 653",
+     "area_eng": "sis"
+    }
+   }
+  ]
+ },
+ "areas": {
+  "type": "FeatureCollection",
+  "features": [
+   {
+    "type": "Feature",
+    "geometry": {
+     "type": "Polygon",
+     "coordinates": [
+      [
+       [
+        27.479333333000056,
+        58.35000000000008
+       ],
+       [
+        27.450500000000034,
+        58.36266666700004
+       ],
+       [
+        27.450000000000045,
+        58.36233333300004
+       ],
+       [
+        27.479000000000042,
+        58.34983333300005
+       ],
+       [
+        27.479333333000056,
+        58.35000000000008
+       ]
+      ]
+     ]
+    },
+    "properties": {
+     "warning_number": 165,
+     "date_from": 1790692200000,
+     "date_to": null,
+     "ntfct_title_eng": "Dredging works",
+     "ntfct_text_eng": "Inland waters <br><br>From 29 September dredging works are taking place in Eesti Värav channel on Lake Lämmijärv in area bounded by: <br>58°20.99′N, 027°28.74′E<br>58°21.74′N, 027°27.00′E<br>58°21.76′N, 027°27.03′E<br>58°21.00′N, 027°28.76′E .<br>Navigate with caution!<br><br>Estonian chart 653",
+     "area_eng": "sis"
+    }
+   },
+   {
+    "type": "Feature",
+    "geometry": {
+     "type": "Polygon",
+     "coordinates": [
+      [
+       [
+        24.19998323300007,
+        59.628454746000045
+       ],
+       [
+        24.19998323300007,
+        59.53336896300004
+       ],
+       [
+        24.442540758000064,
+        59.53336896300004
+       ],
+       [
+        24.441682451000077,
+        59.64997249000004
+       ],
+       [
+        24.288388842000074,
+        59.64997249000004
+       ],
+       [
+        24.19998323300007,
+        59.628454746000045
+       ]
+      ]
+     ]
+    },
+    "properties": {
+     "warning_number": 170,
+     "date_from": 1791010800000,
+     "date_to": 1791468000000,
+     "ntfct_title_eng": "Firing in practice area 2A W from Naissaar",
+     "ntfct_text_eng": "Gulf of Finland<br><br>Firing exercises are taking place west of Naissaar island in firing practice area 2A centred 59°35’N, 024°19’E from 6 October at 10:00 to 8 October at 17:00 (local time). Other vessels must avoid entry into the area.<br>Operative information on VHF channels 13 and 61.<br><br>Estonian chart 610 (INT 1123), 507 (INT 1267)",
+     "area_eng": "soo"
+    }
+   }
+  ]
+ }
+}

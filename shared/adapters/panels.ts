@@ -1,4 +1,4 @@
-import type { EnergySnapshot, InternetSignal, NewsItem } from '../feeds'
+import type { EnergySnapshot, InternetSignal } from '../feeds'
 
 // ---- Power system (energy-charts.info, Fraunhofer ISE, from ENTSO-E data) --------------------
 
@@ -73,36 +73,4 @@ export function normaliseInternet(ioda: IodaSignals): InternetSignal[] {
     const baseline = values.toSorted((a, b) => a - b)[values.length >> 1]
     return [{ id: one.datasource!, label, latest: values[values.length - 1], baseline }]
   })
-}
-
-// ---- News headlines (RSS) -----------------------------------------------------------------
-
-const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' }
-
-/** Feed text as plain text: no markup survives, so nothing from a feed is ever rendered as HTML. */
-function plain(xml: string | undefined): string {
-  return (xml ?? '')
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
-    .replace(/<[^>]*>/g, '')
-    .replace(/&(#x?[0-9a-f]+|\w+);/gi, (whole, name: string) =>
-      name[0] === '#'
-        ? String.fromCodePoint(name[1].toLowerCase() === 'x' ? parseInt(name.slice(2), 16) : Number(name.slice(1)))
-        : (ENTITIES[name] ?? whole),
-    )
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-/** Headlines with links, newest first. A link is only kept if it leads to the site the feed came from. */
-export function parseRss(xml: string, site: string, limit = 12): NewsItem[] {
-  const items: NewsItem[] = []
-  for (const [, item] of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
-    const field = (name: string) => plain(new RegExp(`<${name}[^>]*>([\\s\\S]*?)</${name}>`).exec(item)?.[1])
-    const title = field('title')
-    // Tracking parameters add nothing for the reader.
-    const link = field('link').split('?')[0]
-    const at = Date.parse(field('pubDate'))
-    if (title && link.startsWith(site) && Number.isFinite(at)) items.push({ title, link, at })
-  }
-  return items.sort((a, b) => b.at - a.at).slice(0, limit)
 }

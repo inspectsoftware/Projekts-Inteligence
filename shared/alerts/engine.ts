@@ -1,5 +1,5 @@
 import type { Entity } from '../entity'
-import type { WeatherWarning } from '../feeds'
+import type { NewsItem, WeatherWarning, Zone } from '../feeds'
 
 export type Severity = 'info' | 'warn' | 'critical'
 
@@ -20,6 +20,13 @@ export interface AlertInput {
   entities(slot: string): readonly Entity[]
   /** Official weather warnings in force or imminent. */
   warnings(): readonly WeatherWarning[]
+  /** Rated headlines. Empty while nothing on screen is reading the news feed. */
+  news(): readonly NewsItem[]
+  /**
+   * Sea warnings and airspace restrictions. Empty while nothing on screen is reading those feeds.
+   * Optional so that rules about other things can be tried without it.
+   */
+  zones?(): readonly Zone[]
   insideLatvia(lon: number, lat: number): boolean
 }
 

@@ -1,12 +1,8 @@
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 
 /** Floating chrome surface. The map shows through faintly behind it. */
-export function Panel({ className = '', children }: { className?: string; children: ReactNode }) {
-  return (
-    <div className={`pointer-events-auto border border-line bg-ink-900/85 backdrop-blur-md ${className}`}>
-      {children}
-    </div>
-  )
+export function Panel({ className = '', ...rest }: ComponentProps<'div'>) {
+  return <div className={`pointer-events-auto border border-line bg-ink-900/85 backdrop-blur-md ${className}`} {...rest} />
 }
 
 export function SectionTitle({ children }: { children: ReactNode }) {

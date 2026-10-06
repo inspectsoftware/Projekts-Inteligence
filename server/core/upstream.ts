@@ -82,11 +82,16 @@ export function createUpstream(origins: readonly string[], signal: AbortSignal, 
     }
 
     const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES
-    const body = await res.arrayBuffer()
-    if (body.byteLength > maxBytes) {
-      throw new UpstreamError('too-large', `${host} sent ${body.byteLength} bytes, more than this feed accepts`)
+    // Counted as it arrives: a body past the limit is dropped there, never held in memory whole.
+    const chunks: Uint8Array[] = []
+    let size = 0
+    for await (const chunk of res.body ?? []) {
+      size += chunk.byteLength
+      // Leaving the loop cancels the rest of the download.
+      if (size > maxBytes) throw new UpstreamError('too-large', `${host} sent over ${maxBytes} bytes, more than this feed accepts`)
+      chunks.push(chunk)
     }
-    return new Uint8Array(body)
+    return new Uint8Array(Buffer.concat(chunks))
   }
 
   const text = async (url: string, options?: RequestOptions) => new TextDecoder().decode(await request(url, options))

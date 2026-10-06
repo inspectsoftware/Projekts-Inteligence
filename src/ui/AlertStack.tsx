@@ -1,14 +1,10 @@
-import { useEffect, useState } from 'react'
 import type { Alert, Severity } from '../../shared/alerts/engine'
 import { formatAge } from '../lib/format'
 import { useMap } from '../map/instance'
-import { serverNow } from '../runtime/clock'
 import { getEntity } from '../runtime/entityStore'
+import { useNow } from '../runtime/useNow'
 import { useAlerts } from '../state/alerts'
 import { useSelection } from '../state/selection'
-import { Panel } from './kit'
-
-const MAX_SHOWN = 4
 
 const BAR: Record<Severity, string> = {
   critical: 'bg-danger animate-pulse',
@@ -22,24 +18,14 @@ const TITLE: Record<Severity, string> = {
   info: 'text-accent',
 }
 
-/** Re-renders once in a while so "3 min ago" stays true without any new data arriving. */
-function useNow(intervalMs: number): number {
-  const [now, setNow] = useState(() => serverNow())
-  useEffect(() => {
-    const timer = setInterval(() => setNow(serverNow()), intervalMs)
-    return () => clearInterval(timer)
-  }, [intervalMs])
-  return now
-}
-
-/** Active alerts, most serious first. Opening one flies to it and selects what it is about. */
+/** Active alerts, most serious first: the body of the Alerts window. Opening one flies to it and selects what it is about. */
 export function AlertStack() {
   const map = useMap()
   const active = useAlerts((s) => s.active)
   const select = useSelection((s) => s.select)
   const now = useNow(15_000)
 
-  if (active.length === 0) return null
+  if (active.length === 0) return <p className="p-3 text-[11px] text-fg-mute">No active alerts</p>
 
   const open = (alert: Alert) => {
     if (alert.entityId && getEntity(alert.entityId)) select(alert.entityId)
@@ -49,9 +35,9 @@ export function AlertStack() {
   }
 
   return (
-    <div className="pointer-events-none absolute top-13 left-1/2 z-10 grid w-[min(26rem,calc(100%-1.5rem))] -translate-x-1/2 gap-1.5 font-mono max-md:top-23 max-md:*:nth-[n+3]:hidden">
-      {active.slice(0, MAX_SHOWN).map((alert) => (
-        <Panel key={alert.key}>
+    <ul className="divide-y divide-line">
+      {active.map((alert) => (
+        <li key={alert.key}>
           <button
             type="button"
             onClick={() => open(alert)}
@@ -69,13 +55,8 @@ export function AlertStack() {
               {formatAge(now - alert.raisedAt)}
             </span>
           </button>
-        </Panel>
+        </li>
       ))}
-      {active.length > MAX_SHOWN && (
-        <p className="text-center text-[9.5px] tracking-[0.16em] text-fg-mute uppercase">
-          +{active.length - MAX_SHOWN} more
-        </p>
-      )}
-    </div>
+    </ul>
   )
 }

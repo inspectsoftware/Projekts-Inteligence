@@ -1,8 +1,12 @@
+import { LV_WATERS } from '../data/lvWaters'
 import { type Entity, Flag, KNOTS_TO_MS } from '../entity'
+import { createRegionTest } from '../geo/pip'
 import { type BBox, inBBox } from '../region'
 
 export type ShipType = 'cargo' | 'tanker' | 'passenger' | 'fishing' | 'service' | 'military' | 'pleasure' | 'other'
 export type AisSource = 'digitraffic' | 'aisstream'
+/** A state's own vessels: warships and naval auxiliaries, or coast guard, border guard and police. */
+export type VesselService = 'navy' | 'government'
 
 export interface ShipProps {
   mmsi: number
@@ -17,6 +21,9 @@ export interface ShipProps {
   status: string | null
   /** Country of registration, from the first three digits of the MMSI. */
   flagState: string | null
+  service: VesselService | null
+  /** The name and operator Wikidata's list of navy vessels has for this MMSI. A hint: such entries go stale. */
+  listedAs: string | null
   source: AisSource
 }
 
@@ -69,6 +76,8 @@ const FLAG_STATES: Record<number, string> = {
   240: 'Greece', 241: 'Greece', 244: 'Netherlands', 245: 'Netherlands', 246: 'Netherlands', 247: 'Italy',
   255: 'Portugal (Madeira)', 257: 'Norway', 258: 'Norway', 259: 'Norway', 261: 'Poland', 263: 'Portugal',
   265: 'Sweden', 266: 'Sweden', 271: 'Türkiye', 273: 'Russia', 275: 'Latvia', 276: 'Estonia', 277: 'Lithuania',
+  205: 'Belgium', 224: 'Spain', 225: 'Spain', 226: 'France', 227: 'France', 228: 'France', 316: 'Canada',
+  338: 'United States', 366: 'United States', 367: 'United States', 368: 'United States', 369: 'United States',
   304: 'Antigua and Barbuda', 305: 'Antigua and Barbuda', 308: 'Bahamas', 309: 'Bahamas', 311: 'Bahamas',
   351: 'Panama', 352: 'Panama', 353: 'Panama', 354: 'Panama', 355: 'Panama', 356: 'Panama', 357: 'Panama',
   370: 'Panama', 371: 'Panama', 372: 'Panama', 373: 'Panama', 374: 'Panama', 477: 'Hong Kong',
@@ -76,6 +85,13 @@ const FLAG_STATES: Record<number, string> = {
   565: 'Singapore', 566: 'Singapore', 613: 'Cameroon', 620: 'Comoros', 626: 'Gabon', 636: 'Liberia', 637: 'Liberia',
   667: 'Sierra Leone', 671: 'Togo',
 }
+
+/** The flag states above that are NATO members (the Faroes and Gibraltar through Denmark and the United Kingdom). */
+export const NATO_FLAGS: ReadonlySet<string> = new Set([
+  'Belgium', 'Canada', 'Denmark', 'Estonia', 'Faroe Islands', 'Finland', 'France', 'Germany', 'Gibraltar', 'Greece',
+  'Italy', 'Latvia', 'Lithuania', 'Netherlands', 'Norway', 'Poland', 'Portugal', 'Portugal (Madeira)', 'Spain',
+  'Sweden', 'Türkiye', 'United Kingdom', 'United States',
+])
 
 export function flagStateOf(mmsi: number): string | null {
   return FLAG_STATES[Math.floor(mmsi / 1_000_000)] ?? null
@@ -92,6 +108,53 @@ export function shipTypeOf(code: number | undefined): ShipType {
   if (code >= 70 && code <= 79) return 'cargo'
   if (code >= 80 && code <= 89) return 'tanker'
   return 'other'
+}
+
+/** Navy vessels by MMSI, as scripts/bake-naval.mjs bakes them from Wikidata. */
+export type WarshipList = Readonly<Record<number, readonly [name: string, operator: string]>>
+
+// What warships put in the AIS name field ("SWEDISH WARSHIP K35"), and the ship prefixes of the
+// navies that sail the Baltic. Tried on a day of Finnish AIS data: four vessels, all of them right.
+const NAVY_NAME =
+  /\b(WARSHIP|NAVY|NATO)\b|^(LVNS|LNS|EML|ORP|FGS|HDMS|HSWMS|HMS|FNS|HNOMS|KNM|HNLMS|BNS|FS|USS|USNS|ESPS|ITS|TCG|HMCS|NRP)\s/i
+// Hull names of the Swedish coast guard, the Estonian and Polish border guards and the German federal police.
+const GOVERNMENT_NAME = /^(KBV|PVL|BP|SG)\s/i
+const CIVIL_TYPES: ReadonlySet<ShipType> = new Set(['cargo', 'tanker', 'passenger', 'fishing', 'pleasure'])
+
+/**
+ * Whether a vessel is a state's own. Warships often report no ship type at all, so the type
+ * code is backed up by the navy list and by the name. Many more sail with AIS switched off.
+ */
+export function serviceOf(vessel: Pick<VesselRecord, 'mmsi' | 'name' | 'shipType'>, warships: WarshipList): VesselService | null {
+  // 35 is "military operations", 55 "law enforcement".
+  if (vessel.shipType === 35) return 'navy'
+  // The list and the name are thinner evidence than what the vessel says of itself: the list has
+  // merchant tankers and tourist steamers on it under a navy's name. A vessel that declares itself
+  // a merchant or passenger ship, a fishing boat or a yacht is taken at its word.
+  if (CIVIL_TYPES.has(shipTypeOf(vessel.shipType))) return null
+  if (Object.hasOwn(warships, vessel.mmsi)) return 'navy'
+  if (vessel.shipType === 55) return 'government'
+  if (!vessel.name) return null
+  if (NAVY_NAME.test(vessel.name)) return 'navy'
+  return GOVERNMENT_NAME.test(vessel.name) ? 'government' : null
+}
+
+/**
+ * Inside Latvia's territorial sea or exclusive economic zone. The outline follows the coast,
+ * so a ship in a harbour or up a river is outside it (and inside the land border instead).
+ */
+export const inLatvianWaters = createRegionTest([{ type: 'Polygon', coordinates: [LV_WATERS] }])
+
+interface IdSets {
+  mmsi: ReadonlySet<number>
+  imo: ReadonlySet<number>
+}
+
+/** The reference lists a vessel is checked against as it is turned into a map entity. */
+export interface VesselLists {
+  sanctioned: IdSets
+  shadow: IdSets
+  warships: WarshipList
 }
 
 const clean = (text: string | undefined) => {
@@ -133,11 +196,12 @@ export class VesselTable {
     for (const [mmsi, vessel] of this.vessels) if (now - vessel.at > EXPIRE_AFTER_MS) this.vessels.delete(mmsi)
   }
 
-  view(bbox: BBox, sanctioned: { mmsi: ReadonlySet<number>; imo: ReadonlySet<number> }): Ship[] {
+  view(bbox: BBox, { sanctioned, shadow, warships }: VesselLists): Ship[] {
+    const on = (list: IdSets, v: VesselRecord) => list.mmsi.has(v.mmsi) || (v.imo !== undefined && list.imo.has(v.imo))
     const out: Ship[] = []
     for (const v of this.vessels.values()) {
       if (!inBBox(v.lon, v.lat, bbox)) continue
-      const listed = sanctioned.mmsi.has(v.mmsi) || (v.imo !== undefined && sanctioned.imo.has(v.imo))
+      const listing = Object.hasOwn(warships, v.mmsi) ? warships[v.mmsi] : null
       // 360 and 511 are how AIS says "not available".
       const cog = v.cog !== undefined && v.cog < 360 ? v.cog : undefined
       const heading = v.heading !== undefined && v.heading < 360 ? v.heading : null
@@ -152,7 +216,7 @@ export class VesselTable {
         spd: moving ? v.sogKn! * KNOTS_TO_MS : 0,
         label: v.name ?? String(v.mmsi),
         ts: v.at,
-        flags: listed ? Flag.SANCTIONED : 0,
+        flags: (on(sanctioned, v) ? Flag.SANCTIONED : 0) | (on(shadow, v) ? Flag.SHADOW_FLEET : 0),
         props: {
           mmsi: v.mmsi,
           imo: v.imo ?? null,
@@ -163,6 +227,8 @@ export class VesselTable {
           heading,
           status: v.navStat !== undefined ? (NAV_STATUS[v.navStat] ?? null) : null,
           flagState: flagStateOf(v.mmsi),
+          service: serviceOf(v, warships),
+          listedAs: listing?.filter(Boolean).join(', ') || null,
           source: v.source,
         },
       })

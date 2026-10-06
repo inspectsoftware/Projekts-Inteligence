@@ -25,14 +25,24 @@ export const VIEWS: readonly View[] = [
   { id: 'baltic', label: 'Baltic region', center: [22.5, 57.3], zoom: 5.1 },
 ]
 
-function prefersReducedMotion(): boolean {
+export function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-/** Room for the floating panels, so "all of Latvia" means the visible part of the map. */
+/**
+ * Room for the chrome as it starts out, so "all of Latvia" means the visible part of the map.
+ * Windows can be moved or closed afterwards; this deliberately does not follow them.
+ */
 function chromePadding(map: Map): PaddingOptions {
-  const wide = map.getContainer().clientWidth >= 900
-  return { top: 70, bottom: 70, left: wide ? 290 : 30, right: wide ? 70 : 30 }
+  const width = map.getContainer().clientWidth
+  // From 768px up the dock is a rail down the left edge; below that it is a strip under the top bar.
+  const rail = width >= 768
+  // Wide enough to also keep the country out from under the Layers window in its default slot.
+  const wide = width >= 900
+  // And from here out from under Situation and the Intel feed on the right as well. Any narrower
+  // and the country would be left too small between the two columns, so there they overlap it.
+  const columns = width >= 1280
+  return { top: rail ? 70 : 110, bottom: 70, left: wide ? 320 : rail ? 70 : 30, right: columns ? 376 : wide ? 70 : 30 }
 }
 
 export function flyHome(map: Map, duration = 1800): void {

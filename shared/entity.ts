@@ -1,8 +1,10 @@
+import type { AircraftRole } from './data/aircraftRoles'
+
 /**
  * One moving (or fixed) object on the map, whatever feed it came from.
  * WGS84 coordinates, SI units, bearings in degrees true.
  */
-export type EntityKind = 'aircraft' | 'ship' | 'transit' | 'train' | 'satellite' | 'station' | 'fire' | 'camera' | 'road-event' | 'radiation' | 'gauge'
+export type EntityKind = 'aircraft' | 'ship' | 'transit' | 'train' | 'satellite' | 'station' | 'fire' | 'camera' | 'webcam' | 'road-event' | 'radiation' | 'gauge'
 
 /** Kinds that travel, and so get a trail and dead reckoning. */
 export const MOVING_KINDS: ReadonlySet<EntityKind> = new Set(['aircraft', 'ship', 'transit', 'train'])
@@ -15,6 +17,8 @@ export const Flag = {
   ON_GROUND: 8,
   /** A vessel on a sanctions list. */
   SANCTIONED: 16,
+  /** A vessel listed as part of the shadow fleet that carries sanctioned cargo. */
+  SHADOW_FLEET: 32,
 } as const
 
 export interface Entity<P extends object = object> {
@@ -57,6 +61,11 @@ export interface AircraftProps {
   gpsLost: boolean
   /** Whether the transponder reports integrity at all (ADS-B version 1 or newer). */
   reportsIntegrity: boolean
+  /** What a military aircraft is for, as far as its type (and for a few, its description) says. Null for civil aircraft and unknown types. */
+  role: AircraftRole | null
+  /** The airframe in words ("Boeing RC-135W Rivet Joint") and who flies it, where the aggregator's database says. */
+  description: string | null
+  operator: string | null
 }
 
 export type Aircraft = Entity<AircraftProps>

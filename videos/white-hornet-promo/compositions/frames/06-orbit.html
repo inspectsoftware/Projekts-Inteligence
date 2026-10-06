@@ -1,0 +1,254 @@
+<template>
+  <style>
+    @font-face{
+      font-family: 'Inter Variable';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url("assets/fonts/captured-inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+    }
+    @font-face{
+      font-family: 'Inter Variable';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url("assets/fonts/captured-inter-latin-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+    }
+    @font-face{
+      font-family: 'JetBrains Mono Variable';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 800;
+      src: url("assets/fonts/captured-jetbrains-mono-latin-ext-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+    }
+    @font-face{
+      font-family: 'JetBrains Mono Variable';
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 800;
+      src: url("assets/fonts/captured-jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+    }
+
+    #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+
+    /* ids start with a digit, so attribute selectors instead of #06-… */
+    [id="06-orbit-bg"], [id="06-orbit-cam"], [id="06-orbit-fx"], [id="06-orbit-hud"] {
+      position: absolute; left: 0; top: 0; width: 1920px; height: 1080px;
+    }
+    [id="06-orbit-bg"] { background: #04070a; overflow: hidden; }
+    /* camera pivots on Latvia's centre in map-satellites.png */
+    [id="06-orbit-cam"] { transform-origin: 1000px 620px; will-change: transform; }
+    [id="06-orbit-cam"] img { position: absolute; left: 0; width: 1920px; height: 1080px; display: block; }
+    [id="06-orbit-wide"] { top: 0; }
+    /* same zoom as the wide plate, panned 74px: shift so Latvia registers exactly */
+    [id="06-orbit-tight"] { top: 74px; }
+
+    [id="06-orbit-fx"] { overflow: hidden; }
+    [id="06-orbit-fx"] [data-track] { fill: none; stroke: #b78cff; stroke-width: 2; stroke-dasharray: 10 8; opacity: 0.85; }
+    [id="06-orbit-fx"] [data-mask] { fill: none; stroke: #fff; stroke-width: 10; stroke-dasharray: 1; stroke-dashoffset: 1; }
+    [id="06-orbit-fx"] [data-sat] circle { fill: rgba(4,7,10,0.72); }
+    [id="06-orbit-fx"] [data-sat] path { fill: #b78cff; stroke: #04070a; stroke-width: 3; paint-order: stroke; }
+    [id="06-orbit-fx"] [data-sat] text {
+      font-family: 'JetBrains Mono Variable', monospace; font-weight: 500; font-size: 22px; letter-spacing: 0.14em;
+      fill: #b78cff; stroke: #04070a; stroke-width: 5px; paint-order: stroke;
+    }
+    [id="06-orbit-fx"] [data-hex="red"] polygon { stroke: #ff4d5e; stroke-width: 1; }
+    [id="06-orbit-fx"] [data-hex="amber"] polygon { stroke: #ffb020; stroke-width: 1; }
+    [id="06-orbit-fx"] [data-hex="red"] [data-fill] { fill: rgba(255,77,94,0.35); }
+    [id="06-orbit-fx"] [data-hex="amber"] [data-fill] { fill: rgba(255,176,32,0.28); }
+    [id="06-orbit-fx"] [data-ring] { fill: none; }
+    [id="06-orbit-leader"] { fill: none; stroke: #ff4d5e; stroke-width: 1; stroke-dasharray: 1; }
+    [id="06-orbit-leader-dot"] { fill: #ff4d5e; }
+
+    [id="06-orbit-title"], [id="06-orbit-call"] {
+      position: absolute; left: 106px; background: rgba(10,16,22,0.85); border: 1px solid #1b2a35;
+    }
+    [id="06-orbit-title"] { top: 90px; padding: 28px 36px; width: max-content; }
+    [id="06-orbit-kicker"] {
+      font-family: 'JetBrains Mono Variable', monospace; font-weight: 500; font-size: 22px; line-height: 28px;
+      letter-spacing: 0.14em; text-transform: uppercase; color: #4fd6ff; white-space: nowrap; margin-bottom: 18px;
+    }
+    [id="06-orbit-title"] [data-line] { overflow: hidden; height: 84px; }
+    [id="06-orbit-title"] [data-w] {
+      display: block; font-family: 'Inter Variable', sans-serif; font-weight: 800; font-size: 88px; line-height: 84px;
+      letter-spacing: -0.02em; text-transform: uppercase; color: #d5e1ea; white-space: nowrap;
+    }
+    [id="06-orbit-title"] [data-w="accent"] { color: #4fd6ff; }
+
+    /* right edge at x=500 is where the leader line lands */
+    [id="06-orbit-call"] { top: 420px; width: 394px; box-sizing: border-box; padding: 22px 28px 24px; }
+    [id="06-orbit-call"] div { font-family: 'JetBrains Mono Variable', monospace; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; }
+    [id="06-orbit-call-head"] { font-size: 26px; line-height: 34px; color: #ff4d5e; }
+    [id="06-orbit-call-sub"] { font-size: 20px; line-height: 28px; color: #8499a8; padding-bottom: 16px; border-bottom: 1px solid #1b2a35; }
+    [id="06-orbit-call-row"] { display: flex; align-items: flex-end; gap: 18px; margin-top: 18px; }
+    [id="06-orbit-count"] {
+      display: inline-block; width: 124px; font-family: 'Inter Variable', sans-serif; font-weight: 800; font-size: 88px; line-height: 80px;
+      letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: #ff4d5e; transform-origin: 0 100%;
+    }
+    [id="06-orbit-count-label"] { font-size: 22px; line-height: 28px; color: #d5e1ea; padding-bottom: 8px; }
+  </style>
+
+  <div data-hf-id="hf-mt25" id="root" data-composition-id="06-orbit" data-width="1920" data-height="1080" data-start="0" data-duration="5">
+
+    <!-- full-bleed ground + camera (both plates share one wrapper so the dissolve is velocity-matched) -->
+    <div data-hf-id="hf-o1xw" id="06-orbit-bg" class="clip" data-start="0" data-duration="5" data-track-index="0">
+      <div data-hf-id="hf-e4we" id="06-orbit-cam">
+        <img data-hf-id="hf-kbdt" id="06-orbit-wide" src="assets/map-satellites.png" alt="">
+        <img data-hf-id="hf-vo78" id="06-orbit-tight" src="assets/stack-1-dark-z5.png" alt="">
+      </div>
+    </div>
+
+    <!-- map overlays: hexes under tracks under satellites. Track geometry is set from TRACKS in the script. -->
+    <svg data-hf-id="hf-2293" id="06-orbit-fx" class="clip" data-start="0" data-duration="5" data-track-index="1" viewBox="0 0 1920 1080" width="1920" height="1080" xmlns="http://www.w3.org/2000/svg">
+      <defs data-hf-id="hf-mh0t">
+        <mask data-hf-id="hf-n7dd" id="06-orbit-m0" maskUnits="userSpaceOnUse" x="0" y="0" width="1920" height="1080"><path data-hf-id="hf-lgm6" data-mask="" pathLength="1" /></mask>
+        <mask data-hf-id="hf-gywg" id="06-orbit-m1" maskUnits="userSpaceOnUse" x="0" y="0" width="1920" height="1080"><path data-hf-id="hf-5c8y" data-mask="" pathLength="1" /></mask>
+        <mask data-hf-id="hf-nys3" id="06-orbit-m2" maskUnits="userSpaceOnUse" x="0" y="0" width="1920" height="1080"><path data-hf-id="hf-5qjz" data-mask="" pathLength="1" /></mask>
+      </defs>
+
+      <!-- flat-top hexes, R=46, honeycomb pitch 69 x 79.7, over the sea west/north of Latvia; listed in entry order -->
+      <g data-hf-id="hf-i8dn" data-hex="red" transform="translate(738 420)"><polygon data-hf-id="hf-sqxg" data-fill="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /><polygon data-hf-id="hf-l6f7" data-ring="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /></g>
+      <g data-hf-id="hf-qi86" data-hex="red" transform="translate(669 460)"><polygon data-hf-id="hf-5l64" data-fill="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /><polygon data-hf-id="hf-2czn" data-ring="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /></g>
+      <g data-hf-id="hf-k89e" data-hex="red" transform="translate(738 500)"><polygon data-hf-id="hf-4e91" data-fill="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /><polygon data-hf-id="hf-1yom" data-ring="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /></g>
+      <g data-hf-id="hf-7n8b" data-hex="red" transform="translate(669 540)"><polygon data-hf-id="hf-4sk2" data-fill="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /><polygon data-hf-id="hf-1kdl" data-ring="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /></g>
+      <g data-hf-id="hf-bejz" data-hex="amber" transform="translate(807 380)"><polygon data-hf-id="hf-6s37" data-fill="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /><polygon data-hf-id="hf-162k" data-ring="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /></g>
+      <g data-hf-id="hf-ozc8" data-hex="amber" transform="translate(669 619)"><polygon data-hf-id="hf-76e8" data-fill="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /><polygon data-hf-id="hf-0rrj" data-ring="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /></g>
+      <g data-hf-id="hf-3yd6" data-hex="amber" transform="translate(600 579)"><polygon data-hf-id="hf-5zh5" data-fill="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /><polygon data-hf-id="hf-0dgi" data-ring="" points="46,0 23,39.84 -23,39.84 -46,0 -23,-39.84 23,-39.84" /></g>
+
+      <!-- leader: hex cluster (left vertex of the 669,460 cell) to the callout panel's right edge -->
+      <rect data-hf-id="hf-m3wg" id="06-orbit-leader-dot" x="619" y="456" width="8" height="8" />
+      <path data-hf-id="hf-r63p" id="06-orbit-leader" d="M623 460 H500" pathLength="1" />
+
+      <path data-hf-id="hf-gbhz" data-track="" mask="url(#06-orbit-m0)" />
+      <path data-hf-id="hf-x57c" data-track="" mask="url(#06-orbit-m1)" />
+      <path data-hf-id="hf-eppl" data-track="" mask="url(#06-orbit-m2)" />
+
+      <g data-hf-id="hf-n5mv" data-sat=""><circle data-hf-id="hf-6mn2" r="30" /><path data-hf-id="hf-2tav" transform="translate(-22 -22) scale(0.6875)" d="M26 24H38V40H26ZM4 27H22V37H4ZM42 27H60V37H42ZM22 30.5H26V33.5H22ZM38 30.5H42V33.5H38Z" /><text data-hf-id="hf-tdfg" x="36" y="8">ISS</text></g>
+      <g data-hf-id="hf-35nr" data-sat=""><circle data-hf-id="hf-1hxe" r="30" /><path data-hf-id="hf-8p93" transform="translate(-22 -22) scale(0.6875)" d="M26 24H38V40H26ZM4 27H22V37H4ZM42 27H60V37H42ZM22 30.5H26V33.5H22ZM38 30.5H42V33.5H38Z" /><text data-hf-id="hf-sc42" x="36" y="8">SENTINEL-2B</text></g>
+      <g data-hf-id="hf-2rcq" data-sat=""><circle data-hf-id="hf-1w8f" r="30" /><path data-hf-id="hf-8ay2" transform="translate(-22 -22) scale(0.6875)" d="M26 24H38V40H26ZM4 27H22V37H4ZM42 27H60V37H42ZM22 30.5H26V33.5H22ZM38 30.5H42V33.5H38Z" /><text data-hf-id="hf-zb6b" x="36" y="8">NOAA-20</text></g>
+    </svg>
+
+    <!-- type: all above y=900 -->
+    <div data-hf-id="hf-esta" id="06-orbit-hud" class="clip" data-start="0" data-duration="5" data-track-index="2">
+      <div data-hf-id="hf-kp69" id="06-orbit-title">
+        <div data-hf-id="hf-cnlj" id="06-orbit-kicker">SPACE // PROPAGATED LIVE</div>
+        <div data-hf-id="hf-x4e5" data-line=""><span data-hf-id="hf-iybb" data-w="">OVERHEAD.</span></div>
+        <div data-hf-id="hf-3gr5" data-line=""><span data-hf-id="hf-f4o1" data-w="accent">TRACKED.</span></div>
+      </div>
+      <div data-hf-id="hf-63jd" id="06-orbit-call">
+        <div data-hf-id="hf-c020" id="06-orbit-call-head">GPS INTERFERENCE</div>
+        <div data-hf-id="hf-daq5" id="06-orbit-call-sub">LAST 90 MIN</div>
+        <div data-hf-id="hf-3gs2" id="06-orbit-call-row">
+          <span data-hf-id="hf-i0nd" id="06-orbit-count">00</span>
+          <div data-hf-id="hf-crsz" id="06-orbit-count-label">AIRCRAFT<br data-hf-id="hf-x5px">DEGRADED</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines = window.__timelines || {};
+      window.__timelines["06-orbit"] = tl;
+
+      const $ = (id) => document.getElementById("06-orbit-" + id);
+      const fx = $("fx");
+      const all = (sel) => Array.from(fx.querySelectorAll(sel));
+
+      /* ── Scene 1 (0–1.2s): hard pull-back 2.2 → 1.0, tight plate dissolves into the wide one, then STOP ── */
+      const cam = $("cam");
+      tl.fromTo(cam, { scale: 2.2, transformOrigin: "1000px 620px" }, { scale: 1, duration: 1.2, ease: "power3.out" }, 0);
+      // gone by ~0.62s, before the pull-back uncovers the tight plate's shifted top edge (scale < 1.135)
+      tl.fromTo($("tight"), { opacity: 1 }, { opacity: 0, duration: 0.54, ease: "power2.inOut" }, 0.08);
+      // motion-blur-streak, wrapper level, symmetric (depth move): brief peak, sharp well before the stop
+      const blur = { v: 0 };
+      const writeBlur = () => { cam.style.filter = blur.v > 0.05 ? "blur(" + blur.v.toFixed(2) + "px)" : "none"; };
+      tl.to(blur, { v: 8, duration: 0.18, ease: "power2.out", onUpdate: writeBlur }, 0.02);
+      tl.to(blur, { v: 0, duration: 0.75, ease: "power3.out", onUpdate: writeBlur }, 0.2);
+
+      /* ── Scene 2 (1.2–3.2s): ground tracks draw behind their satellites; kicker + per-word headline ── */
+      // cubic control points [x0,y0, x1,y1, x2,y2, x3,y3] in map-satellites.png pixels
+      const TRACKS = [
+        { p: [812, -40, 742, 230, 712, 540, 744, 760], at: 1.25, dur: 3.75, ease: "power2.out" },   // ISS: N-S just west of Latvia
+        { p: [1720, -40, 1480, 150, 1220, 330, 940, 462], at: 1.5, dur: 3.5, ease: "power1.out" },  // SENTINEL-2B: diagonal across Estonia
+        { p: [-40, 640, 330, 860, 760, 880, 1190, 800], at: 1.75, dur: 3.25, ease: "power1.out" },  // NOAA-20: southern Baltic sweep
+      ];
+      // arc-length lookup so the satellite sits exactly on the head of the drawn stroke (no DOM geometry calls)
+      function sampler(P) {
+        const N = 200, pts = [], len = [0];
+        for (let i = 0; i <= N; i++) {
+          const t = i / N, u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+          pts.push([a * P[0] + b * P[2] + c * P[4] + d * P[6], a * P[1] + b * P[3] + c * P[5] + d * P[7]]);
+          if (i) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+        }
+        return function (prog) {
+          const s = prog * len[N];
+          let i = 1;
+          while (i < N && len[i] < s) i++;
+          const f = (s - len[i - 1]) / (len[i] - len[i - 1] || 1);
+          return [pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * f, pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * f];
+        };
+      }
+      const lines = all("[data-track]"), masks = all("[data-mask]"), sats = all("[data-sat]");
+      TRACKS.forEach((T, i) => {
+        const P = T.p, at = sampler(P);
+        const end = at(1);
+        console.assert(Math.hypot(end[0] - P[6], end[1] - P[7]) < 0.5, "06-orbit: track sampler end mismatch", i);
+        const d = "M" + P[0] + " " + P[1] + " C" + P.slice(2).join(" ");
+        lines[i].setAttribute("d", d);
+        masks[i].setAttribute("d", d);
+        const st = { p: 0 };
+        const write = () => {
+          const xy = at(st.p);
+          masks[i].style.strokeDashoffset = String(1 - st.p);
+          sats[i].setAttribute("transform", "translate(" + xy[0].toFixed(2) + " " + xy[1].toFixed(2) + ")");
+        };
+        write(); // seed t=0: satellite parked off-frame at the track's start, nothing drawn
+        tl.to(st, { p: 1, duration: T.dur, ease: T.ease, onUpdate: write }, T.at);
+      });
+
+      tl.fromTo($("title"), { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power1.out" }, 1.25);
+      tl.fromTo($("kicker"), { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" }, 1.3);
+      // dynamic-content-sequencing: each word's start is derived from the length of the one before it
+      const BASE = 0.25, SEC_PER_CHAR = 0.04;
+      let cursor = 1.55;
+      Array.from($("title").querySelectorAll("[data-w]")).forEach((w) => {
+        tl.fromTo(w, { yPercent: 105 }, { yPercent: 0, duration: 0.5, ease: "power3.out" }, cursor);
+        cursor += BASE + w.textContent.length * SEC_PER_CHAR;
+      });
+
+      /* ── Scene 3 (3.2–5.0s): seven hexes in sequence, one pulse each; leader, callout, counter ── */
+      all("[data-hex]").forEach((g, i) => {
+        const t = 3.2 + i * 0.12;
+        const ring = g.querySelector("[data-ring]");
+        tl.fromTo(g.querySelector("[data-fill]"), { opacity: 0, scale: 0.6, transformOrigin: "50% 50%" },
+          { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out" }, t);
+        tl.fromTo(ring, { opacity: 0, scale: 0.6, transformOrigin: "50% 50%" },
+          { opacity: 0.9, scale: 1, duration: 0.25, ease: "power2.out" }, t);
+        tl.to(ring, { opacity: 0, scale: 1.7, duration: 0.55, ease: "power2.out" }, t + 0.25);
+      });
+
+      tl.fromTo($("leader-dot"), { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "power1.out" }, 3.3);
+      tl.fromTo($("leader"), { strokeDashoffset: 1 }, { strokeDashoffset: 0, duration: 0.3, ease: "power2.out" }, 3.3);
+      tl.fromTo($("call"), { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.35, ease: "power2.out" }, 3.42);
+
+      // counting-dynamic-scale: value + scale share window and ease; text written only when the integer changes
+      const count = $("count"), state = { value: 0 };
+      let shown = "";
+      const COUNT_AT = 3.5, COUNT_DUR = 1.2, COUNT_EASE = "power3.out";
+      const writeCount = () => {
+        const s = String(Math.round(state.value)).padStart(2, "0");
+        if (s !== shown) { count.textContent = s; shown = s; }
+      };
+      tl.to(state, { value: 13, duration: COUNT_DUR, ease: COUNT_EASE, onUpdate: writeCount }, COUNT_AT);
+      tl.fromTo(count, { scale: 0.55 }, { scale: 1, duration: COUNT_DUR, ease: COUNT_EASE }, COUNT_AT);
+      tl.fromTo($("count-label"), { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, COUNT_AT + 0.2);
+    })();
+  </script>
+</template>

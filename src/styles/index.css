@@ -139,8 +139,73 @@ body {
   }
 }
 
+/* ---- Windows ------------------------------------------------------------ */
+
+.window {
+  animation: window-in 120ms ease-out;
+  /* The slow fade is the afterglow of a drop: the lifted look below drains away once the window is let go. */
+  transition:
+    border-color 0.45s ease-out,
+    box-shadow 0.45s ease-out,
+    scale 0.26s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Lifted while it is dragged. `scale` is its own property, so it adds to the translate the drag writes inline. */
+.window[data-busy='drag'] {
+  scale: 1.01;
+  border-color: var(--color-accent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--color-accent) 25%, transparent),
+    0 18px 40px rgb(0 0 0 / 0.55);
+  transition-duration: 80ms;
+}
+
+.window[data-busy='drag'] > header {
+  cursor: grabbing;
+}
+
+/* A video frame from another site swallows pointer events, which would strand a drag half way across it. */
+.window-layer:has(.window[data-busy]) :is(iframe, video) {
+  pointer-events: none;
+}
+
+/* The line a window is being pulled to. */
+.window-guide {
+  position: absolute;
+  z-index: 50;
+  background: var(--color-accent);
+}
+
+/* On release the line stays for a moment and fades: the edge the window locked to. */
+.window-guide[data-flash] {
+  animation: window-guide-out 0.45s ease-out forwards;
+}
+
+@keyframes window-in {
+  from {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+@keyframes window-guide-out {
+  to {
+    opacity: 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .fx-noise {
+  .fx-noise,
+  .window {
     animation: none;
+  }
+
+  .window {
+    transition: none;
+  }
+
+  .window-guide[data-flash] {
+    animation: none;
+    opacity: 0;
   }
 }

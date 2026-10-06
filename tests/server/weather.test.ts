@@ -32,6 +32,9 @@ function aircraft(hex: string, lon: number, lat: number, flags = 0, reportsInteg
       nacP: 10,
       gpsLost: false,
       reportsIntegrity,
+      role: null,
+      description: null,
+      operator: null,
     },
   }
 }

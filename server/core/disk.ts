@@ -3,14 +3,15 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { FeedPayload } from '../../shared/feeds'
 
-export interface StoredSnapshot {
+/** What is kept is a feed's payload, unless the caller says otherwise (the model's call counter does). */
+export interface StoredSnapshot<T = FeedPayload> {
   updatedAt: number
-  payload: FeedPayload
+  payload: T
 }
 
-export interface DiskStore {
-  read(id: string): Promise<StoredSnapshot | null>
-  write(id: string, snapshot: StoredSnapshot): Promise<void>
+export interface DiskStore<T = FeedPayload> {
+  read(id: string): Promise<StoredSnapshot<T> | null>
+  write(id: string, snapshot: StoredSnapshot<T>): Promise<void>
 }
 
 /**
@@ -19,13 +20,13 @@ export interface DiskStore {
  * host documents no persistent folder, so every failure here is ignored and the feed
  * simply falls back to its upstream.
  */
-export function createDiskStore(dir = process.env.CACHE_DIR || join(tmpdir(), 'pwh-cache')): DiskStore {
+export function createDiskStore<T = FeedPayload>(dir = process.env.CACHE_DIR || join(tmpdir(), 'pwh-cache')): DiskStore<T> {
   const fileFor = (id: string) => join(dir, `${id}.json`)
 
   return {
     async read(id) {
       try {
-        const stored = JSON.parse(await readFile(fileFor(id), 'utf8')) as Partial<StoredSnapshot>
+        const stored = JSON.parse(await readFile(fileFor(id), 'utf8')) as Partial<StoredSnapshot<T>>
         if (typeof stored.updatedAt !== 'number' || !stored.payload) return null
         return { updatedAt: stored.updatedAt, payload: stored.payload }
       } catch {

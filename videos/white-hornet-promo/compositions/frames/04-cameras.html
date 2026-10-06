@@ -1,0 +1,363 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "Inter Variable";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url("assets/fonts/captured-inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
+    @font-face {
+      font-family: "Inter Variable";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 900;
+      src: url("assets/fonts/captured-inter-latin-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+    @font-face {
+      font-family: "JetBrains Mono Variable";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 800;
+      src: url("assets/fonts/captured-jetbrains-mono-latin-ext-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+    }
+    @font-face {
+      font-family: "JetBrains Mono Variable";
+      font-style: normal;
+      font-display: swap;
+      font-weight: 100 800;
+      src: url("assets/fonts/captured-jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+      unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+    }
+
+    #root {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      color: #d5e1ea;
+    }
+    /* ids start with a digit, so they are matched by attribute selector (no CSS escapes) */
+    [id="04-cameras-bg"],
+    [id="04-cameras-stage"] {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+    [id="04-cameras-bg"] {
+      background: #04070a;
+    }
+    [id="04-cameras-plate"] {
+      --dof: 0px;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1920px;
+      height: 1080px;
+      object-fit: cover;
+      filter: blur(var(--dof));
+      will-change: filter;
+    }
+
+    /* reticle — handoff_in: centre 960,540, d=150, 2px cyan, four 20px ticks */
+    [id="04-cameras-reticle"] {
+      position: absolute;
+      left: 885px;
+      top: 465px;
+      width: 150px;
+      height: 150px;
+    }
+    [id="04-cameras-reticle"] i {
+      position: absolute;
+      background: #4fd6ff;
+    }
+    [id="04-cameras-ring"] {
+      position: absolute;
+      inset: 0;
+      box-sizing: border-box;
+      border: 2px solid #4fd6ff;
+      border-radius: 50%;
+    }
+
+    /* tag row above the window */
+    [id="04-cameras-tagrow"] {
+      position: absolute;
+      left: 360px;
+      top: 66px;
+      width: 1200px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: "JetBrains Mono Variable", monospace;
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    [id="04-cameras-tag"] {
+      display: flex;
+      align-items: center;
+      color: #4fd6ff;
+    }
+    [id="04-cameras-tagswap"] {
+      display: inline-grid;
+      margin-left: 0.7em;
+      color: #d5e1ea;
+    }
+    [id="04-cameras-tagswap"] span {
+      grid-area: 1 / 1;
+    }
+    [id="04-cameras-live"] {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #ff4d5e;
+    }
+    [id="04-cameras-live"] b {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ff4d5e;
+    }
+
+    /* window box: x=360..1560, y=110..870 */
+    [id="04-cameras-wrap"] {
+      position: absolute;
+      left: 360px;
+      top: 110px;
+      width: 1200px;
+      height: 760px;
+    }
+    [id="04-cameras-card"],
+    [id="04-cameras-grid"] {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #0a1016;
+      transform-origin: 50% 50%;
+      will-change: transform;
+    }
+    [id="04-cameras-grid"] {
+      z-index: 2;
+      box-shadow: 0 0 0 1px rgba(42, 63, 78, 1);
+    }
+    [id="04-cameras-wrap"] img {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 1200px;
+      height: 760px;
+    }
+    /* highlight sits on tile 1 of the grid's top row (tiles: x 5/154/304/453, y 113, 145x81) */
+    [id="04-cameras-hl"] {
+      position: absolute;
+      left: 5px;
+      top: 113px;
+      width: 145px;
+      height: 81px;
+      box-sizing: border-box;
+      border: 2px solid #4fd6ff;
+      box-shadow: 0 0 14px rgba(79, 214, 255, 0.45);
+    }
+
+    /* headline scrim: y=780..890 */
+    [id="04-cameras-scrim"] {
+      position: absolute;
+      left: 0;
+      top: 780px;
+      width: 1920px;
+      height: 110px;
+      box-sizing: border-box;
+      padding: 0 106px;
+      display: flex;
+      align-items: center;
+      gap: 40px;
+      background: rgba(4, 7, 10, 0.92);
+      border-top: 1px solid #1b2a35;
+      border-bottom: 1px solid #1b2a35;
+      z-index: 3;
+    }
+    [id="04-cameras-head"] {
+      font-family: "Inter Variable", sans-serif;
+      font-size: 64px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    [id="04-cameras-head"] span {
+      display: inline-block;
+      margin-right: 0.26em;
+    }
+    [id="04-cameras-head"] span.acc {
+      color: #4fd6ff;
+    }
+    [id="04-cameras-chips"] {
+      display: flex;
+      gap: 10px;
+    }
+    [id="04-cameras-chips"] span {
+      font-family: "JetBrains Mono Variable", monospace;
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      padding: 8px 12px 8px 15px;
+      color: #4fd6ff;
+      background: rgba(10, 16, 22, 0.85);
+      border: 1px solid #2a3f4e;
+    }
+  </style>
+
+  <div data-hf-id="hf-xlbh" id="root" data-composition-id="04-cameras" data-width="1920" data-height="1080" data-duration="4.5">
+    <div data-hf-id="hf-6uyk" id="04-cameras-bg" class="clip" data-start="0" data-duration="4.5" data-track-index="0">
+      <img data-hf-id="hf-acgr" id="04-cameras-plate" src="assets/stack-6-ortho-z18.png" alt="">
+    </div>
+
+    <div data-hf-id="hf-12bw" id="04-cameras-stage" class="clip" data-start="0" data-duration="4.5" data-track-index="1">
+      <div data-hf-id="hf-a1fl" id="04-cameras-reticle">
+        <div data-hf-id="hf-etol" id="04-cameras-ring"></div>
+        <i data-hf-id="hf-xgy7" style="left: 74px; top: -20px; width: 2px; height: 20px"></i>
+        <i data-hf-id="hf-uopi" style="left: 74px; top: 150px; width: 2px; height: 20px"></i>
+        <i data-hf-id="hf-l15p" style="left: -20px; top: 74px; width: 20px; height: 2px"></i>
+        <i data-hf-id="hf-t11i" style="left: 150px; top: 74px; width: 20px; height: 2px"></i>
+      </div>
+
+      <div data-hf-id="hf-xqkv" id="04-cameras-tagrow">
+        <div data-hf-id="hf-ccrd" id="04-cameras-tag">
+          LIVE CCTV //
+          <span data-hf-id="hf-uwlr" id="04-cameras-tagswap">
+            <span data-hf-id="hf-pgtf" id="04-cameras-tag-a">RĀTSLAUKUMS</span>
+            <span data-hf-id="hf-oayz" id="04-cameras-tag-b">GRID</span>
+          </span>
+        </div>
+        <div data-hf-id="hf-swx7" id="04-cameras-live"><b data-hf-id="hf-xujp"></b>LIVE</div>
+      </div>
+
+      <div data-hf-id="hf-x23v" id="04-cameras-wrap">
+        <div data-hf-id="hf-mtt5" id="04-cameras-card">
+          <img data-hf-id="hf-4dni" id="04-cameras-viewimg" src="assets/win-cctv-view.png" alt="">
+        </div>
+        <div data-hf-id="hf-vqav" id="04-cameras-grid">
+          <img data-hf-id="hf-859v" src="assets/win-cctv-grid.png" alt="">
+          <div data-hf-id="hf-l5p3" id="04-cameras-hl"></div>
+        </div>
+      </div>
+
+      <div data-hf-id="hf-1vrj" id="04-cameras-scrim">
+        <div data-hf-id="hf-r7bx" id="04-cameras-head">
+          <span data-hf-id="hf-cq0h" class="acc">32</span><span data-hf-id="hf-fe3i" class="acc">CAMERAS.</span><span data-hf-id="hf-5ijg">OFFICIAL</span><span data-hf-id="hf-at9y">FEEDS</span><span data-hf-id="hf-gmtr">ONLY.</span>
+        </div>
+        <div data-hf-id="hf-hgbs" id="04-cameras-chips"><span data-hf-id="hf-n6xf">LV</span><span data-hf-id="hf-25jf">EE</span><span data-hf-id="hf-mebd">LT</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+  <script>
+    (function () {
+      const $ = (name) => document.querySelector('[id="04-cameras-' + name + '"]');
+      const tl = gsap.timeline({ paused: true });
+
+      // ── Scene 1 (0.0–1.5): reticle blinks, camera window morphs out of it ──
+      const MORPH_START = 0.4;
+      const MORPH_DUR = 0.7;
+      const START_SCALE = 150 / 1200; // 150px-wide seed at the reticle centre
+
+      tl.to($("reticle"), { opacity: 0.15, duration: 0.05, ease: "none" }, 0.3);
+      tl.to($("reticle"), { opacity: 1, duration: 0.05, ease: "none" }, 0.35);
+      tl.to($("reticle"), { scale: 1.5, opacity: 0, duration: 0.3, ease: "power2.out" }, MORPH_START);
+
+      // card-morph-anchor: one tween, uniform scale + paint-only channels
+      tl.fromTo(
+        $("card"),
+        {
+          scale: START_SCALE,
+          borderRadius: 380, // pre-scale: reads as a ~47px-radius capsule at the reticle
+          boxShadow: "0 0 0 16px rgba(79,214,255,1)", // 2px apparent cyan stroke
+        },
+        {
+          scale: 1,
+          borderRadius: 0,
+          boxShadow: "0 0 0 1px rgba(42,63,78,1)",
+          duration: MORPH_DUR,
+          ease: "power2.inOut",
+        },
+        MORPH_START,
+      );
+      tl.fromTo($("card"), { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "power1.out" }, MORPH_START);
+      tl.fromTo(
+        $("viewimg"),
+        { opacity: 0 },
+        { opacity: 1, duration: MORPH_DUR * 0.5, ease: "power1.out" },
+        MORPH_START + MORPH_DUR * 0.4,
+      );
+
+      // depth-of-field-blur: plate recedes on the same window (modest radius, dim does the work)
+      tl.to($("plate"), { "--dof": "5px", opacity: 0.45, duration: MORPH_DUR, ease: "power2.inOut" }, MORPH_START);
+
+      tl.fromTo($("tag"), { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.25, ease: "power3.out" }, 1.0);
+      tl.fromTo($("live"), { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "power1.out" }, 1.2);
+
+      // ── Scene 2 (1.5–2.7): scale-swap to the camera grid, highlight steps the top row ──
+      const TRIGGER = 1.5;
+      const EXIT_DUR = 0.35;
+      const OVERLAP = 0.15;
+      const EXIT_SCALE = 0.72;
+
+      tl.to($("card"), { scale: EXIT_SCALE, opacity: 0, duration: EXIT_DUR, ease: "power2.in" }, TRIGGER);
+      tl.fromTo(
+        $("grid"),
+        { scale: EXIT_SCALE, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.55, ease: "back.out(1.4)" },
+        TRIGGER + EXIT_DUR - OVERLAP,
+      );
+      tl.to($("tag-a"), { opacity: 0, duration: 0.15, ease: "power1.in" }, TRIGGER);
+      tl.fromTo($("tag-b"), { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "power1.out" }, TRIGGER + 0.2);
+
+      const TILE_X = [0, 149, 299, 448]; // offsets from tile 1 (x=5) to tiles at 154 / 304 / 453
+      const BEAT = 0.2;
+      const HL_START = 1.95;
+      tl.fromTo($("hl"), { opacity: 0, x: TILE_X[0] }, { opacity: 1, x: TILE_X[0], duration: 0.08, ease: "none" }, HL_START);
+      for (let i = 1; i < TILE_X.length; i++) {
+        tl.to($("hl"), { x: TILE_X[i], duration: 0.09, ease: "power3.out" }, HL_START + BEAT * i);
+      }
+
+      // ── Scene 3 (2.7–4.0): headline per-word on the scrim, chips pop, hold ──
+      tl.fromTo($("scrim"), { opacity: 0 }, { opacity: 1, duration: 0.2, ease: "power1.out" }, 2.7);
+
+      // dynamic-content-sequencing: word starts pre-computed once from word length
+      const WORD_BASE = 0.05;
+      const SEC_PER_CHAR = 0.007;
+      let cursor = 2.78;
+      $("head")
+        .querySelectorAll("span")
+        .forEach((word) => {
+          tl.fromTo(word, { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: 0.25, ease: "power3.out" }, cursor);
+          cursor += WORD_BASE + word.textContent.length * SEC_PER_CHAR;
+        });
+
+      $("chips")
+        .querySelectorAll("span")
+        .forEach((chip, i) => {
+          tl.fromTo(
+            chip,
+            { opacity: 0, scale: 0.6 },
+            { opacity: 1, scale: 1, duration: 0.16, ease: "back.out(1.8)" },
+            3.1 + i * 0.07,
+          );
+        });
+
+      tl.set({}, {}, 4); // pin the timeline to the frame's 4s duration
+
+      window.__timelines = window.__timelines || {};
+      window.__timelines["04-cameras"] = tl;
+    })();
+  </script>
+</template>

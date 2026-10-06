@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Train } from '../../shared/adapters/trains'
-import type { Aircraft, Entity } from '../../shared/entity'
+import { ROLE_LABEL } from '../../shared/data/aircraftRoles'
+import { type Aircraft, Flag } from '../../shared/entity'
+import { TV_CHANNELS } from '../../shared/media/tv'
 import { LAYERS } from '../layers/registry'
 import { type SearchItem, rank } from '../lib/search'
 import { VIEWS, flyHome, flyToView } from '../map/camera'
+import { goToEntity } from '../map/goToEntity'
 import { getMap } from '../map/instance'
-import { positionAt } from '../map/motion'
-import { serverNow } from '../runtime/clock'
 import { getEntities } from '../runtime/entityStore'
 import { isLayerOn, useLayers } from '../state/layers'
 import { usePalette } from '../state/palette'
-import { useSelection } from '../state/selection'
+import { useWindows } from '../state/windows'
+import { WINDOWS, shownWindows, toggleWindow } from './windows/registry'
+import { watchChannel } from './windows/tv/store'
 
 interface Place {
   name: string
@@ -36,23 +39,19 @@ function loadPlaces(): Promise<Place[]> {
   return placesRequest
 }
 
-function goToEntity(entity: Entity): void {
-  useSelection.getState().select(entity.id)
-  const map = getMap()
-  map?.flyTo({ center: positionAt(entity, serverNow()), zoom: Math.max(map.getZoom(), 8.5), duration: 1400 })
-}
-
-/** Everything searchable right now: live objects, places, layers and saved views. */
+/** Everything searchable right now: live objects, places, layers, windows, television channels and saved views. */
 function buildIndex(places: readonly Place[]): SearchItem[] {
   const items: SearchItem[] = []
 
   for (const a of getEntities('aircraft') as Aircraft[]) {
+    // "tanker" or "awacs" finds every one that is up, "military" all of them.
+    const role = a.props.role ? ROLE_LABEL[a.props.role] : null
     items.push({
       id: a.id,
       group: 'Aircraft',
       title: a.label ?? a.props.hex,
-      subtitle: [a.props.registration, a.props.type].filter(Boolean).join(' · ') || undefined,
-      keywords: `${a.props.registration ?? ''} ${a.props.hex} ${a.props.type ?? ''}`,
+      subtitle: [a.props.registration, a.props.type, role].filter(Boolean).join(' · ') || undefined,
+      keywords: `${a.props.registration ?? ''} ${a.props.hex} ${a.props.type ?? ''} ${role ?? ''} ${a.flags & Flag.MIL ? 'military' : ''}`,
       weight: 50,
       run: () => goToEntity(a),
     })
@@ -103,6 +102,43 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
     })
   }
 
+  const shown = shownWindows()
+  for (const def of WINDOWS) {
+    // Mode windows come and go with what they show; there is nothing to open by hand.
+    if (def.mode) continue
+    items.push({
+      id: `window:${def.id}`,
+      group: 'Window',
+      title: def.title,
+      subtitle: shown.includes(def) ? 'Open: close it' : 'Closed: open it',
+      keywords: 'window panel open close',
+      weight: 20,
+      run: () => toggleWindow(def),
+    })
+  }
+  items.push({
+    id: 'window:reset',
+    group: 'Window',
+    title: 'Reset window layout',
+    keywords: 'windows panels default arrange',
+    weight: 15,
+    run: () => useWindows.getState().resetLayout(),
+  })
+
+  for (const channel of TV_CHANNELS) {
+    // A channel that may not be embedded is still found here, and opens where its broadcaster shows it.
+    const away = channel.kind === 'link'
+    items.push({
+      id: `tv:${channel.id}`,
+      group: 'Live TV',
+      title: channel.name,
+      subtitle: away ? 'Opens the broadcaster’s own site' : channel.schedule,
+      keywords: `tv television live watch channel ${channel.credit}`,
+      weight: 18,
+      run: () => (away ? void window.open(channel.link, '_blank', 'noopener,noreferrer') : watchChannel(channel.id)),
+    })
+  }
+
   items.push({
     id: 'view:latvia',
     group: 'View',
@@ -130,7 +166,7 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
   return items
 }
 
-/** Ctrl+K: find a place, a live object, a layer or a view and go straight to it. */
+/** Ctrl+K: find a place, a live object, a layer, a window or a view and go straight to it. */
 export function CommandPalette() {
   const open = usePalette((s) => s.open)
   const setOpen = usePalette((s) => s.setOpen)

@@ -1,0 +1,138 @@
+{
+  "bgm": {
+    "path": "assets/bgm/track.mp3",
+    "volume": 0.9,
+    "query": "tense pulsing cinematic electronic, dark synth, driving",
+    "duration_s": 25
+  },
+  "bgm_pending": false,
+  "voices": [],
+  "sfx": [
+    {
+      "frame": 1,
+      "file": "assets/sfx/typing.mp3",
+      "offset_s": 0,
+      "duration_s": 1.8,
+      "volume": 0.3
+    },
+    {
+      "frame": 1,
+      "file": "assets/sfx/riser.mp3",
+      "offset_s": 0,
+      "duration_s": 4,
+      "volume": 0.3
+    },
+    {
+      "frame": 2,
+      "file": "assets/sfx/whoosh.mp3",
+      "offset_s": 0,
+      "duration_s": 1.58,
+      "volume": 0.35
+    },
+    {
+      "frame": 2,
+      "file": "assets/sfx/ui-click.mp3",
+      "offset_s": 2.6,
+      "duration_s": 0.576,
+      "volume": 0.5
+    },
+    {
+      "frame": 3,
+      "file": "assets/sfx/whoosh.mp3",
+      "offset_s": 0.3,
+      "duration_s": 1.58,
+      "volume": 0.45
+    },
+    {
+      "frame": 3,
+      "file": "assets/sfx/impact.mp3",
+      "offset_s": 4.3,
+      "duration_s": 0.7,
+      "volume": 0.3
+    },
+    {
+      "frame": 4,
+      "file": "assets/sfx/ui-click.mp3",
+      "offset_s": 0.3,
+      "duration_s": 0.576,
+      "volume": 0.5
+    },
+    {
+      "frame": 4,
+      "file": "assets/sfx/whoosh.mp3",
+      "offset_s": 1.5,
+      "duration_s": 1.58,
+      "volume": 0.3
+    },
+    {
+      "frame": 5,
+      "file": "assets/sfx/ui-click.mp3",
+      "offset_s": 1.2,
+      "duration_s": 0.576,
+      "volume": 0.5
+    },
+    {
+      "frame": 5,
+      "file": "assets/sfx/glitch.mp3",
+      "offset_s": 2.4,
+      "duration_s": 1,
+      "volume": 0.25
+    },
+    {
+      "frame": 5,
+      "file": "assets/sfx/glitch.mp3",
+      "offset_s": 3.5,
+      "duration_s": 1,
+      "volume": 0.25
+    },
+    {
+      "frame": 6,
+      "file": "assets/sfx/whoosh.mp3",
+      "offset_s": 0,
+      "duration_s": 1.58,
+      "volume": 0.45
+    },
+    {
+      "frame": 7,
+      "file": "assets/sfx/impact.mp3",
+      "offset_s": 0,
+      "duration_s": 0.8,
+      "volume": 0.4
+    },
+    {
+      "frame": 7,
+      "file": "assets/sfx/glitch.mp3",
+      "offset_s": 4,
+      "duration_s": 1.37,
+      "volume": 0.3
+    },
+    {
+      "frame": 7,
+      "file": "assets/sfx/impact.mp3",
+      "offset_s": 5.4,
+      "duration_s": 1.6,
+      "volume": 0.45
+    },
+    {
+      "frame": 8,
+      "file": "assets/sfx/ui-click.mp3",
+      "offset_s": 1,
+      "duration_s": 0.576,
+      "volume": 0.45
+    },
+    {
+      "frame": 8,
+      "file": "assets/sfx/ui-click.mp3",
+      "offset_s": 2.4,
+      "duration_s": 0.576,
+      "volume": 0.45
+    },
+    {
+      "frame": 9,
+      "file": "assets/sfx/impact.mp3",
+      "offset_s": 1.2,
+      "duration_s": 2.8,
+      "volume": 0.4
+    }
+  ]
+}

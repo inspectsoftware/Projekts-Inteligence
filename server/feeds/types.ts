@@ -9,10 +9,12 @@ export interface FeedContext {
   http: Upstream
   env: NodeJS.ProcessEnv
   /**
-   * Another feed's current snapshot, refreshed first if it is due. For feeds that are
-   * worked out from another feed's data rather than fetched from somewhere.
+   * Another feed's current snapshot. For feeds that are worked out from another feed's data
+   * rather than fetched from somewhere. A source that is due is refreshed behind the copy handed
+   * back. With `fresh` the refresh is waited for, and the old copy comes back only if it failed:
+   * for a feed that keeps what it makes of the source far longer than the source's own TTL.
    */
-  feed(id: FeedId): Promise<FeedBody>
+  feed(id: FeedId, opts?: { fresh?: boolean }): Promise<FeedBody>
 }
 
 /**

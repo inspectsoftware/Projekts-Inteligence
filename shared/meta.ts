@@ -2,5 +2,5 @@
 export const APP = {
   name: 'Project White Hornet',
   codename: 'WHITE HORNET',
-  tagline: 'Latvia // open-source situational awareness',
+  tagline: 'Latvia // intelligence panel',
 } as const
