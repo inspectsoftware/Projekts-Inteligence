@@ -1,4 +1,5 @@
 import type { LayerSpecification, Map as MapLibreMap } from 'maplibre-gl'
+import { t } from '../i18n'
 import { formatLat, formatLon } from '../lib/coords'
 import { getMap } from '../map/instance'
 import { isLayerOn, useLayers } from '../state/layers'
@@ -28,23 +29,23 @@ export interface SiteProperties {
 }
 
 export const SITE_KINDS = {
-  air: 'Air base',
-  naval: 'Naval base',
-  army: 'Army base',
-  training: 'Training area',
-  sensor: 'Radar or radio site',
-  other: 'Other',
+  air: t('Air base'),
+  naval: t('Naval base'),
+  army: t('Army base'),
+  training: t('Training area'),
+  sensor: t('Radar or radio site'),
+  other: t('Other'),
 } as const
 
 export const COUNTRY_NAMES: Record<string, string> = {
-  LV: 'Latvia',
-  LT: 'Lithuania',
-  EE: 'Estonia',
-  PL: 'Poland',
-  SE: 'Sweden',
-  FI: 'Finland',
-  RU: 'Russia',
-  BY: 'Belarus',
+  LV: t('Latvia'),
+  LT: t('Lithuania'),
+  EE: t('Estonia'),
+  PL: t('Poland'),
+  SE: t('Sweden'),
+  FI: t('Finland'),
+  RU: t('Russia'),
+  BY: t('Belarus'),
 }
 
 const text = (value: unknown): string | undefined => (typeof value === 'string' && value ? value : undefined)
@@ -65,16 +66,16 @@ export function siteSelection(p: Record<string, unknown>, lon: number, lat: numb
     lon,
     lat,
     model: {
-      kicker: SITE_KINDS[p.kind as keyof typeof SITE_KINDS] ?? 'Military site',
-      title: text(p.name) ?? 'Military site',
+      kicker: SITE_KINDS[p.kind as keyof typeof SITE_KINDS] ?? t('Military site'),
+      title: text(p.name) ?? t('Military site'),
       subtitle: COUNTRY_NAMES[text(p.country) ?? ''],
-      badges: p.approx ? [{ text: 'Marker is approximate', tone: 'warn' }] : [],
+      badges: p.approx ? [{ text: t('Marker is approximate'), tone: 'warn' }] : [],
       rows: [
-        ...(text(p.operator) ? [{ label: 'Operator', value: text(p.operator)! }] : []),
-        { label: 'What the source says', value: text(p.note) ?? '' },
-        { label: 'Position', value: `${formatLat(lat)}  ${formatLon(lon)}` },
+        ...(text(p.operator) ? [{ label: t('Operator'), value: text(p.operator)! }] : []),
+        { label: t('What the source says'), value: text(p.note) ?? '' },
+        { label: t('Position'), value: `${formatLat(lat)}  ${formatLon(lon)}` },
       ],
-      links: webLink(`Source: ${SOURCE_NAMES[host] ?? host}`, source),
+      links: webLink(t('Source: {name}', { name: SOURCE_NAMES[host] ?? host }), source),
     },
   }
 }
@@ -111,8 +112,8 @@ const LABEL_PAINT = { 'text-halo-color': '#05080b', 'text-halo-width': 1.4, 'tex
 export const militarySitesLayer: LayerDef = {
   id: 'military-sites',
   group: 'reference',
-  label: 'Military sites',
-  hint: 'Bases, training areas and radar sites around the Baltic, each with the public source it rests on. Markers on a town are approximate',
+  label: t('Military sites'),
+  hint: t('Bases, training areas and radar sites around the Baltic, each with the public source it rests on. Markers on a town are approximate'),
   defaultOn: false,
   swatch: MIL,
   feeds: [],
@@ -163,8 +164,8 @@ export const militarySitesLayer: LayerDef = {
 export const seaExerciseAreasLayer: LayerDef = {
   id: 'sea-exercise-areas',
   group: 'reference',
-  label: 'Sea exercise areas',
-  hint: 'Stretches of sea each coastal state has set aside for its forces: firing and exercise areas and defence zones, from national maritime plans. Standing outlines, not activations',
+  label: t('Sea exercise areas'),
+  hint: t('Stretches of sea each coastal state has set aside for its forces: firing and exercise areas and defence zones, from national maritime plans. Standing outlines, not activations'),
   defaultOn: false,
   swatch: MIL,
   feeds: [],
@@ -187,15 +188,15 @@ export const seaExerciseAreasLayer: LayerDef = {
       lon,
       lat,
       model: {
-        kicker: 'Sea exercise area',
-        title: text(p.type) ?? 'Military area',
+        kicker: t('Sea exercise area'),
+        title: text(p.type) ?? t('Military area'),
         subtitle: text(p.country),
         badges: [],
         rows: [
-          { label: 'Status', value: text(p.status) ?? 'Unknown' },
-          ...(typeof p.km2 === 'number' ? [{ label: 'Area', value: `${p.km2} km²` }] : []),
+          { label: t('Status'), value: text(p.status) ?? t('Unknown') },
+          ...(typeof p.km2 === 'number' ? [{ label: t('Area'), value: `${p.km2} km²` }] : []),
         ],
-        links: [...webLink('National source', p.source), { label: 'EMODnet Human Activities', href: 'https://emodnet.ec.europa.eu/en/human-activities' }],
+        links: [...webLink(t('National source'), p.source), { label: 'EMODnet Human Activities', href: 'https://emodnet.ec.europa.eu/en/human-activities' }],
       },
     }),
     // A click inside both a standing area and a zone announced for today (src/layers/zones.ts) must reach the zone.

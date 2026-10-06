@@ -1,14 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { t } from '../i18n'
 import type { BaseMode } from '../map/basemaps'
 
 export type VisionMode = 'normal' | 'nvg' | 'flir' | 'crt'
 
 export const VISION_MODES: readonly { id: VisionMode; label: string; hint: string }[] = [
-  { id: 'normal', label: 'Std', hint: 'Standard display' },
-  { id: 'nvg', label: 'NVG', hint: 'Night-vision green phosphor' },
-  { id: 'flir', label: 'FLIR', hint: 'White-hot thermal look' },
-  { id: 'crt', label: 'CRT', hint: 'Scanline monitor' },
+  { id: 'normal', label: t('Std'), hint: t('Standard display') },
+  { id: 'nvg', label: 'NVG', hint: t('Night-vision green phosphor') },
+  { id: 'flir', label: 'FLIR', hint: t('White-hot thermal look') },
+  { id: 'crt', label: 'CRT', hint: t('Scanline monitor') },
 ]
 
 interface UiState {

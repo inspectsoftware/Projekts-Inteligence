@@ -2,6 +2,7 @@ import type { Color } from '@deck.gl/core'
 import { ScatterplotLayer, TextLayer } from '@deck.gl/layers'
 import type { Station } from '../../shared/adapters/stations'
 import type { Entity } from '../../shared/entity'
+import { t } from '../i18n'
 import { formatAge, formatBearing, formatInt } from '../lib/format'
 import { getEntities } from '../runtime/entityStore'
 import { LABEL_FONT, OUTLINE, SELECTED, iconScale, selectionRing } from './common'
@@ -35,46 +36,46 @@ function describe(entity: Entity, now: number): InspectorModel {
   const station = entity as Station
   const { props } = station
   const badges: InspectorModel['badges'] = []
-  if ((props.lightning ?? 0) > 0) badges.push({ text: `${props.lightning} lightning strokes`, tone: 'warn' })
-  if ((props.gustMs ?? 0) >= 20) badges.push({ text: 'Strong gusts', tone: 'warn' })
+  if ((props.lightning ?? 0) > 0) badges.push({ text: t('Lightning strokes: {n}', { n: props.lightning ?? 0 }), tone: 'warn' })
+  if ((props.gustMs ?? 0) >= 20) badges.push({ text: t('Strong gusts'), tone: 'warn' })
 
   const rows: InspectorModel['rows'] = [
-    { label: 'Temperature', value: value(props.tempC, '°C', 1) },
-    { label: 'Feels like', value: value(props.feelsC, '°C', 1) },
+    { label: t('Temperature'), value: value(props.tempC, '°C', 1) },
+    { label: t('Feels like'), value: value(props.feelsC, '°C', 1) },
     {
-      label: 'Wind',
+      label: t('Wind'),
       value:
         props.windMs === null
           ? '–'
-          : `${props.windMs.toFixed(1)} m/s${props.windDir === null ? '' : ` from ${formatBearing(props.windDir)}`}`,
+          : `${props.windMs.toFixed(1)} m/s${props.windDir === null ? '' : ` ${t('from {bearing}', { bearing: formatBearing(props.windDir) })}`}`,
     },
-    { label: 'Gusts', value: value(props.gustMs, 'm/s', 1) },
-    { label: 'Humidity', value: value(props.humidity, '%') },
-    { label: 'Pressure', value: value(props.pressureHpa, 'hPa', 1) },
-    { label: 'Rain, last hour', value: value(props.precipMm, 'mm', 1) },
+    { label: t('Gusts'), value: value(props.gustMs, 'm/s', 1) },
+    { label: t('Humidity'), value: value(props.humidity, '%') },
+    { label: t('Pressure'), value: value(props.pressureHpa, 'hPa', 1) },
+    { label: t('Rain, last hour'), value: value(props.precipMm, 'mm', 1) },
     {
-      label: 'Visibility',
+      label: t('Visibility'),
       value: props.visibilityM === null ? '–' : `${formatInt(props.visibilityM / 1000)} km`,
     },
-    { label: 'Observed', value: formatAge(now - station.ts) },
+    { label: t('Observed'), value: formatAge(now - station.ts) },
   ]
-  if (props.elevationM !== null) rows.push({ label: 'Station height', value: `${formatInt(props.elevationM)} m` })
+  if (props.elevationM !== null) rows.push({ label: t('Station height'), value: `${formatInt(props.elevationM)} m` })
 
   return {
-    kicker: 'Weather station',
+    kicker: t('Weather station'),
     title: props.name,
     subtitle: props.code,
     badges,
     rows,
-    links: [{ label: 'LVĢMC observations', href: 'https://videscentrs.lvgmc.lv/' }],
+    links: [{ label: t('LVĢMC observations'), href: 'https://videscentrs.lvgmc.lv/' }],
   }
 }
 
 export const stationsLayer: LayerDef = {
   id: 'stations',
   group: 'environment',
-  label: 'Weather stations',
-  hint: 'Hourly observations from the national weather stations (LVĢMC)',
+  label: t('Weather stations'),
+  hint: t('Hourly observations from the national weather stations (LVĢMC)'),
   defaultOn: false,
   swatch: '#96ebc8',
   feeds: ['stations'],
@@ -83,7 +84,7 @@ export const stationsLayer: LayerDef = {
 
   stats(entities) {
     const lightning = (entities as Station[]).filter((station) => (station.props.lightning ?? 0) > 0).length
-    return [{ label: 'with lightning', value: lightning, tone: 'warn' }]
+    return [{ label: t('with lightning'), value: lightning, tone: 'warn' }]
   },
 
   build({ now, zoom, selectedId, hoveredId, fontsReady }) {

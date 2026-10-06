@@ -6,12 +6,15 @@ import { type AircraftRole, ROLE_LABEL } from '../data/aircraftRoles'
 import { type Aircraft, Flag } from '../entity'
 import { LEVEL_NAMES } from '../escalation'
 import type { WarningLevel, Zone } from '../feeds'
-import type { AlertRule, Severity } from './engine'
+import { msg } from '../i18n'
+import type { AlertInput, AlertRule, Severity } from './engine'
+
+type Tr = AlertInput['tr']
 
 const SQUAWK_MEANING: Record<string, string> = {
-  '7500': 'Squawk 7500: unlawful interference',
-  '7600': 'Squawk 7600: radio failure',
-  '7700': 'Squawk 7700: general emergency',
+  '7500': msg('Squawk 7500: unlawful interference'),
+  '7600': msg('Squawk 7600: radio failure'),
+  '7700': msg('Squawk 7700: general emergency'),
 }
 
 const has = (aircraft: Aircraft, flag: number) => (aircraft.flags & flag) !== 0
@@ -26,14 +29,14 @@ const describeAirframe = (aircraft: Aircraft) =>
 export const emergencyRule: AlertRule = {
   id: 'emergency',
   clearAfterMs: 60_000,
-  evaluate: ({ entities }) =>
+  evaluate: ({ entities, tr }) =>
     (entities('aircraft') as Aircraft[])
       .filter((aircraft) => has(aircraft, Flag.EMERGENCY))
       .map((aircraft) => ({
         key: `emergency:${aircraft.id}`,
         severity: 'critical' as const,
-        title: `Emergency: ${aircraft.label ?? aircraft.props.hex}`,
-        detail: (aircraft.props.squawk && SQUAWK_MEANING[aircraft.props.squawk]) || 'Emergency status declared',
+        title: tr('Emergency: {name}', { name: aircraft.label ?? aircraft.props.hex }),
+        detail: tr((aircraft.props.squawk && SQUAWK_MEANING[aircraft.props.squawk]) || msg('Emergency status declared')),
         at: { lon: aircraft.lon, lat: aircraft.lat },
         entityId: aircraft.id,
       })),
@@ -43,7 +46,7 @@ export const emergencyRule: AlertRule = {
 export const militaryInsideRule: AlertRule = {
   id: 'military-inside',
   clearAfterMs: 45_000,
-  evaluate: ({ entities, insideLatvia }) =>
+  evaluate: ({ entities, insideLatvia, tr }) =>
     (entities('aircraft') as Aircraft[])
       .filter(
         (aircraft) =>
@@ -52,7 +55,7 @@ export const militaryInsideRule: AlertRule = {
       .map((aircraft) => ({
         key: `military:${aircraft.id}`,
         severity: 'warn' as const,
-        title: `Military aircraft over Latvia: ${aircraft.label ?? aircraft.props.hex}`,
+        title: tr('Military aircraft over Latvia: {name}', { name: aircraft.label ?? aircraft.props.hex }),
         detail: describeAirframe(aircraft),
         at: { lon: aircraft.lon, lat: aircraft.lat },
         entityId: aircraft.id,
@@ -67,7 +70,7 @@ export const watchedAircraftRule: AlertRule = {
   id: 'watched-aircraft',
   // The far ones come from a list read every 30 s, and can be missing from it for a poll or two.
   clearAfterMs: 90_000,
-  evaluate: ({ entities }) =>
+  evaluate: ({ entities, tr }) =>
     (entities('aircraft') as Aircraft[]).flatMap((aircraft) => {
       const { role } = aircraft.props
       if (!role || !WATCHED_ROLES.has(role) || !has(aircraft, Flag.MIL) || has(aircraft, Flag.ON_GROUND)) return []
@@ -75,7 +78,7 @@ export const watchedAircraftRule: AlertRule = {
         {
           key: `watched:${aircraft.id}`,
           severity: 'info' as const,
-          title: `${ROLE_LABEL[role]} airborne: ${aircraft.label ?? aircraft.props.hex}`,
+          title: tr('{role} airborne: {name}', { role: tr(ROLE_LABEL[role]), name: aircraft.label ?? aircraft.props.hex }),
           detail: aircraft.props.description ?? describeAirframe(aircraft),
           at: { lon: aircraft.lon, lat: aircraft.lat },
           entityId: aircraft.id,
@@ -89,7 +92,7 @@ export const gpsInterferenceRule: AlertRule = {
   id: 'gps-interference',
   // Aircraft cross the country in minutes; do not flap every time the count dips for one poll.
   clearAfterMs: 120_000,
-  evaluate({ entities, insideLatvia }) {
+  evaluate({ entities, insideLatvia, tr }) {
     const affected = (entities('aircraft') as Aircraft[]).filter(
       (aircraft) =>
         has(aircraft, Flag.GPS_DEGRADED) && !has(aircraft, Flag.ON_GROUND) && insideLatvia(aircraft.lon, aircraft.lat),
@@ -99,8 +102,8 @@ export const gpsInterferenceRule: AlertRule = {
       {
         key: 'gps-interference:latvia',
         severity: 'warn',
-        title: 'GPS interference over Latvia',
-        detail: `${affected.length} aircraft reporting degraded or lost GPS`,
+        title: tr('GPS interference over Latvia'),
+        detail: tr('Aircraft reporting degraded or lost GPS: {n}', { n: affected.length }),
         at: {
           lon: affected.reduce((sum, aircraft) => sum + aircraft.lon, 0) / affected.length,
           lat: affected.reduce((sum, aircraft) => sum + aircraft.lat, 0) / affected.length,
@@ -112,17 +115,16 @@ export const gpsInterferenceRule: AlertRule = {
 
 const WARNING_SEVERITY: Record<WarningLevel, Severity> = { yellow: 'info', orange: 'warn', red: 'critical' }
 
-const RIGA_TIME = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'Europe/Riga',
-  weekday: 'short',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
-})
+/** The colours as words, as a warning's title names them. */
+const WARNING_LEVEL_NAME: Record<WarningLevel, string> = { yellow: msg('yellow'), orange: msg('orange'), red: msg('red') }
+
+/** "Wed 01:00", in Riga's time and the reader's language. */
+const rigaTime = (locale = 'en-GB') =>
+  new Intl.DateTimeFormat(locale, { timeZone: 'Europe/Riga', weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 
 /** "Kurzeme, Zemgale +3" */
-function summariseAreas(areas: readonly string[]): string {
-  if (areas.length === 0) return 'Latvia'
+function summariseAreas(areas: readonly string[], tr: Tr): string {
+  if (areas.length === 0) return tr('Latvia')
   const shown = areas.slice(0, 2).join(', ')
   return areas.length > 2 ? `${shown} +${areas.length - 2}` : shown
 }
@@ -131,15 +133,16 @@ function summariseAreas(areas: readonly string[]): string {
 export const weatherWarningRule: AlertRule = {
   id: 'weather-warning',
   clearAfterMs: 10 * 60_000,
-  evaluate: ({ warnings, now }) =>
-    warnings().map((warning) => {
+  evaluate({ warnings, now, tr, locale }) {
+    const time = rigaTime(locale)
+    return warnings().map((warning) => {
       const ring = warning.polygons[0]
       return {
         key: `weather:${warning.type}:${warning.level}:${warning.areas.join(';')}`,
         severity: WARNING_SEVERITY[warning.level],
-        title: `${warning.type} warning (${warning.level})`,
-        detail: `${summariseAreas(warning.areas)} · ${
-          warning.onset > now ? `from ${RIGA_TIME.format(warning.onset)}` : `until ${RIGA_TIME.format(warning.expires)}`
+        title: tr('{type} warning ({level})', { type: tr(warning.type), level: tr(WARNING_LEVEL_NAME[warning.level]) }),
+        detail: `${summariseAreas(warning.areas, tr)} · ${
+          warning.onset > now ? tr('from {time}', { time: time.format(warning.onset) }) : tr('until {time}', { time: time.format(warning.expires) })
         }`,
         // Sea-area warnings come without outlines, so there is nowhere to fly to.
         ...(ring && {
@@ -149,11 +152,12 @@ export const weatherWarningRule: AlertRule = {
           },
         }),
       }
-    }),
+    })
+  },
 }
 
 /** One quiet alert for however many notices: restricted areas along the eastern border are activated most days. */
-function zoneSummary(key: string, title: string, zones: readonly Zone[]) {
+function zoneSummary(key: string, title: string, zones: readonly Zone[], tr: Tr) {
   if (zones.length === 0) return []
   const names = [...new Set(zones.map((zone) => zone.title))]
   const at = zones.find((zone) => zone.point)?.point
@@ -162,7 +166,7 @@ function zoneSummary(key: string, title: string, zones: readonly Zone[]) {
       key,
       severity: 'info' as const,
       title,
-      detail: zones.length === 1 ? `${zones[0].type} · ${names[0]}` : `${zones.length} notices · ${summariseAreas(names)}`,
+      detail: zones.length === 1 ? `${tr(zones[0].type)} · ${names[0]}` : `${tr('Notices: {n}', { n: zones.length })} · ${summariseAreas(names, tr)}`,
       ...(at && { at: { lon: at[0], lat: at[1] } }),
     },
   ]
@@ -176,7 +180,7 @@ export const militaryZoneRule: AlertRule = {
   id: 'military-zone',
   // The feeds are read every quarter of an hour; one late refresh should not withdraw the alert.
   clearAfterMs: 20 * 60_000,
-  evaluate({ zones, now }) {
+  evaluate({ zones, now, tr }) {
     // Only what is known to apply at this moment: an area between its daily hours, or with times that could not be read, stays quiet.
     const active = (zones?.() ?? []).filter((zone) => zone.military && zoneState(zone, now) === 'active')
     // ponytail: corners only, so an area that crosses Latvian waters with no corner inside them is missed. Test the edges if that ever matters.
@@ -186,19 +190,24 @@ export const militaryZoneRule: AlertRule = {
     // A Latvian NOTAM is about Latvian airspace by definition, outline or not. Interference notices have their own alert.
     const air = active.filter((zone) => zone.id.startsWith('air:lv:') && zone.type !== 'GNSS interference')
     return [
-      ...zoneSummary('military-zone:sea', 'Exercise or danger area in Latvian waters', sea),
-      ...zoneSummary('military-zone:air', 'Military airspace active over Latvia', air),
+      ...zoneSummary('military-zone:sea', tr('Exercise or danger area in Latvian waters'), sea, tr),
+      ...zoneSummary('military-zone:air', tr('Military airspace active over Latvia'), air, tr),
     ]
   },
 }
 
-/** What makes a vessel worth an alert, or null. Its nationality is the country digits of its MMSI and nothing more. */
-function vesselConcern(ship: Ship): string | null {
-  if ((ship.flags & Flag.SANCTIONED) !== 0) return 'Sanctioned vessel'
-  if ((ship.flags & Flag.SHADOW_FLEET) !== 0) return 'Shadow-fleet vessel'
-  const { service, flagState } = ship.props
+/**
+ * The alert's title when a vessel is worth one, or null. Its nationality is the country digits of
+ * its MMSI and nothing more. Whole sentences, so that a translation can order its words freely.
+ */
+function vesselTitle(ship: Ship, inside: boolean, tr: Tr): string | null {
+  const { service, flagState: flag } = ship.props
+  const name = ship.props.name ?? `MMSI ${ship.props.mmsi}`
+  if ((ship.flags & Flag.SANCTIONED) !== 0) return inside ? tr('Sanctioned vessel in Latvian waters: {name}', { name }) : tr('Sanctioned vessel: {name}', { name })
+  if ((ship.flags & Flag.SHADOW_FLEET) !== 0) return inside ? tr('Shadow-fleet vessel in Latvian waters: {name}', { name }) : tr('Shadow-fleet vessel: {name}', { name })
   // A warship whose flag is not known is not assumed to be anybody's.
-  return service === 'navy' && flagState && !NATO_FLAGS.has(flagState) ? `Naval vessel (${flagState})` : null
+  if (service !== 'navy' || !flag || NATO_FLAGS.has(flag)) return null
+  return inside ? tr('Naval vessel ({flag}) in Latvian waters: {name}', { flag, name }) : tr('Naval vessel ({flag}): {name}', { flag, name })
 }
 
 /**
@@ -208,23 +217,23 @@ function vesselConcern(ship: Ship): string | null {
 export const vesselRule: AlertRule = {
   id: 'vessel',
   clearAfterMs: 5 * 60_000,
-  evaluate: ({ entities, insideLatvia }) =>
+  evaluate: ({ entities, insideLatvia, tr }) =>
     (entities('ships') as Ship[]).flatMap((ship) => {
-      const concern = vesselConcern(ship)
-      if (!concern) return []
       // The sea out to the edge of the economic zone, or a harbour or river inside the land border.
       const inside = inLatvianWaters(ship.lon, ship.lat) || insideLatvia(ship.lon, ship.lat)
+      const title = vesselTitle(ship, inside, tr)
+      if (!title) return []
       const { props } = ship
       return [
         {
           key: `vessel:${ship.id}`,
           severity: inside ? ('warn' as const) : ('info' as const),
-          title: `${concern}${inside ? ' in Latvian waters' : ''}: ${props.name ?? `MMSI ${props.mmsi}`}`,
+          title,
           detail:
             [
               props.flagState,
-              props.listedAs ? `listed as ${props.listedAs}` : null,
-              props.destination ? `bound for ${props.destination}` : null,
+              props.listedAs ? tr('listed as {list}', { list: props.listedAs }) : null,
+              props.destination ? tr('bound for {port}', { port: props.destination }) : null,
             ]
               .filter(Boolean)
               .join(' · ') || undefined,
@@ -239,14 +248,14 @@ export const vesselRule: AlertRule = {
 export const roadAccidentRule: AlertRule = {
   id: 'road-accident',
   clearAfterMs: 10 * 60_000,
-  evaluate: ({ entities }) =>
+  evaluate: ({ entities, tr }) =>
     (entities('roads') as RoadEvent[])
       .filter((event) => event.props.category === 'accident')
       .map((event) => ({
         key: `road-accident:${event.id}`,
         severity: 'warn' as const,
-        title: `Road accident: ${event.props.road}`,
-        detail: event.props.restrictions.map(plainWords).join(', ') || undefined,
+        title: tr('Road accident: {road}', { road: event.props.road }),
+        detail: event.props.restrictions.map((restriction) => tr(plainWords(restriction))).join(', ') || undefined,
         at: { lon: event.lon, lat: event.lat },
         entityId: event.id,
       })),
@@ -259,14 +268,14 @@ export const RADIATION_ALERT_USVH = 0.3
 export const radiationRule: AlertRule = {
   id: 'radiation',
   clearAfterMs: 2 * 60 * 60_000,
-  evaluate: ({ entities }) =>
+  evaluate: ({ entities, tr }) =>
     (entities('radiation') as RadiationStation[])
       .filter((station) => station.props.usvh >= RADIATION_ALERT_USVH)
       .map((station) => ({
         key: `radiation:${station.id}`,
         severity: 'critical' as const,
-        title: `Raised radiation: ${station.props.name}`,
-        detail: `${station.props.usvh.toFixed(2)} µSv/h, above normal background`,
+        title: tr('Raised radiation: {name}', { name: station.props.name }),
+        detail: tr('{value} µSv/h, above normal background', { value: station.props.usvh.toFixed(2) }),
         at: { lon: station.lon, lat: station.lat },
         entityId: station.id,
       })),
@@ -279,14 +288,14 @@ const NEWS_ALERT_FRESH_MS = 6 * 60 * 60_000
 export const newsRule: AlertRule = {
   id: 'news',
   clearAfterMs: 60_000,
-  evaluate: ({ news, now }) =>
+  evaluate: ({ news, now, tr }) =>
     news()
       .filter((item) => item.escalation >= 3 && now - item.at < NEWS_ALERT_FRESH_MS)
       .map((item) => ({
         key: `news:${item.link}`,
         severity: item.escalation >= 4 ? ('critical' as const) : ('warn' as const),
-        title: `${LEVEL_NAMES[item.escalation]}: ${item.title}`,
-        detail: `Level ${item.escalation} · ${item.publisher}${item.corroboration > 0 ? ` · also reported by ${item.corroboration}` : ''}`,
+        title: `${tr(LEVEL_NAMES[item.escalation])}: ${item.title}`,
+        detail: [tr('Level {level}', { level: item.escalation }), item.publisher, ...(item.corroboration > 0 ? [tr('also reported by {n}', { n: item.corroboration })] : [])].join(' · '),
       })),
 }
 

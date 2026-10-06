@@ -1,3 +1,5 @@
+import { msg } from '../i18n'
+
 /**
  * What a military aircraft is for, read off its ICAO type designator. Only applied to aircraft
  * the aggregators' database marks as military: a civil A332 is an airliner, a military one a
@@ -53,17 +55,17 @@ const ISR_IF_NAMED: ReadonlySet<string> = new Set(['BE20', 'B350', 'CL60', 'GLEX
 const ISR_VARIANT = /Shadow|RC-12|MC-12|Guardrail|ATHENA|ARTEMIS|E-11|PEGASUS/i
 
 export const ROLE_LABEL: Record<AircraftRole, string> = {
-  isr: 'ISR / SIGINT',
-  aew: 'AWACS / early warning',
-  tanker: 'Tanker',
-  mpa: 'Maritime patrol',
-  uav: 'UAV',
-  bomber: 'Bomber',
-  fighter: 'Fighter / attack',
-  transport: 'Transport',
-  helicopter: 'Helicopter',
-  trainer: 'Trainer',
-  vip: 'VIP / command',
+  isr: msg('ISR / SIGINT'),
+  aew: msg('AWACS / early warning'),
+  tanker: msg('Tanker'),
+  mpa: msg('Maritime patrol'),
+  uav: msg('UAV'),
+  bomber: msg('Bomber'),
+  fighter: msg('Fighter / attack'),
+  transport: msg('Transport'),
+  helicopter: msg('Helicopter'),
+  trainer: msg('Trainer'),
+  vip: msg('VIP / command'),
 }
 
 export const ROLE_ORDER = Object.keys(ROLE_TYPES) as AircraftRole[]

@@ -1,5 +1,6 @@
 import { AlertEngine } from '../../shared/alerts/engine'
 import { RULES } from '../../shared/alerts/rules'
+import { locale, t } from '../i18n'
 import { useAlerts } from '../state/alerts'
 import { insideLatvia } from './border'
 import { serverNow } from './clock'
@@ -26,6 +27,8 @@ export function startAlerts(): () => void {
       news: () => getPayload('news', 'news')?.items ?? [],
       zones: () => [...(getPayload('navwarn', 'zones')?.zones ?? []), ...(getPayload('airspace', 'zones')?.zones ?? [])],
       insideLatvia,
+      tr: t,
+      locale,
     })
     if (result.changed) useAlerts.getState().setActive(result.alerts)
   }

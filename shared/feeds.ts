@@ -1,4 +1,5 @@
 import type { Entity } from './entity'
+import type { Lang } from './i18n'
 import type { Attribution } from './origins'
 
 export const FEED_IDS = [
@@ -213,7 +214,21 @@ export interface IntelBrief {
   countries: Record<string, { level: EscalationLevel; text: string }>
   /** Ratings a language model gave, by item link. They replace the rule scores where present. */
   ratings: Record<string, { importance: number; escalation: EscalationLevel; summary?: string }>
+  /**
+   * The same texts in the other languages; the fields above are the English. `points` runs in the
+   * order of `points` above, `countries` has the same keys. A language that is missing is read in English.
+   */
+  i18n?: Partial<Record<Lang, IntelBriefText>>
 }
+
+export interface IntelBriefText {
+  headline: string
+  summary: string
+  points: string[]
+  countries: Record<string, string>
+}
+
+export type CountryBriefText = Record<'overview' | 'defence' | 'military' | 'economy' | 'risks', string>
 
 /** A written profile of one country. Plain text, one or two paragraphs per section. */
 export interface CountryBrief {
@@ -224,6 +239,8 @@ export interface CountryBrief {
   risks: string
   /** How this one was written. One payload can hold both kinds: a country the model failed on keeps its rule-written text. */
   mode?: 'ai' | 'rules'
+  /** The five sections in the other languages; the fields above are the English. A language that is missing is read in English. */
+  i18n?: Partial<Record<Lang, CountryBriefText>>
 }
 
 /**

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { LEVEL_NAMES, regionLevel } from '../../../shared/escalation'
 import type { EscalationLevel, IntelBrief, NewsItem } from '../../../shared/feeds'
+import { lang, t } from '../../i18n'
 import { formatAge } from '../../lib/format'
 import { useFeed } from '../../runtime/useFeed'
 import { useNow } from '../../runtime/useNow'
@@ -23,15 +24,15 @@ const LEVELS: readonly EscalationLevel[] = [0, 1, 2, 3, 4, 5]
 const COUNTRIES = ['LV', 'LT', 'EE'] as const
 
 const SORTS: readonly { id: IntelSort; label: string }[] = [
-  { id: 'importance', label: 'Importance' },
-  { id: 'latest', label: 'Latest' },
+  { id: 'importance', label: t('Importance') },
+  { id: 'latest', label: t('Latest') },
 ]
 
 const FILTERS: readonly { id: IntelCountry; label: string; hint: string }[] = [
-  { id: 'all', label: 'All', hint: 'Every headline' },
-  { id: 'LV', label: 'LV', hint: 'Headlines about Latvia' },
-  { id: 'LT', label: 'LT', hint: 'Headlines about Lithuania' },
-  { id: 'EE', label: 'EE', hint: 'Headlines about Estonia' },
+  { id: 'all', label: t('All'), hint: t('Every headline') },
+  { id: 'LV', label: 'LV', hint: t('Headlines about Latvia') },
+  { id: 'LT', label: 'LT', hint: t('Headlines about Lithuania') },
+  { id: 'EE', label: 'EE', hint: t('Headlines about Estonia') },
 ]
 
 const CHROME = 'text-[9.5px] tracking-[0.12em] uppercase'
@@ -40,7 +41,7 @@ const MENU = 'scheme-dark flex-1 border border-line bg-ink-850 px-1 py-1.5 text-
 
 function LevelBadge({ level }: { level: EscalationLevel }) {
   return (
-    <span title={LEVEL_NAMES[level]} className={`shrink-0 border px-1 ${CHROME} ${TONE[level].badge}`}>
+    <span title={t(LEVEL_NAMES[level])} className={`shrink-0 border px-1 ${CHROME} ${TONE[level].badge}`}>
       L{level}
     </span>
   )
@@ -50,11 +51,11 @@ function Gauge({ level }: { level: EscalationLevel | null }) {
   return (
     <span
       role="meter"
-      aria-label="Escalation level"
+      aria-label={t('Escalation level')}
       aria-valuemin={0}
       aria-valuemax={5}
       aria-valuenow={level ?? undefined}
-      aria-valuetext={level === null ? 'Not known yet' : `${level}, ${LEVEL_NAMES[level]}`}
+      aria-valuetext={level === null ? t('Not known yet') : `${level}, ${t(LEVEL_NAMES[level])}`}
       className="flex shrink-0 gap-0.5"
     >
       {LEVELS.slice(1).map((step) => (
@@ -66,6 +67,7 @@ function Gauge({ level }: { level: EscalationLevel | null }) {
 
 /** The rest of the brief: the developments it rests on, each with the headlines behind it, and a line per country. */
 function Detail({ brief, items }: { brief: IntelBrief; items: readonly NewsItem[] }) {
+  const own = brief.i18n?.[lang]
   return (
     <>
       <ul className="mt-2 grid gap-1.5">
@@ -73,7 +75,7 @@ function Detail({ brief, items }: { brief: IntelBrief; items: readonly NewsItem[
           <li key={index} className="flex items-baseline gap-2">
             <LevelBadge level={point.level} />
             <p className="min-w-0 font-sans text-xs leading-relaxed text-fg">
-              {point.text}
+              {own?.points[index] ?? point.text}
               {sourcesOf(point.links, items).map((item) => (
                 <a
                   key={item.link}
@@ -93,7 +95,7 @@ function Detail({ brief, items }: { brief: IntelBrief; items: readonly NewsItem[
         {COUNTRIES.map((iso) => (
           <div key={iso} className="flex items-baseline gap-2">
             <dt className={`w-5 shrink-0 text-fg-mute ${CHROME}`}>{iso}</dt>
-            <dd className="min-w-0 font-sans text-xs leading-relaxed text-fg-dim">{brief.countries[iso]?.text}</dd>
+            <dd className="min-w-0 font-sans text-xs leading-relaxed text-fg-dim">{own?.countries[iso] ?? brief.countries[iso]?.text}</dd>
           </div>
         ))}
       </dl>
@@ -112,31 +114,33 @@ function Reading({ brief, items, now }: { brief: IntelBrief | undefined; items: 
   const level = brief?.level ?? (items ? regionLevel(items, now) : null)
   const ai = brief?.mode === 'ai'
   const writtenAt = brief?.generatedAt ?? readAt
+  // The brief in the reader's language where the server wrote one, in English where it did not.
+  const text = brief?.i18n?.[lang] ?? brief
 
   return (
     <section className="border-b border-line px-3 pt-2.5 pb-2">
       <div className="flex items-center gap-2">
         <Gauge level={level} />
         <h3 className={`min-w-0 flex-1 truncate text-[11px] tracking-[0.1em] uppercase ${level === null ? 'text-fg-mute' : TONE[level].text}`}>
-          {level === null ? 'Standing by' : `L${level} ${LEVEL_NAMES[level]}`}
+          {level === null ? t('Standing by') : `L${level} ${t(LEVEL_NAMES[level])}`}
         </h3>
         <button
           type="button"
           aria-expanded={open}
-          title="The whole brief: key points, and a line for each country"
+          title={t('The whole brief: key points, and a line for each country')}
           disabled={!brief}
           onClick={() => setOpen(!open)}
           className={`shrink-0 text-fg-dim transition-colors hover:text-accent disabled:opacity-40 ${CHROME}`}
         >
-          {open ? 'Less' : 'More'}
+          {open ? t('Less') : t('More')}
         </button>
       </div>
 
       <p className="mt-1.5 line-clamp-2 min-h-[2lh] font-sans text-xs font-medium text-fg">
-        {brief ? brief.headline : items ? 'No brief has been written yet' : 'Waiting for data…'}
+        {text ? text.headline : items ? t('No brief has been written yet') : t('Waiting for data…')}
       </p>
       <p className={`mt-1 min-h-[2lh] font-sans text-xs leading-relaxed text-fg-dim ${open ? '' : 'line-clamp-2'}`}>
-        {brief ? brief.summary : items ? 'Until one arrives, the level is worked out here from the rated headlines below.' : ''}
+        {text ? text.summary : items ? t('Until one arrives, the level is worked out here from the rated headlines below.') : ''}
       </p>
 
       {open && brief && <Detail brief={brief} items={items ?? []} />}
@@ -153,10 +157,10 @@ function Reading({ brief, items, now }: { brief: IntelBrief | undefined; items: 
         })}
         <span className="ml-auto min-w-0 truncate text-fg-mute">
           <span
-            title={ai ? 'Written by a language model from these headlines' : 'Worked out by keyword rules, without a language model'}
+            title={ai ? t('Written by a language model from these headlines') : t('Worked out by keyword rules, without a language model')}
             className={`mr-1.5 border px-1 ${ai ? 'border-accent/50 text-accent' : 'border-line-strong text-fg-dim'}`}
           >
-            {ai ? 'AI' : 'Rules'}
+            {ai ? t('AI') : t('Rules')}
           </span>
           {writtenAt ? formatAge(now - writtenAt) : '–'}
         </span>
@@ -166,12 +170,13 @@ function Reading({ brief, items, now }: { brief: IntelBrief | undefined; items: 
 }
 
 function Headline({ row, now }: { row: Row; now: number }) {
-  const notes = [...row.tags.map((tag) => tag.replaceAll('_', ' ')), ...(row.corroboration > 0 ? [`also reported by ${row.corroboration}`] : [])]
+  // A tag in plain words is the text the translators were given (TAG_WORDS).
+  const notes = [...row.tags.map((tag) => t(tag.replaceAll('_', ' '))), ...(row.corroboration > 0 ? [t('also reported by {n}', { n: row.corroboration })] : [])]
   return (
     <li className="border-b border-line/50 px-3 py-2 last:border-0">
       <div className={`flex items-center gap-2 ${CHROME}`}>
         <LevelBadge level={row.escalation} />
-        <span title="Importance, 0 to 100" className="w-6 shrink-0 text-right text-fg tabular-nums">
+        <span title={t('Importance, 0 to 100')} className="w-6 shrink-0 text-right text-fg tabular-nums">
           {row.importance}
         </span>
         <span className="h-0.5 min-w-4 flex-1 bg-line">
@@ -186,8 +191,8 @@ function Headline({ row, now }: { row: Row; now: number }) {
       {row.summary && (
         <p className="mt-0.5 font-sans text-xs leading-relaxed text-fg-dim">
           {/* Marked, so a model's sentence is never taken for the publisher's. */}
-          <span title="Summary written by a language model" className={`mr-1.5 border border-accent/50 px-1 font-mono text-accent ${CHROME}`}>
-            AI
+          <span title={t('Summary written by a language model')} className={`mr-1.5 border border-accent/50 px-1 font-mono text-accent ${CHROME}`}>
+            {t('AI')}
           </span>
           {row.summary}
         </p>
@@ -211,10 +216,10 @@ export function IntelWindow() {
       {/* Stays in reach while the list scrolls. One row where there is room; the two menus drop below it in a narrow window. */}
       <div className="sticky top-0 z-10 flex flex-wrap gap-1.5 border-b border-line bg-ink-900 px-3 py-1.5">
         <div className="min-w-32 flex-1">
-          <Segmented<IntelCountry> label="Country" value={country} options={FILTERS} onChange={setCountry} />
+          <Segmented<IntelCountry> label={t('Country')} value={country} options={FILTERS} onChange={setCountry} />
         </div>
         <div className="flex flex-1 gap-1.5">
-          <select aria-label="Order" title="Order" value={sort} onChange={(event) => setSort(event.target.value as IntelSort)} className={MENU}>
+          <select aria-label={t('Order')} title={t('Order')} value={sort} onChange={(event) => setSort(event.target.value as IntelSort)} className={MENU}>
             {SORTS.map((option) => (
               <option key={option.id} value={option.id}>
                 {option.label}
@@ -222,8 +227,8 @@ export function IntelWindow() {
             ))}
           </select>
           <select
-            aria-label="Lowest level shown"
-            title="Lowest level shown"
+            aria-label={t('Lowest level shown')}
+            title={t('Lowest level shown')}
             value={minLevel}
             onChange={(event) => setMinLevel(Number(event.target.value) as EscalationLevel)}
             className={MENU}
@@ -243,7 +248,7 @@ export function IntelWindow() {
           ))}
         </ul>
       ) : (
-        <p className="p-3 text-fg-mute">{news ? 'No headline matches these filters' : 'Waiting for data…'}</p>
+        <p className="p-3 text-fg-mute">{news ? t('No headline matches these filters') : t('Waiting for data…')}</p>
       )}
     </div>
   )

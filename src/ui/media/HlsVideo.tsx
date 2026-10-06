@@ -1,5 +1,6 @@
 import type Hls from 'hls.js'
 import { useEffect, useRef, useState } from 'react'
+import { t } from '../../i18n'
 
 interface HlsVideoProps {
   /** Playlist URL. Its origin has to be listed in MEDIA_ORIGINS (shared/origins.ts). */
@@ -41,14 +42,14 @@ export function HlsVideo({ src, title, poster }: HlsVideoProps) {
           if (!data.fatal) return
           if (data.type === Hls.ErrorTypes.MEDIA_ERROR) return hls.recoverMediaError()
           // Camera links drop now and then: ask again from the start rather than give up.
-          setNote('No signal: trying again')
+          setNote(t('No signal: trying again'))
           clearTimeout(retry)
           retry = setTimeout(() => hls.loadSource(src), 5000)
         })
         hls.loadSource(src)
         hls.attachMedia(video)
       })
-      .catch(() => setNote('The player could not be loaded'))
+      .catch(() => setNote(t('The player could not be loaded')))
     return () => {
       gone = true
       clearTimeout(retry)

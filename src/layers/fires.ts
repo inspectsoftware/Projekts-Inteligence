@@ -1,44 +1,45 @@
 import { ScatterplotLayer } from '@deck.gl/layers'
 import type { Fire } from '../../shared/adapters/fires'
 import type { Entity } from '../../shared/entity'
+import { t } from '../i18n'
 import { formatLat, formatLon, formatMgrs } from '../lib/coords'
 import { formatAge } from '../lib/format'
 import { getEntities } from '../runtime/entityStore'
 import { iconScale, selectionRing } from './common'
 import type { InspectorModel, LayerDef } from './types'
 
-const CONFIDENCE_TEXT = { low: 'Low', nominal: 'Nominal', high: 'High' } as const
+const CONFIDENCE_TEXT = { low: t('Low'), nominal: t('Nominal'), high: t('High') } as const
 
 function describe(entity: Entity, now: number): InspectorModel {
   const fire = entity as Fire
   const { props } = fire
   const badges: InspectorModel['badges'] = []
-  if (props.confidence === 'high') badges.push({ text: 'High confidence', tone: 'danger' })
-  if (props.confidence === 'low') badges.push({ text: 'Low confidence', tone: 'info' })
+  if (props.confidence === 'high') badges.push({ text: t('High confidence'), tone: 'danger' })
+  if (props.confidence === 'low') badges.push({ text: t('Low confidence'), tone: 'info' })
 
   return {
-    kicker: 'Heat source seen from orbit',
-    title: props.frpMw === null ? 'Fire detection' : `${props.frpMw.toFixed(1)} MW`,
-    subtitle: 'Fire radiative power',
+    kicker: t('Heat source seen from orbit'),
+    title: props.frpMw === null ? t('Fire detection') : `${props.frpMw.toFixed(1)} MW`,
+    subtitle: t('Fire radiative power'),
     badges,
     rows: [
-      { label: 'Detected', value: formatAge(now - fire.ts) },
-      { label: 'Pass', value: props.night ? 'Night' : 'Day' },
-      { label: 'Brightness', value: props.brightnessK === null ? '–' : `${props.brightnessK.toFixed(0)} K` },
-      { label: 'Confidence', value: props.confidence ? CONFIDENCE_TEXT[props.confidence] : '–' },
-      { label: 'Satellite', value: props.satellite ?? '–' },
-      { label: 'Position', value: `${formatLat(fire.lat)}  ${formatLon(fire.lon)}` },
+      { label: t('Detected'), value: formatAge(now - fire.ts) },
+      { label: t('Pass'), value: props.night ? t('Night') : t('Day') },
+      { label: t('Brightness'), value: props.brightnessK === null ? '–' : `${props.brightnessK.toFixed(0)} K` },
+      { label: t('Confidence'), value: props.confidence ? CONFIDENCE_TEXT[props.confidence] : '–' },
+      { label: t('Satellite'), value: props.satellite ?? '–' },
+      { label: t('Position'), value: `${formatLat(fire.lat)}  ${formatLon(fire.lon)}` },
       { label: 'MGRS', value: formatMgrs(fire.lon, fire.lat) },
     ],
-    links: [{ label: 'NASA FIRMS map', href: `https://firms.modaps.eosdis.nasa.gov/map/#d:24hrs;@${fire.lon.toFixed(2)},${fire.lat.toFixed(2)},10z` }],
+    links: [{ label: t('NASA FIRMS map'), href: `https://firms.modaps.eosdis.nasa.gov/map/#d:24hrs;@${fire.lon.toFixed(2)},${fire.lat.toFixed(2)},10z` }],
   }
 }
 
 export const firesLayer: LayerDef = {
   id: 'fires',
   group: 'environment',
-  label: 'Fires',
-  hint: 'Heat sources detected by the VIIRS satellite sensor in the last 24 hours (NASA FIRMS)',
+  label: t('Fires'),
+  hint: t('Heat sources detected by the VIIRS satellite sensor in the last 24 hours (NASA FIRMS)'),
   defaultOn: true,
   swatch: '#ff7a3d',
   feeds: ['fires'],

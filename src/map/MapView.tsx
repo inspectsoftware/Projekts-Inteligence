@@ -3,6 +3,7 @@ import { Map as MapLibreMap, addProtocol, setWorkerUrl } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef } from 'react'
+import { t } from '../i18n'
 import { setBorder } from '../runtime/border'
 import { useUi } from '../state/ui'
 import { finishBoot } from '../ui/boot'
@@ -61,7 +62,7 @@ export function MapView() {
       })
     } catch (err) {
       // Thrown when the browser cannot give us WebGL2.
-      setMapFailure(`This browser could not start WebGL2. ${err instanceof Error ? err.message : String(err)}`)
+      setMapFailure(`${t('This browser could not start WebGL2.')} ${err instanceof Error ? err.message : String(err)}`)
       finishBoot()
       return () => setMapFailure(null)
     }
@@ -96,7 +97,7 @@ export function MapView() {
         // Storage can be switched off; then the page is simply not reloaded automatically.
         recent = true
       }
-      if (recent) setMapFailure('The graphics context was lost. Reload the page to try again.')
+      if (recent) setMapFailure(t('The graphics context was lost. Reload the page to try again.'))
       else window.location.reload()
     }
     // The event does not bubble, so it is caught on its way down to whichever canvas lost it.
@@ -147,7 +148,7 @@ export function MapView() {
       {error && (
         <div className="absolute inset-0 grid place-items-center p-8 text-center font-mono text-xs tracking-widest text-danger uppercase">
           <p>
-            Map unavailable
+            {t('Map unavailable')}
             <span className="mt-2 block text-fg-mute normal-case">{error}</span>
           </p>
         </div>

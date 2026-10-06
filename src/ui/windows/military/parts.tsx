@@ -1,5 +1,6 @@
 import type { Entity } from '../../../../shared/entity'
 import type { FeedId } from '../../../../shared/feeds'
+import { t } from '../../../i18n'
 import type { LayerDef } from '../../../layers/types'
 import { goToEntity } from '../../../map/goToEntity'
 import { useFeeds } from '../../../state/feeds'
@@ -33,7 +34,7 @@ export function TrackRow({ entity, layer, title, kind, tone, detail, where, insi
       <button
         type="button"
         onClick={open}
-        title="Show on the map"
+        title={t('Show on the map')}
         className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-1 py-1 text-left transition-colors hover:bg-ink-700"
       >
         <span className="truncate text-fg">
@@ -53,7 +54,7 @@ export function Credits({ feed }: { feed: FeedId }) {
   if (!credits?.length) return null
   return (
     <p className="mt-2 text-[9.5px] text-fg-mute">
-      Data:{' '}
+      {t('Data:')}{' '}
       {credits.map((credit, index) => (
         <span key={credit.href}>
           {index > 0 && ' · '}

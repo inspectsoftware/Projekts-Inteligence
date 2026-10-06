@@ -1,6 +1,7 @@
 import { LV_WATERS } from '../data/lvWaters'
 import { type Entity, Flag, KNOTS_TO_MS } from '../entity'
 import { createRegionTest } from '../geo/pip'
+import { msg } from '../i18n'
 import { type BBox, inBBox } from '../region'
 
 export type ShipType = 'cargo' | 'tanker' | 'passenger' | 'fishing' | 'service' | 'military' | 'pleasure' | 'other'
@@ -57,33 +58,33 @@ export type StaticUpdate = Pick<VesselRecord, 'mmsi' | 'name' | 'callSign' | 'im
 const EXPIRE_AFTER_MS = 30 * 60 * 1000
 
 const NAV_STATUS: Record<number, string> = {
-  0: 'Under way',
-  1: 'At anchor',
-  2: 'Not under command',
-  3: 'Restricted manoeuvrability',
-  4: 'Constrained by draught',
-  5: 'Moored',
-  6: 'Aground',
-  7: 'Fishing',
-  8: 'Under sail',
+  0: msg('Under way'),
+  1: msg('At anchor'),
+  2: msg('Not under command'),
+  3: msg('Restricted manoeuvrability'),
+  4: msg('Constrained by draught'),
+  5: msg('Moored'),
+  6: msg('Aground'),
+  7: msg('Fishing'),
+  8: msg('Under sail'),
 }
 
 /** Maritime identification digits (the first three of an MMSI) seen around the Baltic. */
 const FLAG_STATES: Record<number, string> = {
-  209: 'Cyprus', 210: 'Cyprus', 212: 'Cyprus', 211: 'Germany', 218: 'Germany', 215: 'Malta', 229: 'Malta',
-  248: 'Malta', 249: 'Malta', 256: 'Malta', 219: 'Denmark', 220: 'Denmark', 230: 'Finland', 231: 'Faroe Islands',
-  232: 'United Kingdom', 233: 'United Kingdom', 234: 'United Kingdom', 235: 'United Kingdom', 236: 'Gibraltar',
-  240: 'Greece', 241: 'Greece', 244: 'Netherlands', 245: 'Netherlands', 246: 'Netherlands', 247: 'Italy',
-  255: 'Portugal (Madeira)', 257: 'Norway', 258: 'Norway', 259: 'Norway', 261: 'Poland', 263: 'Portugal',
-  265: 'Sweden', 266: 'Sweden', 271: 'Türkiye', 273: 'Russia', 275: 'Latvia', 276: 'Estonia', 277: 'Lithuania',
-  205: 'Belgium', 224: 'Spain', 225: 'Spain', 226: 'France', 227: 'France', 228: 'France', 316: 'Canada',
-  338: 'United States', 366: 'United States', 367: 'United States', 368: 'United States', 369: 'United States',
-  304: 'Antigua and Barbuda', 305: 'Antigua and Barbuda', 308: 'Bahamas', 309: 'Bahamas', 311: 'Bahamas',
-  351: 'Panama', 352: 'Panama', 353: 'Panama', 354: 'Panama', 355: 'Panama', 356: 'Panama', 357: 'Panama',
-  370: 'Panama', 371: 'Panama', 372: 'Panama', 373: 'Panama', 374: 'Panama', 477: 'Hong Kong',
-  511: 'Palau', 518: 'Cook Islands', 538: 'Marshall Islands', 563: 'Singapore', 564: 'Singapore',
-  565: 'Singapore', 566: 'Singapore', 613: 'Cameroon', 620: 'Comoros', 626: 'Gabon', 636: 'Liberia', 637: 'Liberia',
-  667: 'Sierra Leone', 671: 'Togo',
+  209: msg('Cyprus'), 210: msg('Cyprus'), 212: msg('Cyprus'), 211: msg('Germany'), 218: msg('Germany'), 215: msg('Malta'), 229: msg('Malta'),
+  248: msg('Malta'), 249: msg('Malta'), 256: msg('Malta'), 219: msg('Denmark'), 220: msg('Denmark'), 230: msg('Finland'), 231: msg('Faroe Islands'),
+  232: msg('United Kingdom'), 233: msg('United Kingdom'), 234: msg('United Kingdom'), 235: msg('United Kingdom'), 236: msg('Gibraltar'),
+  240: msg('Greece'), 241: msg('Greece'), 244: msg('Netherlands'), 245: msg('Netherlands'), 246: msg('Netherlands'), 247: msg('Italy'),
+  255: msg('Portugal (Madeira)'), 257: msg('Norway'), 258: msg('Norway'), 259: msg('Norway'), 261: msg('Poland'), 263: msg('Portugal'),
+  265: msg('Sweden'), 266: msg('Sweden'), 271: msg('Türkiye'), 273: msg('Russia'), 275: msg('Latvia'), 276: msg('Estonia'), 277: msg('Lithuania'),
+  205: msg('Belgium'), 224: msg('Spain'), 225: msg('Spain'), 226: msg('France'), 227: msg('France'), 228: msg('France'), 316: msg('Canada'),
+  338: msg('United States'), 366: msg('United States'), 367: msg('United States'), 368: msg('United States'), 369: msg('United States'),
+  304: msg('Antigua and Barbuda'), 305: msg('Antigua and Barbuda'), 308: msg('Bahamas'), 309: msg('Bahamas'), 311: msg('Bahamas'),
+  351: msg('Panama'), 352: msg('Panama'), 353: msg('Panama'), 354: msg('Panama'), 355: msg('Panama'), 356: msg('Panama'), 357: msg('Panama'),
+  370: msg('Panama'), 371: msg('Panama'), 372: msg('Panama'), 373: msg('Panama'), 374: msg('Panama'), 477: msg('Hong Kong'),
+  511: msg('Palau'), 518: msg('Cook Islands'), 538: msg('Marshall Islands'), 563: msg('Singapore'), 564: msg('Singapore'),
+  565: msg('Singapore'), 566: msg('Singapore'), 613: msg('Cameroon'), 620: msg('Comoros'), 626: msg('Gabon'), 636: msg('Liberia'), 637: msg('Liberia'),
+  667: msg('Sierra Leone'), 671: msg('Togo'),
 }
 
 /** The flag states above that are NATO members (the Faroes and Gibraltar through Denmark and the United Kingdom). */

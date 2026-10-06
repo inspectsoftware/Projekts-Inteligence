@@ -1,5 +1,6 @@
 import type { Feature, FeatureCollection, Point } from 'geojson'
 import { useEffect, useState } from 'react'
+import { t } from '../../../i18n'
 import { COUNTRY_NAMES, SITES_URL, SITE_KINDS, type SiteProperties, militarySitesLayer, showSite } from '../../../layers/military'
 import { SectionTitle } from '../../kit'
 
@@ -29,8 +30,8 @@ export function SitesTab() {
     return () => controller.abort()
   }, [])
 
-  if (failed) return <p className="text-fg-mute">The list of sites could not be loaded.</p>
-  if (!sites) return <p className="text-fg-mute">Loading…</p>
+  if (failed) return <p className="text-fg-mute">{t('The list of sites could not be loaded.')}</p>
+  if (!sites) return <p className="text-fg-mute">{t('Loading…')}</p>
 
   const wanted = query.trim().toLowerCase()
   const shown = sites
@@ -46,11 +47,11 @@ export function SitesTab() {
         type="search"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Filter by name, kind, operator or country"
-        aria-label="Filter the sites"
+        placeholder={t('Filter by name, kind, operator or country')}
+        aria-label={t('Filter the sites')}
         className="mb-2 w-full border border-line bg-ink-850 px-2 py-1 text-[11px] text-fg placeholder:text-fg-mute focus:border-accent focus:outline-none"
       />
-      {shown.length === 0 && <p className="text-fg-mute">No site matches.</p>}
+      {shown.length === 0 && <p className="text-fg-mute">{t('No site matches.')}</p>}
       {Object.entries(COUNTRY_NAMES).map(([code, country]) => {
         const here = shown.filter((site) => site.properties.country === code)
         if (here.length === 0) return null
@@ -63,7 +64,7 @@ export function SitesTab() {
                   <button
                     type="button"
                     onClick={() => showSite(properties, geometry.coordinates[0], geometry.coordinates[1])}
-                    title="Show on the map"
+                    title={t('Show on the map')}
                     className="grid w-full gap-x-3 px-1 py-1 text-left transition-colors hover:bg-ink-700"
                   >
                     <span className="truncate text-fg">
@@ -79,11 +80,10 @@ export function SitesTab() {
         )
       })}
       <p className="text-[10px] text-fg-mute">
-        A reference list, not an inventory. Each entry says only what the public page it links to says, and a hollow marker stands on a town
-        or an area rather than on the site itself.
+        {t('A reference list, not an inventory. Each entry says only what the public page it links to says, and a hollow marker stands on a town or an area rather than on the site itself.')}
       </p>
       <p className="mt-2 text-[9.5px] text-fg-mute">
-        Data:{' '}
+        {t('Data:')}{' '}
         {militarySitesLayer.attribution!.map((credit, index) => (
           <span key={credit.href}>
             {index > 0 && ' · '}
@@ -102,7 +102,7 @@ export function SitesTab() {
         >
           submarinecablemap.com ↗
         </a>{' '}
-        TeleGeography’s map of undersea cables, which may be looked at but not copied
+        {t('TeleGeography’s map of undersea cables, which may be looked at but not copied')}
       </p>
     </>
   )

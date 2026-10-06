@@ -1,12 +1,13 @@
 import { type ReactNode, useState } from 'react'
+import { t } from '../i18n'
 import { formatAge, formatInt } from '../lib/format'
 import { serverNow } from '../runtime/clock'
 import { useFeed } from '../runtime/useFeed'
 import { Segmented } from './kit'
 
 const TABS = [
-  { id: 'power', label: 'Power', hint: 'Electricity: load, generation, exchange and price' },
-  { id: 'net', label: 'Internet', hint: "How much of the country's internet is reachable" },
+  { id: 'power', label: t('Power'), hint: t('Electricity: load, generation, exchange and price') },
+  { id: 'net', label: t('Internet'), hint: t("How much of the country's internet is reachable") },
 ] as const
 type Tab = (typeof TABS)[number]['id']
 
@@ -21,7 +22,7 @@ function Row({ label, value, tone = 'plain' }: { label: string; value: ReactNode
   )
 }
 
-const Waiting = () => <p className="py-2 text-fg-mute">Waiting for data…</p>
+const Waiting = () => <p className="py-2 text-fg-mute">{t('Waiting for data…')}</p>
 const mw = (value: number | null) => (value === null ? '–' : `${formatInt(Math.abs(value))} MW`)
 
 function Power() {
@@ -32,13 +33,13 @@ function Power() {
   return (
     <>
       <dl>
-        <Row label="Price now" value={price.now === null ? '–' : `${price.now.toFixed(2)} €/MWh`} tone={(price.now ?? 0) >= 200 ? 'warn' : 'plain'} />
-        {price.low !== null && price.high !== null && <Row label="Day range" value={`${Math.round(price.low) || 0} to ${Math.round(price.high) || 0} €/MWh`} />}
-        <Row label="Load" value={mw(energy.loadMw)} />
-        <Row label="Generation" value={mw(energy.generationMw)} />
-        {importMw !== null && <Row label={importMw >= 0 ? 'Net import' : 'Net export'} value={mw(importMw)} />}
+        <Row label={t('Price now')} value={price.now === null ? '–' : `${price.now.toFixed(2)} €/MWh`} tone={(price.now ?? 0) >= 200 ? 'warn' : 'plain'} />
+        {price.low !== null && price.high !== null && <Row label={t('Day range')} value={t('{low} to {high} €/MWh', { low: Math.round(price.low) || 0, high: Math.round(price.high) || 0 })} />}
+        <Row label={t('Load')} value={mw(energy.loadMw)} />
+        <Row label={t('Generation')} value={mw(energy.generationMw)} />
+        {importMw !== null && <Row label={importMw >= 0 ? t('Net import') : t('Net export')} value={mw(importMw)} />}
         {energy.flows.map((flow) => (
-          <Row key={flow.country} label={flow.country} value={flow.mw === 0 ? 'no exchange' : `${mw(flow.mw)} ${flow.mw > 0 ? 'in' : 'out'}`} />
+          <Row key={flow.country} label={flow.country} value={flow.mw === 0 ? t('no exchange') : flow.mw > 0 ? t('{mw} in', { mw: mw(flow.mw) }) : t('{mw} out', { mw: mw(flow.mw) })} />
         ))}
       </dl>
       {energy.mix.length > 0 && (
@@ -54,7 +55,7 @@ function Power() {
           ))}
         </ul>
       )}
-      {energy.at !== null && <p className="mt-2 text-[10px] text-fg-mute">Grid figures from {formatAge(serverNow() - energy.at)}: operators publish with a delay.</p>}
+      {energy.at !== null && <p className="mt-2 text-[10px] text-fg-mute">{t('Grid figures from {age}: operators publish with a delay.', { age: formatAge(serverNow() - energy.at) })}</p>}
     </>
   )
 }
@@ -62,19 +63,19 @@ function Power() {
 function Internet() {
   const internet = useFeed('internet', 'internet')
   if (!internet) return <Waiting />
-  if (internet.signals.length === 0) return <p className="py-2 text-fg-mute">No measurements published right now.</p>
+  if (internet.signals.length === 0) return <p className="py-2 text-fg-mute">{t('No measurements published right now.')}</p>
   const share = (signal: { latest: number; baseline: number }) => (signal.baseline > 0 ? signal.latest / signal.baseline : 1)
   const worst = Math.min(...internet.signals.map(share))
-  const verdict = worst >= 0.9 ? { text: 'Normal', tone: 'ok' as const } : worst >= 0.5 ? { text: 'Degraded', tone: 'warn' as const } : { text: 'Outage', tone: 'danger' as const }
+  const verdict = worst >= 0.9 ? { text: t('Normal'), tone: 'ok' as const } : worst >= 0.5 ? { text: t('Degraded'), tone: 'warn' as const } : { text: t('Outage'), tone: 'danger' as const }
   return (
     <>
       <dl>
-        <Row label="Reachability" value={verdict.text} tone={verdict.tone} />
+        <Row label={t('Reachability')} value={verdict.text} tone={verdict.tone} />
         {internet.signals.map((signal) => (
-          <Row key={signal.id} label={signal.label} value={`${(share(signal) * 100).toFixed(0)}% of usual`} tone={share(signal) < 0.9 ? 'warn' : 'plain'} />
+          <Row key={signal.id} label={t(signal.label)} value={t('{percent}% of usual', { percent: (share(signal) * 100).toFixed(0) })} tone={share(signal) < 0.9 ? 'warn' : 'plain'} />
         ))}
       </dl>
-      <p className="mt-2 text-[10px] text-fg-mute">Latest value against the median of the past 24 hours.</p>
+      <p className="mt-2 text-[10px] text-fg-mute">{t('Latest value against the median of the past 24 hours.')}</p>
     </>
   )
 }
@@ -86,7 +87,7 @@ export function StatusPanel() {
   return (
     <>
       <div className="shrink-0 px-3 pt-3">
-        <Segmented<Tab> label="Situation panel" value={tab} options={TABS} onChange={setTab} />
+        <Segmented<Tab> label={t('Situation panel')} value={tab} options={TABS} onChange={setTab} />
       </div>
       <div className="min-h-0 overflow-y-auto p-3 text-[11px]">
         {tab === 'power' && <Power />}

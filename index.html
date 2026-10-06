@@ -8,7 +8,8 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>PROJEKTS INTELIĢENCE // Latvia</title>
     <style>
-      /* Boot screen: painted before any script loads, faded out by the app once it is ready. */
+      /* Splash: painted before any script loads. The eye opens, looks around and closes;
+         the app then lets it go (src/ui/boot.ts) and the page zooms in through it. */
       html,
       body {
         margin: 0;
@@ -25,86 +26,115 @@
         color: #d5e1ea;
         font: 11px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         letter-spacing: 0.14em;
-        transition: opacity 0.6s ease;
+        transition:
+          opacity 0.55s ease,
+          transform 0.55s cubic-bezier(0.6, 0, 0.9, 0.4);
       }
       #boot.done {
         opacity: 0;
+        transform: scale(2.4);
         pointer-events: none;
       }
       .boot-box {
-        width: min(420px, 80vw);
+        width: min(340px, 72vw);
+        text-align: center;
       }
-      .boot-flag {
-        display: grid;
-        grid-template-rows: 2fr 1fr 2fr;
-        width: 34px;
-        height: 17px;
-        margin-bottom: 18px;
+      .boot-logo {
+        display: block;
+        width: 100%;
+        height: auto;
+        filter: drop-shadow(0 0 28px rgb(158 48 57 / 0.35));
       }
-      .boot-flag i:nth-child(odd) {
-        background: #9e3039;
+      .boot-eye,
+      .boot-iris,
+      .boot-rays {
+        transform-box: fill-box;
+        transform-origin: center;
       }
-      .boot-flag i:nth-child(2) {
-        background: #f4f6f8;
+      /* 3.4 s in all: shut, open, left, right, up, centre, shut. */
+      .boot-eye {
+        animation: boot-lids 3.4s cubic-bezier(0.5, 0, 0.3, 1) both;
+      }
+      .boot-iris {
+        animation: boot-look 3.4s ease-in-out both;
+      }
+      .boot-rays {
+        animation: boot-rays 3.4s ease-out both;
       }
       .boot-title {
-        font-size: 22px;
+        margin-top: 22px;
+        font-size: 17px;
         font-weight: 600;
         letter-spacing: 0.32em;
         color: #f4f6f8;
       }
       .boot-sub {
-        margin-top: 4px;
+        margin-top: 2px;
         color: #8499a8;
       }
-      .boot-bar {
-        position: relative;
-        height: 1px;
-        margin: 22px 0 16px;
-        overflow: hidden;
-        background: #1b2a35;
-      }
-      .boot-bar span {
-        position: absolute;
-        inset: 0 auto 0 0;
-        width: 30%;
-        background: #4fd6ff;
-        animation: boot-sweep 1.4s ease-in-out infinite;
-      }
-      .boot-log {
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        color: #566a78;
-      }
-      .boot-log li {
-        opacity: 0;
-        animation: boot-in 0.3s ease forwards;
-      }
-      .boot-log li:nth-child(2) {
-        animation-delay: 0.25s;
-      }
-      .boot-log li:nth-child(3) {
-        animation-delay: 0.5s;
-      }
-      @keyframes boot-sweep {
-        from {
-          transform: translateX(-100%);
+      @keyframes boot-lids {
+        0%,
+        8% {
+          transform: scaleY(0.02);
         }
-        to {
-          transform: translateX(340%);
+        22%,
+        84% {
+          transform: scaleY(1);
+        }
+        96%,
+        100% {
+          transform: scaleY(0.02);
         }
       }
-      @keyframes boot-in {
-        to {
-          opacity: 1;
+      @keyframes boot-look {
+        0%,
+        26% {
+          transform: translate(0, 0);
+        }
+        38%,
+        44% {
+          transform: translate(-30px, 2px);
+        }
+        56%,
+        62% {
+          transform: translate(30px, 2px);
+        }
+        72%,
+        76% {
+          transform: translate(8px, -12px);
+        }
+        84%,
+        100% {
+          transform: translate(0, 0);
+        }
+      }
+      @keyframes boot-rays {
+        0%,
+        14% {
+          opacity: 0;
+          transform: scale(0.7);
+        }
+        30%,
+        84% {
+          opacity: 0.55;
+          transform: scale(1);
+        }
+        100% {
+          opacity: 0;
+          transform: scale(0.85);
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        .boot-bar span,
-        .boot-log li {
+        .boot-eye,
+        .boot-iris,
+        .boot-rays {
           animation: none;
-          opacity: 1;
+        }
+        .boot-rays {
+          opacity: 0.55;
+        }
+        #boot.done {
+          transform: none;
         }
       }
     </style>
@@ -112,15 +142,37 @@
   <body>
     <div id="boot" role="status" aria-label="Loading">
       <div class="boot-box">
-        <div class="boot-flag" aria-hidden="true"><i></i><i></i><i></i></div>
+        <svg class="boot-logo" viewBox="0 0 400 240" aria-hidden="true">
+          <defs>
+            <clipPath id="boot-flag"><rect x="20" y="20" width="360" height="200" rx="6" /></clipPath>
+            <clipPath id="boot-ball"><path d="M96 120C128 76 164 62 200 62s72 14 104 58c-32 44-68 58-104 58s-72-14-104-58Z" /></clipPath>
+            <radialGradient id="boot-iris" cx="50%" cy="45%" r="55%">
+              <stop offset="0" stop-color="#c8414c" />
+              <stop offset="0.6" stop-color="#9e3039" />
+              <stop offset="1" stop-color="#5e1a21" />
+            </radialGradient>
+          </defs>
+          <g clip-path="url(#boot-flag)">
+            <rect x="20" y="20" width="360" height="200" fill="#9e3039" />
+            <rect x="20" y="100" width="360" height="40" fill="#f4f6f8" />
+            <g class="boot-rays" stroke="#f4f6f8" stroke-width="2.5" stroke-linecap="round">
+              <path d="M200 62V30M200 178v32M158 70l-16-28M242 70l16-28M158 170l-16 28M242 170l16 28M124 86l-30-20M276 86l30-20M124 154l-30 20M276 154l30 20" />
+            </g>
+          </g>
+          <g class="boot-eye">
+            <path d="M96 120C128 76 164 62 200 62s72 14 104 58c-32 44-68 58-104 58s-72-14-104-58Z" fill="#f4f6f8" />
+            <g clip-path="url(#boot-ball)">
+              <g class="boot-iris">
+                <circle cx="200" cy="120" r="40" fill="url(#boot-iris)" stroke="#04070a" stroke-width="5" />
+                <circle cx="200" cy="120" r="17" fill="#04070a" />
+                <circle cx="213" cy="107" r="6.5" fill="#f4f6f8" />
+              </g>
+            </g>
+            <path d="M96 120C128 76 164 62 200 62s72 14 104 58c-32 44-68 58-104 58s-72-14-104-58Z" fill="none" stroke="#04070a" stroke-width="7" stroke-linejoin="round" />
+          </g>
+        </svg>
         <div class="boot-title">PROJEKTS INTELIĢENCE</div>
         <div class="boot-sub">LATVIA // INTELLIGENCE PANEL</div>
-        <div class="boot-bar"><span></span></div>
-        <ul class="boot-log">
-          <li>UPLINK ........ ESTABLISHING</li>
-          <li>BASEMAP ....... STANDBY</li>
-          <li>FEEDS ......... STANDBY</li>
-        </ul>
       </div>
     </div>
     <div id="root"></div>

@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { TV_CHANNELS } from '../../../shared/media/tv'
+import { t } from '../../i18n'
 import { useFeed } from '../../runtime/useFeed'
 import { useFeeds } from '../../state/feeds'
 import { ChannelRail } from './tv/ChannelRail'
@@ -28,7 +29,7 @@ export function TvWindow() {
           <Stage channel={channel} now={lookups.get(channel.id)} waiting={!payload && !failed} />
         </section>
       ) : (
-        <p className="grid flex-1 place-items-center p-3 text-[10px] tracking-[0.2em] text-fg-mute uppercase max-md:portrait:hidden">Choose a channel</p>
+        <p className="grid flex-1 place-items-center p-3 text-[10px] tracking-[0.2em] text-fg-mute uppercase max-md:portrait:hidden">{t('Choose a channel')}</p>
       )}
       <ChannelRail lookups={lookups} selected={channel?.id} />
     </div>

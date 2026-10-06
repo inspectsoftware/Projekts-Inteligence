@@ -3,6 +3,7 @@ import type { Train } from '../../shared/adapters/trains'
 import { ROLE_LABEL } from '../../shared/data/aircraftRoles'
 import { type Aircraft, Flag } from '../../shared/entity'
 import { TV_CHANNELS } from '../../shared/media/tv'
+import { t } from '../i18n'
 import { LAYERS } from '../layers/registry'
 import { type SearchItem, rank } from '../lib/search'
 import { VIEWS, flyHome, flyToView } from '../map/camera'
@@ -24,7 +25,7 @@ interface Place {
 }
 
 const PLACE_ZOOM = { city: 11, town: 12, village: 13 } as const
-const PLACE_LABEL = { city: 'City', town: 'Town', village: 'Village' } as const
+const PLACE_LABEL = { city: t('City'), town: t('Town'), village: t('Village') } as const
 
 let placesRequest: Promise<Place[]> | null = null
 
@@ -45,10 +46,10 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
 
   for (const a of getEntities('aircraft') as Aircraft[]) {
     // "tanker" or "awacs" finds every one that is up, "military" all of them.
-    const role = a.props.role ? ROLE_LABEL[a.props.role] : null
+    const role = a.props.role ? t(ROLE_LABEL[a.props.role]) : null
     items.push({
       id: a.id,
-      group: 'Aircraft',
+      group: t('Aircraft'),
       title: a.label ?? a.props.hex,
       subtitle: [a.props.registration, a.props.type, role].filter(Boolean).join(' · ') || undefined,
       keywords: `${a.props.registration ?? ''} ${a.props.hex} ${a.props.type ?? ''} ${role ?? ''} ${a.flags & Flag.MIL ? 'military' : ''}`,
@@ -59,8 +60,8 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
   for (const train of getEntities('trains') as Train[]) {
     items.push({
       id: train.id,
-      group: 'Train',
-      title: `Train ${train.props.number}`,
+      group: t('Train'),
+      title: t('Train {number}', { number: train.props.number }),
       subtitle: train.props.route ?? undefined,
       keywords: `${train.props.number} ${train.props.route ?? ''} ${train.props.nextStop ?? ''}`,
       weight: 40,
@@ -68,8 +69,8 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
     })
   }
   for (const [slot, group] of [
-    ['satellites', 'Satellite'],
-    ['stations', 'Weather station'],
+    ['satellites', t('Satellite')],
+    ['stations', t('Weather station')],
   ] as const) {
     for (const entity of getEntities(slot)) {
       const name = (entity.props as { name?: string }).name ?? entity.label ?? entity.id
@@ -93,9 +94,9 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
     const on = isLayerOn(visible, layer.id, layer.defaultOn)
     items.push({
       id: `layer:${layer.id}`,
-      group: 'Layer',
+      group: t('Layer'),
       title: layer.label,
-      subtitle: on ? 'Shown: hide it' : 'Hidden: show it',
+      subtitle: on ? t('Shown: hide it') : t('Hidden: show it'),
       keywords: `layer toggle ${layer.group}`,
       weight: 20,
       run: () => toggle(layer.id, layer.defaultOn),
@@ -108,9 +109,9 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
     if (def.mode) continue
     items.push({
       id: `window:${def.id}`,
-      group: 'Window',
+      group: t('Window'),
       title: def.title,
-      subtitle: shown.includes(def) ? 'Open: close it' : 'Closed: open it',
+      subtitle: shown.includes(def) ? t('Open: close it') : t('Closed: open it'),
       keywords: 'window panel open close',
       weight: 20,
       run: () => toggleWindow(def),
@@ -118,8 +119,8 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
   }
   items.push({
     id: 'window:reset',
-    group: 'Window',
-    title: 'Reset window layout',
+    group: t('Window'),
+    title: t('Reset window layout'),
     keywords: 'windows panels default arrange',
     weight: 15,
     run: () => useWindows.getState().resetLayout(),
@@ -130,9 +131,9 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
     const away = channel.kind === 'link'
     items.push({
       id: `tv:${channel.id}`,
-      group: 'Live TV',
+      group: t('Live TV'),
       title: channel.name,
-      subtitle: away ? 'Opens the broadcaster’s own site' : channel.schedule,
+      subtitle: away ? t('Opens the broadcaster’s own site') : channel.schedule && t(channel.schedule),
       keywords: `tv television live watch channel ${channel.credit}`,
       weight: 18,
       run: () => (away ? void window.open(channel.link, '_blank', 'noopener,noreferrer') : watchChannel(channel.id)),
@@ -141,8 +142,8 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
 
   items.push({
     id: 'view:latvia',
-    group: 'View',
-    title: 'Latvia overview',
+    group: t('View'),
+    title: t('Latvia overview'),
     keywords: 'home country',
     weight: 25,
     run: () => {
@@ -153,7 +154,7 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
   for (const view of VIEWS) {
     items.push({
       id: `view:${view.id}`,
-      group: 'View',
+      group: t('View'),
       title: view.label,
       keywords: 'view go to',
       weight: 10,
@@ -223,7 +224,7 @@ export function CommandPalette() {
         if (event.target === event.currentTarget) close()
       }}
     >
-      <div role="dialog" aria-label="Search" className="w-[min(34rem,100%)] border border-line-strong bg-ink-900 font-mono shadow-2xl">
+      <div role="dialog" aria-label={t('Search')} className="w-[min(34rem,100%)] border border-line-strong bg-ink-900 font-mono shadow-2xl">
         <input
           ref={inputRef}
           value={query}
@@ -241,8 +242,8 @@ export function CommandPalette() {
               setCursor(Math.max(active - 1, 0))
             } else if (event.key === 'Enter') choose(results[active])
           }}
-          placeholder="Search places, callsigns, trains, satellites, layers…"
-          aria-label="Search"
+          placeholder={t('Search places, callsigns, trains, satellites, layers…')}
+          aria-label={t('Search')}
           autoComplete="off"
           spellCheck={false}
           className="w-full border-b border-line bg-transparent px-4 py-3 text-sm text-fg placeholder:text-fg-mute focus:outline-none"
@@ -266,7 +267,7 @@ export function CommandPalette() {
           </ul>
         ) : (
           <p className="px-4 py-3 text-[11px] tracking-[0.1em] text-fg-mute">
-            {query.trim() ? 'Nothing matches.' : 'Type to search. ↑ ↓ to move, Enter to go, Esc to close.'}
+            {query.trim() ? t('Nothing matches.') : t('Type to search. ↑ ↓ to move, Enter to go, Esc to close.')}
           </p>
         )}
       </div>

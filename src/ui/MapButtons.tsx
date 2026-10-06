@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { t } from '../i18n'
 import { flyHome } from '../map/camera'
 import { useMap } from '../map/instance'
 
@@ -26,16 +27,16 @@ export function MapButtons() {
   return (
     // data-snap: a dragged window is drawn to these edges as it is to another window's.
     <div data-snap className="pointer-events-auto absolute top-13 right-3 z-10 grid gap-px border border-line bg-line max-md:hidden">
-      <MapButton title="Zoom in" onClick={() => map.zoomIn()}>
+      <MapButton title={t('Zoom in')} onClick={() => map.zoomIn()}>
         <path d="M8 3v10M3 8h10" />
       </MapButton>
-      <MapButton title="Zoom out" onClick={() => map.zoomOut()}>
+      <MapButton title={t('Zoom out')} onClick={() => map.zoomOut()}>
         <path d="M3 8h10" />
       </MapButton>
-      <MapButton title="North up, flat" onClick={() => map.easeTo({ bearing: 0, pitch: 0, duration: 600 })}>
+      <MapButton title={t('North up, flat')} onClick={() => map.easeTo({ bearing: 0, pitch: 0, duration: 600 })}>
         <path d="M8 2l3.5 11L8 10.5 4.5 13 8 2z" />
       </MapButton>
-      <MapButton title="Latvia overview" onClick={() => flyHome(map)}>
+      <MapButton title={t('Latvia overview')} onClick={() => flyHome(map)}>
         <path d="M2.5 8L8 3l5.5 5M4 7v6h8V7" />
       </MapButton>
     </div>

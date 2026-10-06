@@ -1,12 +1,13 @@
 import { isCurrent, zoneState } from '../../../../shared/adapters/zones'
 import type { FeedId, Zone } from '../../../../shared/feeds'
+import { locale, t } from '../../../i18n'
 import { showZone } from '../../../layers/zones'
 import { useFeed } from '../../../runtime/useFeed'
 import { useNow } from '../../../runtime/useNow'
 import { SectionTitle } from '../../kit'
 import { Credits } from './parts'
 
-const RIGA_TIME = new Intl.DateTimeFormat('en-GB', {
+const RIGA_TIME = new Intl.DateTimeFormat(locale, {
   timeZone: 'Europe/Riga',
   day: 'numeric',
   month: 'short',
@@ -17,9 +18,9 @@ const RIGA_TIME = new Intl.DateTimeFormat('en-GB', {
 
 /** Sources with no licence to reuse their data, or no feed at all: a link is all that can be offered. */
 const ELSEWHERE = [
-  { href: 'https://gpsjam.org', label: 'gpsjam.org', what: 'yesterday’s GPS interference, mapped from aircraft reports' },
-  { href: 'https://www.navtex.lv', label: 'navtex.lv', what: 'NAVTEX broadcasts as received in Latvia, unedited' },
-  { href: 'https://notice.lja.lv/map_changes.php', label: 'Notices to Mariners', what: 'Latvia’s own, from the Maritime Administration, monthly' },
+  { href: 'https://gpsjam.org', label: 'gpsjam.org', what: t('yesterday’s GPS interference, mapped from aircraft reports') },
+  { href: 'https://www.navtex.lv', label: 'navtex.lv', what: t('NAVTEX broadcasts as received in Latvia, unedited') },
+  { href: 'https://notice.lja.lv/map_changes.php', label: t('Notices to Mariners'), what: t('Latvia’s own, from the Maritime Administration, monthly') },
 ] as const
 
 const ROW = 'grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-1 py-1 text-left transition-colors hover:bg-ink-700'
@@ -28,13 +29,13 @@ const ROW = 'grid w-full grid-cols-[minmax(0,1fr)_auto] gap-x-3 px-1 py-1 text-l
 function when(zone: Zone, now: number): string {
   switch (zoneState(zone, now)) {
     case 'active':
-      return zone.to === null ? 'until withdrawn' : `until ${RIGA_TIME.format(zone.to)}`
+      return zone.to === null ? t('until withdrawn') : t('until {time}', { time: RIGA_TIME.format(zone.to) })
     case 'pending':
-      return `from ${RIGA_TIME.format(zone.from!)}`
+      return t('from {time}', { time: RIGA_TIME.format(zone.from!) })
     case 'idle':
-      return 'outside its hours'
+      return t('outside its hours')
     case 'unsure':
-      return 'see notice for times'
+      return t('see notice for times')
   }
 }
 
@@ -43,7 +44,7 @@ function ZoneRow({ zone, now }: { zone: Zone; now: number }) {
     <>
       <span className="truncate text-fg">
         {zone.title}
-        <span className={`ml-2 text-[9.5px] tracking-[0.12em] uppercase ${zone.military ? 'text-mil' : 'text-fg-mute'}`}>{zone.type}</span>
+        <span className={`ml-2 text-[9.5px] tracking-[0.12em] uppercase ${zone.military ? 'text-mil' : 'text-fg-mute'}`}>{t(zone.type)}</span>
       </span>
       <span className={`text-right text-[10px] whitespace-nowrap ${zoneState(zone, now) === 'active' ? 'text-warn' : 'text-fg-dim'}`}>
         {when(zone, now)}
@@ -56,7 +57,7 @@ function ZoneRow({ zone, now }: { zone: Zone; now: number }) {
     return (
       <li>
         <details>
-          <summary title="Read the notice" className={`${ROW} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
+          <summary title={t('Read the notice')} className={`${ROW} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}>
             {head}
           </summary>
           <p className="px-1 pb-2 text-[10px] whitespace-pre-line text-fg-dim">{zone.text}</p>
@@ -66,7 +67,7 @@ function ZoneRow({ zone, now }: { zone: Zone; now: number }) {
   }
   return (
     <li>
-      <button type="button" onClick={() => showZone(zone)} title="Show on the map" className={ROW}>
+      <button type="button" onClick={() => showZone(zone)} title={t('Show on the map')} className={ROW}>
         {head}
       </button>
     </li>
@@ -96,14 +97,14 @@ function Section({ title, feed, empty, now }: { title: string; feed: FeedId; emp
     <section className="mb-3">
       <SectionTitle>{title}</SectionTitle>
       {!payload ? (
-        <p className="text-fg-mute">Waiting for data…</p>
+        <p className="text-fg-mute">{t('Waiting for data…')}</p>
       ) : (
         <>
           {military.length === 0 ? <p className="text-fg-mute">{empty}</p> : <Rows zones={military} now={now} />}
           {routine.length > 0 && (
             <details className="mt-1">
               <summary className="cursor-pointer px-1 py-1 text-[10px] tracking-[0.12em] text-fg-mute uppercase hover:text-fg">
-                {routine.length} routine
+                {t('Routine: {n}', { n: routine.length })}
               </summary>
               <Rows zones={routine} now={now} />
             </details>
@@ -120,11 +121,10 @@ export function ZonesTab() {
   const now = useNow(60_000)
   return (
     <>
-      <Section title="At sea" feed="navwarn" empty="No exercise, firing or danger area is announced." now={now} />
-      <Section title="In the air" feed="airspace" empty="No military airspace is activated." now={now} />
+      <Section title={t('At sea')} feed="navwarn" empty={t('No exercise, firing or danger area is announced.')} now={now} />
+      <Section title={t('In the air')} feed="airspace" empty={t('No military airspace is activated.')} now={now} />
       <p className="text-[10px] text-fg-mute">
-        Times are Rīga time. The Baltic’s sea warnings come through Sweden, Russian exercise areas included; airspace covers Latvia and
-        Estonia only, as Lithuania publishes nothing this site can read. Not for navigation or flight planning.
+        {t('Times are Rīga time. The Baltic’s sea warnings come through Sweden, Russian exercise areas included; airspace covers Latvia and Estonia only, as Lithuania publishes nothing this site can read. Not for navigation or flight planning.')}
       </p>
       <ul className="mt-2 text-[10px] text-fg-mute">
         {ELSEWHERE.map((link) => (

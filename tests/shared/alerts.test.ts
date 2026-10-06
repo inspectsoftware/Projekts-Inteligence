@@ -14,6 +14,7 @@ import {
 import { type Aircraft, type Entity, Flag } from '../../shared/entity'
 import type { WeatherWarning, Zone } from '../../shared/feeds'
 import { createRegionTest, pointInRing } from '../../shared/geo/pip'
+import { translate } from '../../shared/i18n'
 
 const border = JSON.parse(
   readFileSync(new URL('../../public/data/lv-border.json', import.meta.url), 'utf8'),
@@ -56,6 +57,7 @@ const input = (entities: Entity[], now = 0, warnings: WeatherWarning[] = []): Al
   warnings: () => warnings,
   news: () => [],
   insideLatvia,
+  tr: translate.bind(null, 'en'),
 })
 
 describe('point in polygon', () => {
@@ -150,7 +152,7 @@ describe('rules', () => {
     const [alert] = gpsInterferenceRule.evaluate(
       input([degraded('a', 24), degraded('b', 25), degraded('c', 26), aircraft('d', VILNIUS, Flag.GPS_DEGRADED)]),
     )
-    expect(alert).toMatchObject({ key: 'gps-interference:latvia', detail: '3 aircraft reporting degraded or lost GPS' })
+    expect(alert).toMatchObject({ key: 'gps-interference:latvia', detail: 'Aircraft reporting degraded or lost GPS: 3' })
     expect(alert.at!.lon).toBeCloseTo(25)
   })
 })
@@ -261,7 +263,7 @@ describe('military zone rule', () => {
         key: 'military-zone:air',
         severity: 'info',
         title: 'Military airspace active over Latvia',
-        detail: '3 notices · EVR69A PLISUNS1, EVR68A SIVERS1 +1',
+        detail: 'Notices: 3 · EVR69A PLISUNS1, EVR68A SIVERS1 +1',
         at: { lon: 27.86, lat: 56.36 },
       },
     ])
@@ -315,6 +317,18 @@ describe('AlertEngine', () => {
     const next = engine.evaluate(input([mil, aircraft('x', RIGA)], 1000))
     expect(next.changed).toBe(true)
     expect(next.alerts[0].detail).toBe('2 aircraft')
+  })
+
+  it('words an alert in the language it is handed, and keeps its key', () => {
+    const marked = { ...input([mil]), tr: (text: string, vars?: Record<string, string | number>) => `«${translate('en', text, vars)}»` }
+    expect(militaryInsideRule.evaluate(marked)[0]).toMatchObject({ key: 'military:aircraft:mil001', title: '«Military aircraft over Latvia: MIL001»' })
+
+    const wind: WeatherWarning = { id: 'w', type: 'Wind', level: 'red', description: '', onset: 0, expires: Date.parse('2026-10-06T22:00:00Z'), sent: 0, areas: [], polygons: [] }
+    const [warning] = weatherWarningRule.evaluate({ ...marked, now: Date.parse('2026-10-06T10:00:00Z'), locale: 'lv-LV', warnings: () => [wind] })
+    expect(warning.key).toBe('weather:Wind:red:')
+    expect(warning.title).toBe('««Wind» warning («red»)»')
+    expect(warning.detail).toMatch(/^«Latvia» · «until \S+ 01:00»$/)
+    expect(warning.detail).not.toContain('Wed')
   })
 
   it('lists the most severe first, then the most recent', () => {

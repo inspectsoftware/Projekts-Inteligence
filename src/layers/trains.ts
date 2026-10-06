@@ -2,6 +2,7 @@ import type { Color } from '@deck.gl/core'
 import { IconLayer, PathLayer, TextLayer } from '@deck.gl/layers'
 import type { Train } from '../../shared/adapters/trains'
 import type { Entity } from '../../shared/entity'
+import { t } from '../i18n'
 import { formatLat, formatLon } from '../lib/coords'
 import { formatAge, formatBearing, formatInt } from '../lib/format'
 import { getIconAtlas } from '../map/icons'
@@ -19,39 +20,39 @@ function describe(entity: Entity, now: number): InspectorModel {
   const train = entity as Train
   const { props } = train
   const badges: InspectorModel['badges'] = []
-  if (props.stopped) badges.push({ text: 'At a stop', tone: 'info' })
-  if (!props.gps) badges.push({ text: 'Position estimated', tone: 'warn' })
+  if (props.stopped) badges.push({ text: t('At a stop'), tone: 'info' })
+  if (!props.gps) badges.push({ text: t('Position estimated'), tone: 'warn' })
 
   const rows: InspectorModel['rows'] = []
   if (props.nextStop) {
-    rows.push({ label: 'Next stop', value: props.nextStopTime ? `${props.nextStop} · ${props.nextStopTime}` : props.nextStop })
+    rows.push({ label: t('Next stop'), value: props.nextStopTime ? `${props.nextStop} · ${props.nextStopTime}` : props.nextStop })
   }
-  if (props.departure && props.arrival) rows.push({ label: 'Timetable', value: `${props.departure} → ${props.arrival}` })
-  if (train.spd !== undefined) rows.push({ label: 'Speed', value: `${formatInt(train.spd * 3.6)} km/h (estimated)` })
-  if (train.trk !== undefined && (train.spd ?? 0) > 1) rows.push({ label: 'Heading', value: formatBearing(train.trk) })
+  if (props.departure && props.arrival) rows.push({ label: t('Timetable'), value: `${props.departure} → ${props.arrival}` })
+  if (train.spd !== undefined) rows.push({ label: t('Speed'), value: `${formatInt(train.spd * 3.6)} km/h (${t('estimated')})` })
+  if (train.trk !== undefined && (train.spd ?? 0) > 1) rows.push({ label: t('Heading'), value: formatBearing(train.trk) })
   rows.push({
-    label: 'Position from',
-    value: props.gps ? 'On-board GPS' : 'Timetable (no GPS signal)',
+    label: t('Position from'),
+    value: props.gps ? t('On-board GPS') : t('Timetable (no GPS signal)'),
   })
-  if (props.traction) rows.push({ label: 'Traction', value: props.traction === 'diesel' ? 'Diesel' : 'Electric' })
-  rows.push({ label: 'Position', value: `${formatLat(train.lat)}  ${formatLon(train.lon)}` })
-  rows.push({ label: 'Last update', value: formatAge(now - train.ts) })
+  if (props.traction) rows.push({ label: t('Traction'), value: props.traction === 'diesel' ? t('Diesel') : t('Electric') })
+  rows.push({ label: t('Position'), value: `${formatLat(train.lat)}  ${formatLon(train.lon)}` })
+  rows.push({ label: t('Last update'), value: formatAge(now - train.ts) })
 
   return {
-    kicker: 'Passenger train',
-    title: `Train ${props.number}`,
+    kicker: t('Passenger train'),
+    title: t('Train {number}', { number: props.number }),
     subtitle: props.route ?? undefined,
     badges,
     rows,
-    links: [{ label: 'Vivi live map', href: 'https://trainmap.vivi.lv' }],
+    links: [{ label: t('Vivi live map'), href: 'https://trainmap.vivi.lv' }],
   }
 }
 
 export const trainsLayer: LayerDef = {
   id: 'trains',
   group: 'land',
-  label: 'Trains',
-  hint: 'Passenger trains in service, from the operator’s own live map',
+  label: t('Trains'),
+  hint: t('Passenger trains in service, from the operator’s own live map'),
   defaultOn: true,
   swatch: '#7cffb2',
   feeds: ['trains'],
@@ -60,7 +61,7 @@ export const trainsLayer: LayerDef = {
 
   stats(entities) {
     const estimated = (entities as Train[]).filter((train) => !train.props.gps).length
-    return [{ label: 'estimated', value: estimated, tone: 'warn' }]
+    return [{ label: t('estimated'), value: estimated, tone: 'warn' }]
   },
 
   build({ now, zoom, selectedId, hoveredId, fontsReady }) {

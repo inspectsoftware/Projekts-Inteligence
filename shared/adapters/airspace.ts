@@ -1,4 +1,5 @@
 import type { Zone } from '../feeds'
+import { msg } from '../i18n'
 import { type Ring, centreOf, clip, isCurrent, plainText, sortZones, tidyRing } from './zones'
 
 export const EANS_PAGE = 'https://utm.eans.ee/avm/'
@@ -9,12 +10,12 @@ export type AreaTable = Readonly<Record<string, { name: string; ring: Ring }>>
 
 /** First match wins. */
 const KINDS: readonly [RegExp, string][] = [
-  [/GNSS|GPS/, 'GNSS interference'],
-  [/FIRING|SHOOTING|GUNNERY/, 'Firing practice'],
-  [/DANGER AREA/, 'Danger area'],
-  [/PROHIBITED AREA/, 'Prohibited area'],
-  [/RESTRICTED AREA/, 'Restricted area'],
-  [/(SEGREGATED|RESERVED|OPERATING) AREA/, 'Reserved airspace'],
+  [/GNSS|GPS/, msg('GNSS interference')],
+  [/FIRING|SHOOTING|GUNNERY/, msg('Firing practice')],
+  [/DANGER AREA/, msg('Danger area')],
+  [/PROHIBITED AREA/, msg('Prohibited area')],
+  [/RESTRICTED AREA/, msg('Restricted area')],
+  [/(SEGREGATED|RESERVED|OPERATING) AREA/, msg('Reserved airspace')],
 ]
 /** What makes a NOTAM a matter of airspace rather than of runway lights and cranes. */
 const RELEVANT = /\b(DANGER|RESTRICTED|PROHIBITED|RESERVED|SEGREGATED|OPERATING) AREA\b|GNSS|AIRSPACE|MILITARY|\bMIL OPS\b|FIRING/
@@ -44,7 +45,7 @@ const scrub = (text: string) =>
 function classify(text: string): Pick<Zone, 'type' | 'military'> {
   // Pilots are often told to "exercise caution", which is no exercise.
   const wording = text.replace(/EXERCISE (\w+ )?CAUTION/g, '')
-  return { type: KINDS.find(([pattern]) => pattern.test(wording))?.[1] ?? 'Airspace notice', military: MILITARY.test(wording) }
+  return { type: KINDS.find(([pattern]) => pattern.test(wording))?.[1] ?? msg('Airspace notice'), military: MILITARY.test(wording) }
 }
 
 // ---- Estonia: the NOTAM areas on the air navigation service's drone map ---------------------

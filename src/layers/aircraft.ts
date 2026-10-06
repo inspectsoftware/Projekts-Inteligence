@@ -2,6 +2,7 @@ import type { Color } from '@deck.gl/core'
 import { IconLayer, PathLayer, ScatterplotLayer, TextLayer } from '@deck.gl/layers'
 import { KEY_ROLES, ROLE_LABEL } from '../../shared/data/aircraftRoles'
 import { type Aircraft, type Entity, FEET_TO_M, FPM_TO_MS, Flag, KNOTS_TO_MS } from '../../shared/entity'
+import { t } from '../i18n'
 import { formatLat, formatLon, formatMgrs } from '../lib/coords'
 import { formatAge, formatBearing, formatInt } from '../lib/format'
 import { type IconName, getIconAtlas } from '../map/icons'
@@ -65,55 +66,55 @@ function describe(entity: Entity, now: number): InspectorModel {
   const a = entity as Aircraft
   const { props } = a
   const badges: InspectorModel['badges'] = []
-  if (is(a, Flag.EMERGENCY)) badges.push({ text: `Emergency ${props.squawk ?? ''}`.trim(), tone: 'danger' })
-  if (is(a, Flag.MIL)) badges.push({ text: 'Military', tone: 'mil' })
-  if (is(a, Flag.GPS_DEGRADED)) badges.push({ text: props.gpsLost ? 'GPS lost' : 'GPS degraded', tone: 'warn' })
-  if (is(a, Flag.ON_GROUND)) badges.push({ text: 'On ground', tone: 'info' })
+  if (is(a, Flag.EMERGENCY)) badges.push({ text: `${t('Emergency')} ${props.squawk ?? ''}`.trim(), tone: 'danger' })
+  if (is(a, Flag.MIL)) badges.push({ text: t('Military'), tone: 'mil' })
+  if (is(a, Flag.GPS_DEGRADED)) badges.push({ text: props.gpsLost ? t('GPS lost') : t('GPS degraded'), tone: 'warn' })
+  if (is(a, Flag.ON_GROUND)) badges.push({ text: t('On ground'), tone: 'info' })
 
   const rows: InspectorModel['rows'] = []
   if (is(a, Flag.MIL)) {
     // Read off the type designator, so it is what such an airframe usually does, not what this one is doing.
-    rows.push({ label: 'Role (from type)', value: props.role ? ROLE_LABEL[props.role] : 'Military, role unknown' })
+    rows.push({ label: t('Role (from type)'), value: props.role ? t(ROLE_LABEL[props.role]) : t('Military, role unknown') })
   }
-  if (props.description) rows.push({ label: 'Airframe', value: props.description })
-  if (props.operator) rows.push({ label: 'Operator', value: props.operator })
-  if (is(a, Flag.ON_GROUND)) rows.push({ label: 'Altitude', value: 'On ground' })
+  if (props.description) rows.push({ label: t('Airframe'), value: props.description })
+  if (props.operator) rows.push({ label: t('Operator'), value: props.operator })
+  if (is(a, Flag.ON_GROUND)) rows.push({ label: t('Altitude'), value: t('On ground') })
   else if (a.alt !== undefined) {
-    rows.push({ label: 'Altitude', value: `${formatInt(a.alt / FEET_TO_M)} ft · ${formatInt(a.alt)} m` })
+    rows.push({ label: t('Altitude'), value: `${formatInt(a.alt / FEET_TO_M)} ft · ${formatInt(a.alt)} m` })
   }
   if (a.spd !== undefined) {
-    rows.push({ label: 'Ground speed', value: `${formatInt(a.spd / KNOTS_TO_MS)} kt · ${formatInt(a.spd * 3.6)} km/h` })
+    rows.push({ label: t('Ground speed'), value: `${formatInt(a.spd / KNOTS_TO_MS)} kt · ${formatInt(a.spd * 3.6)} km/h` })
   }
-  if (a.trk !== undefined) rows.push({ label: 'Track', value: formatBearing(a.trk) })
+  if (a.trk !== undefined) rows.push({ label: t('Track'), value: formatBearing(a.trk) })
   if (a.vr !== undefined && Math.abs(a.vr) > 0.3) {
     const fpm = Math.round(a.vr / FPM_TO_MS / 50) * 50
-    rows.push({ label: 'Vertical rate', value: `${fpm > 0 ? '+' : '−'}${formatInt(Math.abs(fpm))} ft/min` })
+    rows.push({ label: t('Vertical rate'), value: `${fpm > 0 ? '+' : '−'}${formatInt(Math.abs(fpm))} ft/min` })
   }
-  if (props.squawk) rows.push({ label: 'Squawk', value: props.squawk })
+  if (props.squawk) rows.push({ label: t('Squawk'), value: props.squawk })
   rows.push({
-    label: 'Position from',
-    value: { adsb: 'ADS-B (own GPS)', mlat: 'Multilateration', tisb: 'TIS-B relay', other: 'Other' }[props.source],
+    label: t('Position from'),
+    value: { adsb: t('ADS-B (own GPS)'), mlat: t('Multilateration'), tisb: t('TIS-B relay'), other: t('Other') }[props.source],
   })
   rows.push({
-    label: 'GPS integrity',
+    label: t('GPS integrity'),
     value: !props.reportsIntegrity
-      ? 'Not reported by this transponder'
+      ? t('Not reported by this transponder')
       : `NIC ${props.nic ?? '–'} · NACp ${props.nacP ?? '–'}`,
   })
-  rows.push({ label: 'Position', value: `${formatLat(a.lat)}  ${formatLon(a.lon)}` })
+  rows.push({ label: t('Position'), value: `${formatLat(a.lat)}  ${formatLon(a.lon)}` })
   rows.push({ label: 'MGRS', value: formatMgrs(a.lon, a.lat) })
-  rows.push({ label: 'Last fix', value: formatAge(now - a.ts) })
-  rows.push({ label: 'ICAO address', value: props.hex.toUpperCase() })
+  rows.push({ label: t('Last fix'), value: formatAge(now - a.ts) })
+  rows.push({ label: t('ICAO address'), value: props.hex.toUpperCase() })
 
   return {
-    kicker: 'Aircraft',
+    kicker: t('Aircraft'),
     title: props.callsign ?? props.registration ?? props.hex.toUpperCase(),
     subtitle: [props.registration, props.type].filter(Boolean).join(' · ') || undefined,
     badges,
     rows,
     links: [
-      { label: 'Live track (adsb.fi)', href: `https://globe.adsb.fi/?icao=${props.hex}` },
-      { label: 'Airframe (Planespotters)', href: `https://www.planespotters.net/hex/${props.hex.toUpperCase()}` },
+      { label: t('Live track (adsb.fi)'), href: `https://globe.adsb.fi/?icao=${props.hex}` },
+      { label: t('Airframe (Planespotters)'), href: `https://www.planespotters.net/hex/${props.hex.toUpperCase()}` },
     ],
   }
 }
@@ -121,8 +122,8 @@ function describe(entity: Entity, now: number): InspectorModel {
 export const aircraftLayer: LayerDef = {
   id: 'aircraft',
   group: 'air',
-  label: 'Aircraft',
-  hint: 'Live ADS-B and multilateration positions within 250 nm, refreshed every 10 s, plus military aircraft across the wider Baltic region every 30 s',
+  label: t('Aircraft'),
+  hint: t('Live ADS-B and multilateration positions within 250 nm, refreshed every 10 s, plus military aircraft across the wider Baltic region every 30 s'),
   defaultOn: true,
   swatch: '#a4e8ff',
   feeds: ['aircraft'],
@@ -134,16 +135,16 @@ export const aircraftLayer: LayerDef = {
     const overLatvia = entities.filter((e) => !is(e, Flag.ON_GROUND) && insideLatvia(e.lon, e.lat)).length
     const roles = (entities as Aircraft[]).map((a) => a.props.role)
     return [
-      { label: 'over Latvia', value: overLatvia, tone: 'info' },
-      { label: 'Military', value: count(Flag.MIL), tone: 'mil' },
+      { label: t('over Latvia'), value: overLatvia, tone: 'info' },
+      { label: t('Military'), value: count(Flag.MIL), tone: 'mil' },
       // One number per role worth noticing; the layer list leaves out the zeros.
       ...[...KEY_ROLES].map((role) => ({
-        label: ROLE_LABEL[role],
+        label: t(ROLE_LABEL[role]),
         value: roles.filter((r) => r === role).length,
         tone: 'mil' as const,
       })),
-      { label: 'GPS degraded', value: count(Flag.GPS_DEGRADED), tone: 'warn' },
-      { label: 'Emergency', value: count(Flag.EMERGENCY), tone: 'danger' },
+      { label: t('GPS degraded'), value: count(Flag.GPS_DEGRADED), tone: 'warn' },
+      { label: t('Emergency'), value: count(Flag.EMERGENCY), tone: 'danger' },
     ]
   },
 

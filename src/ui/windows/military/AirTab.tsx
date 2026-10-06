@@ -1,23 +1,24 @@
 import { KEY_ROLES, ROLE_LABEL } from '../../../../shared/data/aircraftRoles'
 import { type Aircraft, FEET_TO_M, KNOTS_TO_MS } from '../../../../shared/entity'
+import { t } from '../../../i18n'
 import { aircraftLayer } from '../../../layers/aircraft'
 import { formatInt } from '../../../lib/format'
 import { insideLatvia } from '../../../runtime/border'
 import { useFeed } from '../../../runtime/useFeed'
-import { airborneMilitary, fromRiga } from './order'
+import { airborneMilitary, rigaOffset } from './order'
 import { Credits, TrackRow } from './parts'
 
 /** Military aircraft in the air across the region, the ones that say most about posture first. */
 export function AirTab() {
   // Polled for as long as the tab is shown, whether or not the aircraft layer is on.
   const feed = useFeed('aircraft', 'entities')
-  if (!feed) return <p className="text-fg-mute">Waiting for data…</p>
+  if (!feed) return <p className="text-fg-mute">{t('Waiting for data…')}</p>
   const aircraft = airborneMilitary(feed.entities as Aircraft[])
 
   return (
     <>
       {aircraft.length === 0 ? (
-        <p className="text-fg-mute">No military aircraft are broadcasting in the region right now.</p>
+        <p className="text-fg-mute">{t('No military aircraft are broadcasting in the region right now.')}</p>
       ) : (
         <ul className="divide-y divide-line/50">
           {aircraft.map((a) => {
@@ -29,7 +30,7 @@ export function AirTab() {
                 entity={a}
                 layer={aircraftLayer}
                 title={a.label ?? a.props.hex.toUpperCase()}
-                kind={[type, role ? ROLE_LABEL[role] : 'role unknown'].filter(Boolean).join(' · ')}
+                kind={[type, role ? t(ROLE_LABEL[role]) : t('role unknown')].filter(Boolean).join(' · ')}
                 tone={role && KEY_ROLES.has(role) ? 'mil' : 'plain'}
                 detail={[
                   a.alt !== undefined && `${formatInt(a.alt / FEET_TO_M)} ft`,
@@ -38,7 +39,7 @@ export function AirTab() {
                 ]
                   .filter(Boolean)
                   .join(' · ')}
-                where={inside ? 'Over Latvia' : fromRiga(a)}
+                where={inside ? t('Over Latvia') : t('{km} km {compass} of Rīga', rigaOffset(a))}
                 inside={inside}
               />
             )
@@ -46,7 +47,7 @@ export function AirTab() {
         </ul>
       )}
       <p className="mt-2 text-[10px] text-fg-mute">
-        Only aircraft that broadcast their position. Russian and Belarusian combat aircraft do not, and will not appear.
+        {t('Only aircraft that broadcast their position. Russian and Belarusian combat aircraft do not, and will not appear.')}
       </p>
       <Credits feed="aircraft" />
     </>

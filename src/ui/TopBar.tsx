@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { APP } from '../../shared/meta'
 import { usePalette } from '../state/palette'
+import { LANGS, LANG_NAMES, isLang } from '../../shared/i18n'
+import { lang, setLang, t } from '../i18n'
 import { Clock } from './Clock'
 
 type Uplink = { state: 'connecting' } | { state: 'up'; commit: string } | { state: 'down' }
@@ -34,26 +36,39 @@ export function TopBar() {
         <i className="bg-carmine" />
       </span>
       <h1 className="font-semibold tracking-[0.3em] whitespace-nowrap text-white">{APP.codename}</h1>
-      <span className="hidden whitespace-nowrap text-fg-mute lg:inline">Latvia // Intelligence Panel</span>
+      <span className="hidden whitespace-nowrap text-fg-mute lg:inline">{t('Latvia // Intelligence Panel')}</span>
       <span className="hidden border border-ok/40 px-1.5 py-px text-[9px] tracking-[0.2em] text-ok xl:inline">
-        Public sources only
+        {t('Public sources only')}
       </span>
 
       <button
         type="button"
         onClick={() => openSearch(true)}
-        title="Search places, callsigns, trains, satellites and layers"
+        title={t('Search places, callsigns, trains, satellites and layers')}
         className="ml-2 flex items-center gap-2 border border-line px-2 py-0.5 text-[10px] tracking-[0.16em] text-fg-mute transition-colors hover:border-line-strong hover:text-fg max-sm:hidden"
       >
-        Search
+        {t('Search')}
         <kbd className="font-mono text-[9px] text-fg-mute">Ctrl K</kbd>
       </button>
 
       <div className="ml-auto flex items-center gap-4">
+        <select
+          aria-label={t('Language')}
+          title={t('Language')}
+          value={lang}
+          onChange={(event) => isLang(event.target.value) && setLang(event.target.value)}
+          className="cursor-pointer border border-line bg-ink-900 px-1 py-0.5 text-[10px] tracking-[0.12em] text-fg-dim uppercase hover:border-line-strong hover:text-fg"
+        >
+          {LANGS.map((code) => (
+            <option key={code} value={code} title={LANG_NAMES[code]}>
+              {code}
+            </option>
+          ))}
+        </select>
         <Clock />
         <span
           className="flex items-center gap-1.5"
-          title={uplink.state === 'up' ? `Server build ${uplink.commit}` : undefined}
+          title={uplink.state === 'up' ? t('Server build {commit}', { commit: uplink.commit }) : undefined}
         >
           <span
             className={`h-1.5 w-1.5 rounded-full ${
@@ -61,7 +76,7 @@ export function TopBar() {
             }`}
           />
           <span className="hidden sm:inline">
-            {uplink.state === 'up' ? 'Uplink' : uplink.state === 'down' ? 'Uplink down' : 'Linking'}
+            {uplink.state === 'up' ? t('Uplink') : uplink.state === 'down' ? t('Uplink down') : t('Linking')}
           </span>
         </span>
       </div>

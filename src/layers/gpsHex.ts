@@ -1,6 +1,7 @@
 import type { Color } from '@deck.gl/core'
 import { PolygonLayer } from '@deck.gl/layers'
 import type { FeedPayload, GpsCell } from '../../shared/feeds'
+import { t } from '../i18n'
 import { getPayload } from '../runtime/entityStore'
 import { useFeeds } from '../state/feeds'
 import type { LayerDef } from './types'
@@ -40,8 +41,8 @@ let reportedFor: FeedPayload | null = null
 export const gpsHexLayer: LayerDef = {
   id: 'gps-hex',
   group: 'signals',
-  label: 'GPS interference',
-  hint: 'Where aircraft reported degraded or lost GPS in the last 90 minutes. Red: more than 10 % of traffic affected, amber: more than 2 %, green: clean',
+  label: t('GPS interference'),
+  hint: t('Where aircraft reported degraded or lost GPS in the last 90 minutes. Red: more than 10 % of traffic affected, amber: more than 2 %, green: clean'),
   defaultOn: true,
   swatch: '#ff4d5e',
   feeds: ['gps-hex'],
@@ -56,8 +57,8 @@ export const gpsHexLayer: LayerDef = {
     useFeeds.getState().report('gps-hex', {
       count: heavy + some,
       stats: [
-        { label: 'heavy', value: heavy, tone: 'danger' },
-        { label: 'moderate', value: some, tone: 'warn' },
+        { label: t('heavy'), value: heavy, tone: 'danger' },
+        { label: t('moderate'), value: some, tone: 'warn' },
       ],
     })
   },

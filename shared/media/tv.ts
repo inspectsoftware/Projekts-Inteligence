@@ -7,6 +7,8 @@
  * reuse (ERR) or its site refuses to be framed, the channel is a link to its own page and nothing more.
  */
 
+import { msg } from '../i18n'
+
 export type TvCountry = 'LV' | 'LT' | 'EE' | 'INT'
 
 /** Latvia, Lithuania and Estonia keep the same time, so one zone dates every broadcast and every slot. */
@@ -65,7 +67,7 @@ export const TV_CHANNELS: readonly TvChannel[] = [
     name: 'LTV news',
     country: 'LV',
     lang: 'lv',
-    schedule: 'Dienas ziņas at 18:00 and Panorāma at 20:30, Riga time',
+    schedule: msg('Dienas ziņas at 18:00 and Panorāma at 20:30, Riga time'),
     kind: 'yt-feed',
     channelId: 'UCOSAAyJoybqsY5sZ76BaqFA',
     title: /Dienas ziņas|Panorāma/,
@@ -82,7 +84,7 @@ export const TV_CHANNELS: readonly TvChannel[] = [
     name: 'Saeima',
     country: 'LV',
     lang: 'lv',
-    schedule: 'Parliament sittings, usually on Thursdays',
+    schedule: msg('Parliament sittings, usually on Thursdays'),
     kind: 'yt-feed',
     channelId: 'UCdQ1YxaZG3i7ygGCdU8mPKQ',
     title: /^Saeimas sēde/,
@@ -95,7 +97,7 @@ export const TV_CHANNELS: readonly TvChannel[] = [
     name: 'Cabinet of Ministers',
     country: 'LV',
     lang: 'lv',
-    schedule: 'Government sittings on Tuesdays, and the press conference after',
+    schedule: msg('Government sittings on Tuesdays, and the press conference after'),
     kind: 'yt-feed',
     channelId: 'UCcG5Xi9yY89axvOTHszLCcA',
     title: /^Ministru kabineta sēde|^Preses konference pēc Ministru kabineta sēdes/,
@@ -107,7 +109,7 @@ export const TV_CHANNELS: readonly TvChannel[] = [
     name: 'President of Latvia',
     country: 'LV',
     lang: 'lv',
-    schedule: 'Statements and press conferences, as they happen',
+    schedule: msg('Statements and press conferences, as they happen'),
     kind: 'yt-feed',
     channelId: 'UChG7C8090M0h6eCU8TM-vGQ',
     // The live events are the uploads that start with their date; the rest are short clips of meetings.
@@ -132,7 +134,7 @@ export const TV_CHANNELS: readonly TvChannel[] = [
     name: 'Seimas',
     country: 'LT',
     lang: 'lt',
-    schedule: 'Parliament sittings on Tuesdays and Thursdays',
+    schedule: msg('Parliament sittings on Tuesdays and Thursdays'),
     kind: 'yt-feed',
     channelId: 'UCN6ZSYI-7pxml6bE_zrTgow',
     title: /^\d{4}-\d{2}-\d{2} Seimo .*posėdis/,
@@ -149,7 +151,7 @@ export const TV_CHANNELS: readonly TvChannel[] = [
     name: 'Riigikogu',
     country: 'EE',
     lang: 'et',
-    schedule: 'The chamber of parliament: a title card while it is not sitting',
+    schedule: msg('The chamber of parliament: a title card while it is not sitting'),
     kind: 'hls',
     // Read from the player on Riigikogu's own live page. If it stops answering, read it there again.
     src: 'https://router.euddn.net/862366dd346d6b6392d5231546f3d179/smil:rk_live_1.smil/playlist.m3u8?c=8005',
@@ -161,7 +163,7 @@ export const TV_CHANNELS: readonly TvChannel[] = [
     name: 'Government of Estonia',
     country: 'EE',
     lang: 'et',
-    schedule: 'Government press conference on Thursdays',
+    schedule: msg('Government press conference on Thursdays'),
     kind: 'yt-feed',
     channelId: 'UCy2B86RwjKly8vab4GTg5Fw',
     // The comma leaves out the second upload of each one, with sign language, which arrives a day late.

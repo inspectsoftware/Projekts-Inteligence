@@ -1,6 +1,7 @@
 import type { Color } from '@deck.gl/core'
 import { PolygonLayer } from '@deck.gl/layers'
 import type { FeedPayload, WarningLevel, WeatherWarning } from '../../shared/feeds'
+import { t } from '../i18n'
 import { getPayload } from '../runtime/entityStore'
 import { useFeeds } from '../state/feeds'
 import type { LayerDef } from './types'
@@ -41,8 +42,8 @@ function areasOf(warnings: WeatherWarning[]): Area[] {
 export const warningsLayer: LayerDef = {
   id: 'warnings',
   group: 'environment',
-  label: 'Weather warnings',
-  hint: 'Official warnings in force or starting within a day (LVĢMC via MeteoAlarm). Warnings for sea areas are listed as alerts only',
+  label: t('Weather warnings'),
+  hint: t('Official warnings in force or starting within a day (LVĢMC via MeteoAlarm). Warnings for sea areas are listed as alerts only'),
   defaultOn: true,
   swatch: '#ffd65c',
   feeds: ['warnings'],
@@ -55,9 +56,9 @@ export const warningsLayer: LayerDef = {
     useFeeds.getState().report('warnings', {
       count: payload.warnings.length,
       stats: [
-        { label: 'red', value: count('red'), tone: 'danger' },
-        { label: 'orange', value: count('orange'), tone: 'mil' },
-        { label: 'yellow', value: count('yellow'), tone: 'warn' },
+        { label: t('red'), value: count('red'), tone: 'danger' },
+        { label: t('orange'), value: count('orange'), tone: 'mil' },
+        { label: t('yellow'), value: count('yellow'), tone: 'warn' },
       ],
     })
   },

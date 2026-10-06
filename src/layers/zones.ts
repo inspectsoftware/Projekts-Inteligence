@@ -2,6 +2,7 @@ import type { Feature, FeatureCollection } from 'geojson'
 import type { ExpressionSpecification, GeoJSONSource, LayerSpecification, Map as MapLibreMap } from 'maplibre-gl'
 import { type ZoneState, isCurrent, zoneState } from '../../shared/adapters/zones'
 import type { FeedId, FeedPayload, Zone } from '../../shared/feeds'
+import { locale, t } from '../i18n'
 import { getMap } from '../map/instance'
 import { serverNow } from '../runtime/clock'
 import { getPayload } from '../runtime/entityStore'
@@ -16,7 +17,7 @@ import type { InspectorModel, LayerDef, StaticSelection } from './types'
  */
 const MIL = '#ff8a3d'
 
-const RIGA_TIME = new Intl.DateTimeFormat('en-GB', {
+const RIGA_TIME = new Intl.DateTimeFormat(locale, {
   timeZone: 'Europe/Riga',
   weekday: 'short',
   day: 'numeric',
@@ -29,10 +30,10 @@ const RIGA_TIME = new Intl.DateTimeFormat('en-GB', {
 
 /** Only a zone known to apply at this moment is called in force: one with hours this site cannot read is not. */
 const STATE_BADGE: Record<ZoneState, InspectorModel['badges'][number]> = {
-  active: { text: 'In force', tone: 'warn' },
-  pending: { text: 'Not yet in force', tone: 'info' },
-  idle: { text: 'Outside its hours', tone: 'info' },
-  unsure: { text: 'See notice for times', tone: 'info' },
+  active: { text: t('In force'), tone: 'warn' },
+  pending: { text: t('Not yet in force'), tone: 'info' },
+  idle: { text: t('Outside its hours'), tone: 'info' },
+  unsure: { text: t('See notice for times'), tone: 'info' },
 }
 
 /** A zone as the inspector shows it, standing at `at`. */
@@ -41,18 +42,18 @@ export function zoneSelection(zone: Zone, at: [number, number], now: number): St
     lon: at[0],
     lat: at[1],
     model: {
-      kicker: zone.kind === 'sea' ? 'Sea warning' : 'Airspace restriction',
+      kicker: zone.kind === 'sea' ? t('Sea warning') : t('Airspace restriction'),
       title: zone.title,
       subtitle: zone.issuer,
-      badges: [{ text: zone.type, tone: zone.military ? 'mil' : 'info' }, STATE_BADGE[zoneState(zone, now)]],
+      badges: [{ text: t(zone.type), tone: zone.military ? 'mil' : 'info' }, STATE_BADGE[zoneState(zone, now)]],
       rows: [
-        { label: 'From (Rīga)', value: zone.from === null ? 'Not stated' : RIGA_TIME.format(zone.from) },
-        { label: 'Until (Rīga)', value: zone.to === null ? 'Until withdrawn' : RIGA_TIME.format(zone.to) },
-        ...(zone.schedule ? [{ label: 'Hours (UTC)', value: zone.schedule }] : []),
+        { label: t('From (Rīga)'), value: zone.from === null ? t('Not stated') : RIGA_TIME.format(zone.from) },
+        { label: t('Until (Rīga)'), value: zone.to === null ? t('Until withdrawn') : RIGA_TIME.format(zone.to) },
+        ...(zone.schedule ? [{ label: t('Hours (UTC)'), value: zone.schedule }] : []),
         // The inspector lays a row out on one line and wraps it: the notice's own line breaks would be lost without a mark.
-        { label: 'Notice', value: zone.text.replaceAll('\n', ' · ') },
+        { label: t('Notice'), value: zone.text.replaceAll('\n', ' · ') },
       ],
-      links: [{ label: 'Official page', href: zone.href }],
+      links: [{ label: t('Official page'), href: zone.href }],
     },
   }
 }
@@ -178,7 +179,7 @@ function zoneLayer(def: Pick<LayerDef, 'id' | 'group' | 'label' | 'hint'>, feed:
       if (payload !== drawn) {
         useFeeds.getState().report(feed, {
           count: payload.zones.length,
-          stats: [{ label: 'military', value: payload.zones.filter((zone) => zone.military).length, tone: 'mil' }],
+          stats: [{ label: t('military'), value: payload.zones.filter((zone) => zone.military).length, tone: 'mil' }],
         })
       }
       drawn = payload
@@ -197,8 +198,8 @@ export const seaWarningsLayer = zoneLayer(
   {
     id: 'sea-warnings',
     group: 'sea',
-    label: 'Sea warnings',
-    hint: 'Navigational warnings in force or starting within two days, Baltic-wide: exercise, firing and danger areas in solid orange, routine notices dashed. Not for navigation',
+    label: t('Sea warnings'),
+    hint: t('Navigational warnings in force or starting within two days, Baltic-wide: exercise, firing and danger areas in solid orange, routine notices dashed. Not for navigation'),
   },
   'navwarn',
 )
@@ -207,8 +208,8 @@ export const airspaceLayer = zoneLayer(
   {
     id: 'airspace',
     group: 'air',
-    label: 'Airspace restrictions',
-    hint: 'Airspace closed, reserved or dangerous by NOTAM, in force or starting within two days, over Latvia and Estonia: military activity in solid orange, the rest dashed. Not for flight planning',
+    label: t('Airspace restrictions'),
+    hint: t('Airspace closed, reserved or dangerous by NOTAM, in force or starting within two days, over Latvia and Estonia: military activity in solid orange, the rest dashed. Not for flight planning'),
   },
   'airspace',
 )

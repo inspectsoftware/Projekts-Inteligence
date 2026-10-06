@@ -2,6 +2,7 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { linkOf, playersOf } from '../../../../shared/adapters/tv'
 import type { TvNow } from '../../../../shared/feeds'
 import type { TvChannel } from '../../../../shared/media/tv'
+import { t } from '../../../i18n'
 import { EmbedFrame } from '../../media/EmbedFrame'
 import { HlsVideo } from '../../media/HlsVideo'
 import { useTv } from './store'
@@ -28,7 +29,7 @@ function SoundNote() {
   if (!shown) return null
   return (
     <p role="status" className="text-[9.5px] tracking-[0.16em] text-accent uppercase">
-      Sound is off: turn it on in the player
+      {t('Sound is off: turn it on in the player')}
     </p>
   )
 }
@@ -58,8 +59,8 @@ function Frame({ channel, now, muted = false, children }: StageProps & { muted?:
           </a>
         </div>
         {channel.schedule && (
-          <p className="truncate text-fg-mute" title={channel.schedule}>
-            {channel.schedule}
+          <p className="truncate text-fg-mute" title={t(channel.schedule)}>
+            {t(channel.schedule)}
           </p>
         )}
       </footer>
@@ -81,11 +82,11 @@ function Playing({ channel, now: latest }: StageProps) {
           <div>
             <p>
               {channel.schedule
-                ? 'Not on air right now, or this broadcast may not be shown on other sites.'
-                : 'This stream has moved, or may no longer be shown on other sites.'}
+                ? t('Not on air right now, or this broadcast may not be shown on other sites.')
+                : t('This stream has moved, or may no longer be shown on other sites.')}
             </p>
             <a href={linkOf(channel, now)} target="_blank" rel="noreferrer noopener" className={`mt-2 inline-block text-accent ${LINK}`}>
-              Watch at {channel.credit} ↗
+              {t('Watch at {credit} ↗', { credit: channel.credit })}
             </a>
           </div>
         </div>
@@ -123,11 +124,11 @@ export function Stage({ channel, now, waiting }: StageProps & { waiting: boolean
   return (
     <Frame channel={channel} now={now}>
       {plays > 0 ? (
-        <p className={NOTE}>Finding the broadcast…</p>
+        <p className={NOTE}>{t('Finding the broadcast…')}</p>
       ) : (
-        <button type="button" onClick={() => watch(channel.id)} aria-label={`Play ${channel.name}`} className="group relative grid h-full w-full place-items-center text-fg-dim hover:text-accent">
+        <button type="button" onClick={() => watch(channel.id)} aria-label={t('Play {name}', { name: channel.name })} className="group relative grid h-full w-full place-items-center text-fg-dim hover:text-accent">
           {players[0].poster && <img src={players[0].poster} alt="" className="absolute inset-0 h-full w-full object-cover opacity-60" />}
-          <span className="relative border border-line-strong bg-ink-900/80 px-3 py-1.5 text-[10px] tracking-[0.2em] uppercase group-hover:border-accent">Play</span>
+          <span className="relative border border-line-strong bg-ink-900/80 px-3 py-1.5 text-[10px] tracking-[0.2em] uppercase group-hover:border-accent">{t('Play')}</span>
         </button>
       )}
     </Frame>

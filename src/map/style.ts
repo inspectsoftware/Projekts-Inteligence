@@ -1,5 +1,6 @@
 import type { ExpressionSpecification, LayerSpecification, StyleSpecification } from 'maplibre-gl'
 import { TILE_ORIGINS } from '../../shared/origins'
+import { lang } from '../i18n'
 
 /**
  * Dark tactical basemap over OpenFreeMap's vector tiles (OpenMapTiles schema).
@@ -50,8 +51,8 @@ const isPolygon: ExpressionSpecification = ['match', ['geometry-type'], ['Polygo
 const isLine: ExpressionSpecification = ['match', ['geometry-type'], ['LineString', 'MultiLineString'], true, false]
 const isPoint: ExpressionSpecification = ['match', ['geometry-type'], ['Point', 'MultiPoint'], true, false]
 
-/** Prefers the Latin-script name so neighbouring Cyrillic labels stay readable. */
-const NAME: ExpressionSpecification = ['coalesce', ['get', 'name:latin'], ['get', 'name']]
+/** The name in the reader's language where the tiles carry one, else the Latin-script name so neighbouring Cyrillic labels stay readable. */
+const NAME: ExpressionSpecification = ['coalesce', ['get', `name:${lang}`], ['get', 'name:latin'], ['get', 'name']]
 
 /** Street names start dim, as one more texture, and come forward once the streets fill the screen. */
 const STREET_NAME_COLOR: ExpressionSpecification = ['interpolate', ['linear'], ['zoom'], 15, C.labelDim, 17, C.label]
@@ -380,7 +381,7 @@ export function buildStyle(): StyleSpecification {
   const ofm = TILE_ORIGINS.openFreeMap
   return {
     version: 8,
-    name: 'White Hornet dark',
+    name: 'Projekts Inteliģence dark',
     // The TileJSON resolves to a dated tile path, so always reference it rather than the tiles.
     sources: { [SOURCE]: { type: 'vector', url: `${ofm}/planet` } },
     glyphs: `${ofm}/fonts/{fontstack}/{range}.pbf`,

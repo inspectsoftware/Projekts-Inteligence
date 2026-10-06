@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { t } from '../../i18n'
 
 const YOUTUBE = 'https://www.youtube-nocookie.com'
 
@@ -67,12 +68,12 @@ export function EmbedFrame({ src, title, poster, eager = false, onError }: Embed
       <button
         type="button"
         onClick={() => setWanted(src)}
-        aria-label={`Play ${title}`}
+        aria-label={t('Play {title}', { title })}
         className="group relative grid h-full min-h-0 w-full place-items-center overflow-hidden bg-ink-950 text-fg-dim hover:text-accent"
       >
         {poster && <img src={poster} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-60" />}
         <span className="relative border border-line-strong bg-ink-900/80 px-3 py-1.5 text-[10px] tracking-[0.2em] uppercase group-hover:border-accent">
-          Play
+          {t('Play')}
         </span>
       </button>
     )

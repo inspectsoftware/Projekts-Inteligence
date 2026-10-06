@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { type RoadRow, normaliseCameras, normaliseRoadEvents } from '../../shared/adapters/roads'
 import { roadAccidentRule } from '../../shared/alerts/rules'
+import { translate } from '../../shared/i18n'
 
 const T0 = Date.parse('2026-10-06T11:00:00Z')
 const UNPLANNED = 'public.kafkamessages_notplannedevent_public'
@@ -64,6 +65,7 @@ describe('road events', () => {
       warnings: () => [],
       news: () => [],
       insideLatvia: () => true,
+      tr: translate.bind(null, 'en'),
     })
     expect(alerts).toMatchObject([{ title: 'Road accident: A7 (36.793km)', detail: 'lanes blocked', entityId: 'road-event:u21411' }])
   })

@@ -3,18 +3,19 @@ import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { Entity } from '../../shared/entity'
 import type { FeedId } from '../../shared/feeds'
 import type { Attribution } from '../../shared/origins'
+import { t } from '../i18n'
 import type { Stat } from '../state/feeds'
 
 export type LayerGroup = 'air' | 'sea' | 'land' | 'space' | 'signals' | 'environment' | 'reference'
 
 export const GROUP_LABELS: Record<LayerGroup, string> = {
-  air: 'Air',
-  sea: 'Sea',
-  land: 'Land',
-  space: 'Space',
-  signals: 'Signals',
-  environment: 'Environment',
-  reference: 'Reference',
+  air: t('Air'),
+  sea: t('Sea'),
+  land: t('Land'),
+  space: t('Space'),
+  signals: t('Signals'),
+  environment: t('Environment'),
+  reference: t('Reference'),
 }
 
 /** What a layer needs to know to draw one frame. */

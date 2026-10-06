@@ -17,6 +17,7 @@ import type { AlertInput } from '../../shared/alerts/engine'
 import { vesselRule } from '../../shared/alerts/rules'
 import { WARSHIPS } from '../../shared/data/warships'
 import { Flag } from '../../shared/entity'
+import { translate } from '../../shared/i18n'
 
 const SEA = [18.5, 55.3, 25.6, 59.7] as const
 const NO_IDS = { mmsi: new Set<number>(), imo: new Set<number>() }
@@ -205,7 +206,7 @@ describe('state vessels', () => {
     table.describe({ mmsi: 273444560, shipType: 80, name: undefined, callSign: undefined, imo: undefined, destination: undefined })
     const [hilda] = table.view(SEA, { ...NONE, warships: listed })
     expect(hilda.props).toMatchObject({ type: 'tanker', service: null, listedAs: 'Hilda, Russian Navy' })
-    expect(vesselRule.evaluate({ now: T0, entities: () => [hilda], warnings: () => [], news: () => [], insideLatvia: () => false })).toEqual([])
+    expect(vesselRule.evaluate({ now: T0, entities: () => [hilda], warnings: () => [], news: () => [], insideLatvia: () => false, tr: translate.bind(null, 'en') })).toEqual([])
   })
 
   it('leaves the bunker tankers and tourist steamers out of the baked navy list', () => {
@@ -255,6 +256,7 @@ describe('vessel alerts', () => {
     warnings: () => [],
     news: () => [],
     insideLatvia,
+    tr: translate.bind(null, 'en'),
   })
   const alertsFor = (ships: Ship[], insideLatvia: AlertInput['insideLatvia'] = () => false) =>
     vesselRule.evaluate(input(ships, insideLatvia)).map((alert) => [alert.severity, alert.title])

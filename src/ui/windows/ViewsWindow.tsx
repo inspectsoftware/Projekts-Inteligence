@@ -1,3 +1,4 @@
+import { t } from '../../i18n'
 import { VIEWS, flyHome, flyToView } from '../../map/camera'
 import { useMap } from '../../map/instance'
 
@@ -14,7 +15,7 @@ export function ViewsWindow() {
           onClick={() => map && flyHome(map)}
           className="w-full bg-ink-850 px-2 py-1.5 text-left text-[10px] tracking-[0.16em] text-fg uppercase transition-colors hover:bg-ink-700 hover:text-accent disabled:opacity-40"
         >
-          Latvia overview
+          {t('Latvia overview')}
         </button>
       </li>
       {VIEWS.map((view) => (

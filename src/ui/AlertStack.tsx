@@ -1,4 +1,5 @@
 import type { Alert, Severity } from '../../shared/alerts/engine'
+import { t } from '../i18n'
 import { formatAge } from '../lib/format'
 import { useMap } from '../map/instance'
 import { getEntity } from '../runtime/entityStore'
@@ -25,7 +26,7 @@ export function AlertStack() {
   const select = useSelection((s) => s.select)
   const now = useNow(15_000)
 
-  if (active.length === 0) return <p className="p-3 text-[11px] text-fg-mute">No active alerts</p>
+  if (active.length === 0) return <p className="p-3 text-[11px] text-fg-mute">{t('No active alerts')}</p>
 
   const open = (alert: Alert) => {
     if (alert.entityId && getEntity(alert.entityId)) select(alert.entityId)
@@ -41,7 +42,7 @@ export function AlertStack() {
           <button
             type="button"
             onClick={() => open(alert)}
-            title="Show on the map"
+            title={t('Show on the map')}
             className="flex w-full items-stretch gap-2.5 text-left transition-colors hover:bg-ink-700"
           >
             <span className={`w-1 shrink-0 ${BAR[alert.severity]}`} />

@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { pictureOf } from '../../../../shared/adapters/cams'
 import type { Cam } from '../../../../shared/feeds'
+import { t } from '../../../i18n'
 import { useMap } from '../../../map/instance'
 import { getEntity } from '../../../runtime/entityStore'
 import { useSelection } from '../../../state/selection'
@@ -39,7 +40,7 @@ export function CamView({ cam }: { cam: Cam }) {
   // A poster stops renewing once its player runs: nobody sees it any more.
   const picture = pictureOf(cam, useTicker(still || !armed ? cam.refreshS : undefined, onScreen))
   const [broken, setBroken] = useState<string | null>(null)
-  const label = `${cam.name}, ${cam.place}`
+  const label = `${cam.name}, ${t(cam.place)}`
 
   const showOnMap = () => {
     if (!map || cam.lon === undefined || cam.lat === undefined) return
@@ -55,13 +56,13 @@ export function CamView({ cam }: { cam: Cam }) {
       picture !== broken ? (
         <img src={picture!} alt={label} onError={() => setBroken(picture)} className="h-full w-full object-contain" />
       ) : (
-        <p className="grid h-full place-items-center text-[10px] tracking-[0.2em] text-fg-mute uppercase">No picture right now</p>
+        <p className="grid h-full place-items-center text-[10px] tracking-[0.2em] text-fg-mute uppercase">{t('No picture right now')}</p>
       )
   } else if (!armed) {
     media = (
-      <button type="button" onClick={arm} aria-label={`Play ${label}`} className="group relative grid h-full w-full place-items-center text-fg-dim hover:text-accent">
+      <button type="button" onClick={arm} aria-label={t('Play {name}', { name: label })} className="group relative grid h-full w-full place-items-center text-fg-dim hover:text-accent">
         {picture && <img src={picture} alt="" className="absolute inset-0 h-full w-full object-contain opacity-60" />}
-        <span className="relative border border-line-strong bg-ink-900/80 px-3 py-1.5 text-[10px] tracking-[0.2em] uppercase group-hover:border-accent">Play</span>
+        <span className="relative border border-line-strong bg-ink-900/80 px-3 py-1.5 text-[10px] tracking-[0.2em] uppercase group-hover:border-accent">{t('Play')}</span>
       </button>
     )
   } else if (!onScreen) {
@@ -80,13 +81,13 @@ export function CamView({ cam }: { cam: Cam }) {
     <>
       <header className="flex shrink-0 items-center gap-2 border-b border-line px-2 py-1.5">
         <button type="button" onClick={back} className={FOOT_BUTTON}>
-          ‹ Grid
+          {t('‹ Grid')}
         </button>
         <h3 className="min-w-0 flex-1 truncate text-[11px] tracking-[0.08em] text-fg" title={cam.name}>
           {cam.name}
         </h3>
         <span className="shrink-0 text-[9.5px] tracking-[0.14em] text-fg-mute uppercase">
-          {cam.place} · {cam.country}
+          {t(cam.place)} · {cam.country}
         </span>
       </header>
       {/* In a window the frame takes the room that is left; in the phone sheet, which has no height of its own, a 16:9 box. */}
@@ -101,15 +102,15 @@ export function CamView({ cam }: { cam: Cam }) {
         ) : (
           <span className="min-w-0 truncate text-fg-dim">{cam.credit}</span>
         )}
-        {cam.approx && <span className="tracking-[0.14em] text-warn uppercase">Approximate position</span>}
+        {cam.approx && <span className="tracking-[0.14em] text-warn uppercase">{t('Approximate position')}</span>}
         <button
           type="button"
           disabled={!map || cam.lon === undefined}
-          title={cam.lon === undefined ? 'Its publisher gives no position' : 'Fly the map to this camera'}
+          title={cam.lon === undefined ? t('Its publisher gives no position') : t('Fly the map to this camera')}
           onClick={showOnMap}
           className={`ml-auto ${FOOT_BUTTON}`}
         >
-          Show on map
+          {t('Show on map')}
         </button>
       </footer>
     </>

@@ -2,6 +2,7 @@ import type { Color } from '@deck.gl/core'
 import { IconLayer, PathLayer, TextLayer } from '@deck.gl/layers'
 import type { Ship, ShipType } from '../../shared/adapters/ships'
 import { type Entity, Flag, KNOTS_TO_MS } from '../../shared/entity'
+import { t } from '../i18n'
 import { formatLat, formatLon, formatMgrs } from '../lib/coords'
 import { formatAge, formatBearing } from '../lib/format'
 import { getIconAtlas } from '../map/icons'
@@ -23,14 +24,14 @@ const TYPE_COLOR: Record<ShipType, Color> = {
 }
 
 const TYPE_LABEL: Record<ShipType, string> = {
-  cargo: 'Cargo ship',
-  tanker: 'Tanker',
-  passenger: 'Passenger ship',
-  fishing: 'Fishing vessel',
-  service: 'Tug, pilot or rescue vessel',
-  military: 'Military or law-enforcement vessel',
-  pleasure: 'Pleasure craft',
-  other: 'Vessel',
+  cargo: t('Cargo ship'),
+  tanker: t('Tanker'),
+  passenger: t('Passenger ship'),
+  fishing: t('Fishing vessel'),
+  service: t('Tug, pilot or rescue vessel'),
+  military: t('Military or law-enforcement vessel'),
+  pleasure: t('Pleasure craft'),
+  other: t('Vessel'),
 }
 
 const LISTED: Color = [255, 77, 94]
@@ -45,32 +46,32 @@ function describe(entity: Entity, now: number): InspectorModel {
   const ship = entity as Ship
   const { props } = ship
   const badges: InspectorModel['badges'] = []
-  if (isSanctioned(ship)) badges.push({ text: 'On a sanctions list', tone: 'danger' })
-  if (isShadowFleet(ship)) badges.push({ text: 'Shadow fleet', tone: 'warn' })
-  if (props.service === 'navy') badges.push({ text: 'Navy', tone: 'mil' })
-  if (props.service === 'government') badges.push({ text: 'Government vessel', tone: 'mil' })
-  if (props.status) badges.push({ text: props.status, tone: 'info' })
+  if (isSanctioned(ship)) badges.push({ text: t('On a sanctions list'), tone: 'danger' })
+  if (isShadowFleet(ship)) badges.push({ text: t('Shadow fleet'), tone: 'warn' })
+  if (props.service === 'navy') badges.push({ text: t('Navy'), tone: 'mil' })
+  if (props.service === 'government') badges.push({ text: t('Government vessel'), tone: 'mil' })
+  if (props.status) badges.push({ text: t(props.status), tone: 'info' })
 
-  const rows: InspectorModel['rows'] = [{ label: 'Type', value: TYPE_LABEL[props.type] }]
+  const rows: InspectorModel['rows'] = [{ label: t('Type'), value: TYPE_LABEL[props.type] }]
   // Shown beside the name the ship itself broadcasts, so a stale list entry gives itself away.
-  if (props.listedAs) rows.push({ label: 'Navy list (Wikidata)', value: props.listedAs })
-  if (props.flagState) rows.push({ label: 'Flag', value: props.flagState })
-  if (props.destination) rows.push({ label: 'Destination', value: props.destination })
-  rows.push({ label: 'Speed', value: `${((ship.spd ?? 0) / KNOTS_TO_MS).toFixed(1)} kn` })
-  if (ship.trk !== undefined && (ship.spd ?? 0) > 0.2) rows.push({ label: 'Course', value: formatBearing(ship.trk) })
-  if (props.heading !== null) rows.push({ label: 'Heading', value: formatBearing(props.heading) })
+  if (props.listedAs) rows.push({ label: t('Navy list (Wikidata)'), value: props.listedAs })
+  if (props.flagState) rows.push({ label: t('Flag'), value: t(props.flagState) })
+  if (props.destination) rows.push({ label: t('Destination'), value: props.destination })
+  rows.push({ label: t('Speed'), value: `${((ship.spd ?? 0) / KNOTS_TO_MS).toFixed(1)} kn` })
+  if (ship.trk !== undefined && (ship.spd ?? 0) > 0.2) rows.push({ label: t('Course'), value: formatBearing(ship.trk) })
+  if (props.heading !== null) rows.push({ label: t('Heading'), value: formatBearing(props.heading) })
   rows.push({ label: 'MMSI', value: String(props.mmsi) })
   if (props.imo) rows.push({ label: 'IMO', value: String(props.imo) })
-  if (props.callSign) rows.push({ label: 'Call sign', value: props.callSign })
-  rows.push({ label: 'Position', value: `${formatLat(ship.lat)}  ${formatLon(ship.lon)}` })
+  if (props.callSign) rows.push({ label: t('Call sign'), value: props.callSign })
+  rows.push({ label: t('Position'), value: `${formatLat(ship.lat)}  ${formatLon(ship.lon)}` })
   rows.push({ label: 'MGRS', value: formatMgrs(ship.lon, ship.lat) })
-  rows.push({ label: 'Last report', value: formatAge(now - ship.ts) })
-  rows.push({ label: 'Heard by', value: props.source === 'aisstream' ? 'AISStream' : 'Digitraffic (Finland)' })
+  rows.push({ label: t('Last report'), value: formatAge(now - ship.ts) })
+  rows.push({ label: t('Heard by'), value: props.source === 'aisstream' ? 'AISStream' : 'Digitraffic (Finland)' })
 
   return {
-    kicker: 'Ship',
+    kicker: t('Ship'),
     title: props.name ?? `MMSI ${props.mmsi}`,
-    subtitle: [props.flagState, props.imo ? `IMO ${props.imo}` : null].filter(Boolean).join(' · ') || undefined,
+    subtitle: [props.flagState && t(props.flagState), props.imo ? `IMO ${props.imo}` : null].filter(Boolean).join(' · ') || undefined,
     badges,
     rows,
     links: [
@@ -83,8 +84,8 @@ function describe(entity: Entity, now: number): InspectorModel {
 export const shipsLayer: LayerDef = {
   id: 'ships',
   group: 'sea',
-  label: 'Ships',
-  hint: 'Vessels broadcasting AIS, with navy, government, sanctioned and shadow-fleet vessels marked. Without an AISStream key only the northern approaches are covered (open Finnish data); with one, all Latvian waters',
+  label: t('Ships'),
+  hint: t('Vessels broadcasting AIS, with navy, government, sanctioned and shadow-fleet vessels marked. Without an AISStream key only the northern approaches are covered (open Finnish data); with one, all Latvian waters'),
   defaultOn: true,
   swatch: '#7ed6aa',
   feeds: ['ships'],
@@ -94,11 +95,11 @@ export const shipsLayer: LayerDef = {
   stats(entities) {
     const ships = entities as Ship[]
     return [
-      { label: 'navy', value: ships.filter((ship) => ship.props.service === 'navy').length, tone: 'mil' },
-      { label: 'government', value: ships.filter((ship) => ship.props.service === 'government').length, tone: 'mil' },
-      { label: 'sanctioned', value: ships.filter(isSanctioned).length, tone: 'danger' },
-      { label: 'shadow fleet', value: ships.filter(isShadowFleet).length, tone: 'warn' },
-      { label: 'tankers', value: ships.filter((ship) => ship.props.type === 'tanker').length, tone: 'info' },
+      { label: t('navy'), value: ships.filter((ship) => ship.props.service === 'navy').length, tone: 'mil' },
+      { label: t('government'), value: ships.filter((ship) => ship.props.service === 'government').length, tone: 'mil' },
+      { label: t('sanctioned'), value: ships.filter(isSanctioned).length, tone: 'danger' },
+      { label: t('shadow fleet'), value: ships.filter(isShadowFleet).length, tone: 'warn' },
+      { label: t('tankers'), value: ships.filter((ship) => ship.props.type === 'tanker').length, tone: 'info' },
     ]
   },
 

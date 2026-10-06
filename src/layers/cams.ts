@@ -1,6 +1,7 @@
 import type { Color } from '@deck.gl/core'
 import { type CamEntity, camEntities, pictureOf } from '../../shared/adapters/cams'
 import type { Cam } from '../../shared/feeds'
+import { t } from '../i18n'
 import { formatLat, formatLon } from '../lib/coords'
 import { serverNow } from '../runtime/clock'
 import { getEntities, getPayload, publishEntities } from '../runtime/entityStore'
@@ -15,11 +16,11 @@ const VIEW: Color = [255, 158, 199]
 const ROAD: Color = [201, 128, 160]
 
 const KIND: Record<Cam['kind'], string> = {
-  still: 'Still picture',
-  hls: 'Live video',
-  video: 'Live video',
-  youtube: 'Live video on YouTube',
-  iframe: "Live video in the publisher's player",
+  still: t('Still picture'),
+  hls: t('Live video'),
+  video: t('Live video'),
+  youtube: t('Live video on YouTube'),
+  iframe: t("Live video in the publisher's player"),
 }
 
 let source: Cam[] | null = null
@@ -32,8 +33,8 @@ function reset(): void {
 export const camsLayer: LayerDef = {
   id: 'cams',
   group: 'land',
-  label: 'Live cameras',
-  hint: "Officially published live cameras in the three Baltic states: city, port and ski views, and Lithuania's road cameras. Watch them in the Live CCTV window",
+  label: t('Live cameras'),
+  hint: t("Officially published live cameras in the three Baltic states: city, port and ski views, and Lithuania's road cameras. Watch them in the Live CCTV window"),
   defaultOn: false,
   swatch: '#ff9ec7',
   feeds: ['cams'],
@@ -44,14 +45,14 @@ export const camsLayer: LayerDef = {
     const picture = pictureOf(cam, now)
     const where = `${formatLat(entity.lat)}  ${formatLon(entity.lon)}`
     return {
-      kicker: cam.road ? 'Road camera' : 'Live camera',
+      kicker: cam.road ? t('Road camera') : t('Live camera'),
       title: cam.name,
-      subtitle: `${cam.place} · ${cam.country}`,
-      image: picture ? { src: picture, alt: `Camera view: ${cam.name}, ${cam.place}` } : undefined,
-      badges: cam.approx ? [{ text: 'Approximate position', tone: 'warn' }] : [],
+      subtitle: `${t(cam.place)} · ${cam.country}`,
+      image: picture ? { src: picture, alt: t('Camera view: {name}, {place}', { name: cam.name, place: t(cam.place) }) } : undefined,
+      badges: cam.approx ? [{ text: t('Approximate position'), tone: 'warn' }] : [],
       rows: [
-        { label: 'Shows', value: KIND[cam.kind] },
-        { label: 'Position', value: where },
+        { label: t('Shows'), value: KIND[cam.kind] },
+        { label: t('Position'), value: where },
       ],
       links: /^https?:\/\//.test(cam.page) ? [{ label: cam.credit, href: cam.page }] : [],
     }
@@ -66,7 +67,7 @@ export const camsLayer: LayerDef = {
     publishEntities(SLOT, entities)
     useFeeds.getState().report('cams', {
       count: entities.length,
-      stats: [{ label: 'hand-picked views', value: entities.filter((entity) => !entity.props.road).length, tone: 'info' }],
+      stats: [{ label: t('hand-picked views'), value: entities.filter((entity) => !entity.props.road).length, tone: 'info' }],
     })
   },
 

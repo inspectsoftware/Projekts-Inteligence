@@ -41,8 +41,13 @@ export function vesselsOfInterest(ships: readonly Ship[]): { state: Ship[]; list
 
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const
 
+/** The distance and compass point from Rīga: the values of a sentence the caller words in the reader's language. */
+export function rigaOffset(point: Point): { km: number; compass: string } {
+  return { km: Math.round(metresFromRiga(point) / 1000), compass: COMPASS[Math.round(bearing(RIGA.lon, RIGA.lat, point.lon, point.lat) / 45) % 8] }
+}
+
 /** "312 km SW of Rīga": where something is for a reader who knows where Rīga is. */
 export function fromRiga(point: Point): string {
-  const compass = COMPASS[Math.round(bearing(RIGA.lon, RIGA.lat, point.lon, point.lat) / 45) % 8]
-  return `${Math.round(metresFromRiga(point) / 1000)} km ${compass} of Rīga`
+  const { km, compass } = rigaOffset(point)
+  return `${km} km ${compass} of Rīga`
 }

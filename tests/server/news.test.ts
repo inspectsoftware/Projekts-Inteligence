@@ -3,6 +3,7 @@ import { type Cluster, type NewsSource, type RawNews, parseFeed, rank, score } f
 import { newsRule } from '../../shared/alerts/rules'
 import { regionLevel } from '../../shared/escalation'
 import type { NewsItem } from '../../shared/feeds'
+import { translate } from '../../shared/i18n'
 import type { StoredSnapshot } from '../../server/core/disk'
 
 const NOW = Date.parse('2026-10-06T12:00:00Z')
@@ -406,7 +407,7 @@ describe('regionLevel', () => {
 })
 
 describe('news alert', () => {
-  const alerts = (items: NewsItem[]) => newsRule.evaluate({ now: NOW, entities: () => [], warnings: () => [], news: () => items, insideLatvia: () => false })
+  const alerts = (items: NewsItem[]) => newsRule.evaluate({ now: NOW, entities: () => [], warnings: () => [], news: () => items, insideLatvia: () => false, tr: translate.bind(null, 'en') })
 
   it('is raised by a fresh serious headline and withdrawn when it is six hours old', () => {
     expect(alerts([news({}), news({ link: 'https://eng.lsm.lv/a2/', escalation: 2 }), news({ link: 'https://eng.lsm.lv/a3/', at: NOW - 7 * HOUR })])).toEqual([

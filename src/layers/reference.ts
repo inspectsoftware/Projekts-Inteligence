@@ -1,4 +1,5 @@
 import type { ExpressionSpecification, LayerSpecification, Map as MapLibreMap } from 'maplibre-gl'
+import { t } from '../i18n'
 import { formatLat, formatLon, formatMgrs } from '../lib/coords'
 import type { InspectorModel, LayerDef, NativeLayer, StaticSelection } from './types'
 
@@ -64,7 +65,7 @@ function staticLayer(
           ...model,
           rows: [
             ...model.rows,
-            { label: 'Position', value: `${formatLat(lat)}  ${formatLon(lon)}` },
+            { label: t('Position'), value: `${formatLat(lat)}  ${formatLon(lon)}` },
             { label: 'MGRS', value: formatMgrs(lon, lat) },
           ],
           links: [
@@ -84,23 +85,23 @@ function referenceLayer(def: Pick<LayerDef, 'id' | 'label' | 'hint' | 'swatch' |
 }
 
 const SOURCE_LABEL: Record<string, string> = {
-  hydro: 'Hydroelectric',
-  gas: 'Gas',
-  wind: 'Wind',
-  solar: 'Solar',
-  biomass: 'Biomass',
-  biogas: 'Biogas',
-  coal: 'Coal',
-  oil: 'Oil',
-  waste: 'Waste',
+  hydro: t('Hydroelectric'),
+  gas: t('Gas'),
+  wind: t('Wind'),
+  solar: t('Solar'),
+  biomass: t('Biomass'),
+  biogas: t('Biogas'),
+  coal: t('Coal'),
+  oil: t('Oil'),
+  waste: t('Waste'),
 }
 
 export const municipalitiesLayer: LayerDef = {
   ...referenceLayer(
     {
       id: 'municipalities',
-      label: 'Municipalities',
-      hint: 'The 36 municipalities and 7 state cities (official boundaries, 2026)',
+      label: t('Municipalities'),
+      hint: t('The 36 municipalities and 7 state cities (official boundaries, 2026)'),
       swatch: '#6f8696',
       defaultOn: false,
     },
@@ -126,14 +127,14 @@ export const municipalitiesLayer: LayerDef = {
       },
     ]),
   ),
-  attribution: [{ label: 'Boundaries: data.gov.lv (CC0)', href: 'https://data.gov.lv' }],
+  attribution: [{ label: t('Boundaries: data.gov.lv (CC0)'), href: 'https://data.gov.lv' }],
 }
 
 export const powerLayer = referenceLayer(
   {
     id: 'power',
-    label: 'Power grid',
-    hint: 'Transmission lines of 110 kV and above, their substations, and power plants',
+    label: t('Power grid'),
+    hint: t('Transmission lines of 110 kV and above, their substations, and power plants'),
     swatch: '#ffcc66',
     defaultOn: false,
   },
@@ -213,22 +214,22 @@ export const powerLayer = referenceLayer(
       if (p.class === 'power-plant') {
         const source = text(p.source)
         return {
-          kicker: 'Power plant',
-          title: text(p.name) ?? 'Unnamed power plant',
+          kicker: t('Power plant'),
+          title: text(p.name) ?? t('Unnamed power plant'),
           subtitle: source ? (SOURCE_LABEL[source] ?? source) : undefined,
           badges: [],
-          rows: typeof p.mw === 'number' ? [{ label: 'Rated output', value: `${p.mw} MW` }] : [],
+          rows: typeof p.mw === 'number' ? [{ label: t('Rated output'), value: `${p.mw} MW` }] : [],
         }
       }
       if (p.class === 'substation') {
         return {
-          kicker: 'Substation',
-          title: text(p.name) ?? 'Substation',
+          kicker: t('Substation'),
+          title: text(p.name) ?? t('Substation'),
           badges: [],
-          rows: [{ label: 'Voltage', value: `${p.kv} kV` }],
+          rows: [{ label: t('Voltage'), value: `${p.kv} kV` }],
         }
       }
-      return { kicker: 'Transmission line', title: `${p.kv} kV line`, badges: [], rows: [] }
+      return { kicker: t('Transmission line'), title: t('{kv} kV line', { kv: String(p.kv) }), badges: [], rows: [] }
     },
   ),
 )
@@ -236,8 +237,8 @@ export const powerLayer = referenceLayer(
 export const aerodromesLayer = referenceLayer(
   {
     id: 'aerodromes',
-    label: 'Airfields',
-    hint: 'Airports and airfields, from the international airport down to grass strips',
+    label: t('Airfields'),
+    hint: t('Airports and airfields, from the international airport down to grass strips'),
     swatch: '#9fd3ff',
     defaultOn: true,
   },
@@ -273,10 +274,10 @@ export const aerodromesLayer = referenceLayer(
       },
     ],
     (p) => ({
-      kicker: p.military ? 'Military airfield' : 'Airfield',
-      title: text(p.name) ?? 'Airfield',
+      kicker: p.military ? t('Military airfield') : t('Airfield'),
+      title: text(p.name) ?? t('Airfield'),
       subtitle: [text(p.icao), text(p.iata)].filter(Boolean).join(' · ') || undefined,
-      badges: p.military ? [{ text: 'Military', tone: 'mil' as const }] : [],
+      badges: p.military ? [{ text: t('Military'), tone: 'mil' as const }] : [],
       rows: [],
     }),
   ),
@@ -286,8 +287,8 @@ export const portsLayer: LayerDef = {
   ...referenceLayer(
     {
       id: 'ports',
-      label: 'Ports',
-      hint: "Latvia's ten sea ports: the three large ones (Rīga, Ventspils, Liepāja) and seven small harbours",
+      label: t('Ports'),
+      hint: t("Latvia's ten sea ports: the three large ones (Rīga, Ventspils, Liepāja) and seven small harbours"),
       swatch: '#5fb0ff',
       defaultOn: true,
     },
@@ -322,8 +323,8 @@ export const portsLayer: LayerDef = {
         },
       ],
       (p) => ({
-        kicker: p.major ? 'Major port' : 'Small port',
-        title: text(p.name) ?? 'Port',
+        kicker: p.major ? t('Major port') : t('Small port'),
+        title: text(p.name) ?? t('Port'),
         badges: [],
         rows: [],
       }),
@@ -336,8 +337,8 @@ export const portsLayer: LayerDef = {
 export const defenceLayer = referenceLayer(
   {
     id: 'defence',
-    label: 'Defence sites',
-    hint: 'Areas mapped as military land in OpenStreetMap: bases, ranges and training grounds',
+    label: t('Defence sites'),
+    hint: t('Areas mapped as military land in OpenStreetMap: bases, ranges and training grounds'),
     swatch: '#ff8a3d',
     defaultOn: false,
   },
@@ -372,8 +373,8 @@ export const defenceLayer = referenceLayer(
       },
     ],
     (p) => ({
-      kicker: 'Defence site',
-      title: text(p.name) ?? 'Military area',
+      kicker: t('Defence site'),
+      title: text(p.name) ?? t('Military area'),
       subtitle: text(p.kind)?.replaceAll('_', ' '),
       badges: [],
       rows: [],
@@ -384,8 +385,8 @@ export const defenceLayer = referenceLayer(
 export const borderCrossingsLayer = referenceLayer(
   {
     id: 'border-crossings',
-    label: 'Border crossings',
-    hint: 'Border control points. Live queue lengths are published at lvborder.lv',
+    label: t('Border crossings'),
+    hint: t('Border control points. Live queue lengths are published at lvborder.lv'),
     swatch: '#e6f6ff',
     defaultOn: false,
   },
@@ -419,21 +420,21 @@ export const borderCrossingsLayer = referenceLayer(
         paint: { ...LABEL_PAINT, 'text-color': '#e6f6ff' },
       },
     ],
-    (p) => ({ kicker: 'Border crossing', title: text(p.name) ?? 'Border control point', badges: [], rows: [] }),
+    (p) => ({ kicker: t('Border crossing'), title: text(p.name) ?? t('Border control point'), badges: [], rows: [] }),
   ),
 )
 
 const UNDERSEA_KIND: Record<string, string> = {
-  telecom: 'Telecom cable',
-  power: 'Power cable',
-  pipeline: 'Pipeline',
+  telecom: t('Telecom cable'),
+  power: t('Power cable'),
+  pipeline: t('Pipeline'),
 }
 
 export const underseaLayer = referenceLayer(
   {
     id: 'undersea',
-    label: 'Undersea cables',
-    hint: 'Named telecom cables, power links and pipelines on the Baltic seabed, as mapped in OpenStreetMap',
+    label: t('Undersea cables'),
+    hint: t('Named telecom cables, power links and pipelines on the Baltic seabed, as mapped in OpenStreetMap'),
     swatch: '#c08cff',
     defaultOn: true,
   },
@@ -453,13 +454,13 @@ export const underseaLayer = referenceLayer(
       },
     ],
     (p) => ({
-      kicker: UNDERSEA_KIND[text(p.kind) ?? ''] ?? 'Undersea line',
-      title: text(p.name) ?? UNDERSEA_KIND[text(p.kind) ?? ''] ?? 'Undersea line',
+      kicker: UNDERSEA_KIND[text(p.kind) ?? ''] ?? t('Undersea line'),
+      title: text(p.name) ?? UNDERSEA_KIND[text(p.kind) ?? ''] ?? t('Undersea line'),
       subtitle: text(p.operator),
       badges: [],
       rows: [
-        ...(text(p.substance) ? [{ label: 'Carries', value: text(p.substance)! }] : []),
-        ...(text(p.rating) ? [{ label: 'Rating', value: text(p.rating)! }] : []),
+        ...(text(p.substance) ? [{ label: t('Carries'), value: text(p.substance)! }] : []),
+        ...(text(p.rating) ? [{ label: t('Rating'), value: text(p.rating)! }] : []),
       ],
     }),
   ),

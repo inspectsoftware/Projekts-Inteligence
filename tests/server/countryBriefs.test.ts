@@ -5,6 +5,7 @@ import { buildCountryBriefs, numbersIn, rulesCountryBrief } from '../../server/f
 import { setBlurbs } from '../../server/feeds/newsBlurbs'
 import { COUNTRY_CODES, type CountryFile, formatFact, formatYear } from '../../shared/countries'
 import data from '../../shared/data/countries.json'
+import { LANGS } from '../../shared/i18n'
 import { NOW, asked, fakeModel, headline, reply } from './fakeModel'
 
 const file: CountryFile = data
@@ -43,31 +44,39 @@ describe('country facts', () => {
 describe('template-written briefs', () => {
   it('are real sentences with the actual figures and their years', () => {
     const news = [headline({ escalation: 2 }), headline()]
-    const brief = rulesCountryBrief(file.countries.LV, news, NOW)
+    const brief = rulesCountryBrief('LV', file.countries.LV, news, NOW)
     expect(brief.mode).toBe('rules')
     expect(brief.overview).toContain('Latvia has 1,847,785 people (2025) and covers 64,590 km² (2023). Its capital is Riga.')
-    expect(brief.economy).toContain('GDP was US$48.62 bn (2025), or US$26,312 per person')
-    expect(brief.economy).toContain('the forecast for 2026 is 2.2% (IMF WEO Apr 2026)')
+    expect(brief.economy).toContain('GDP was US$48.62 bn (2025). That is US$26,312 per person.')
+    expect(brief.economy).toContain('The forecast for 2026 is 2.2% (IMF WEO Apr 2026).')
     expect(brief.defence).toContain('The national defence budget for 2026 is €2.16 bn, or 4.73% of GDP (source: Ministry of Defence of Latvia).')
     expect(brief.defence).toContain('3.67% of GDP (2025 est.) and 4.92% of GDP (2026 est.)')
     expect(brief.military).toContain('NATO lists 8,200 military personnel for 2025 (estimate) and 8,300 for 2026 (estimate)')
     expect(brief.military).toContain('\n\nAllied forces. NATO Multinational Brigade Latvia: Canada-led brigade of 14 nations')
     expect(brief.risks).toContain('The Global Peace Index scores Latvia 1.589 (rank 19, 2026)')
-    expect(brief.risks).toContain('As of 6 October 2026, keyword scoring of 2 recent headlines about Latvia supports level 2 (hybrid pressure).')
+    expect(brief.risks).toContain('As of 6 October 2026, keyword scoring of the recent headlines about Latvia supports level 2 (hybrid pressure). Headlines counted: 2.')
   })
 
   it('leave out what the file does not hold for a country, without leaving a hole', () => {
     for (const iso of COUNTRY_CODES) {
-      const brief = rulesCountryBrief(file.countries[iso], [], NOW)
-      for (const section of SECTIONS) {
-        expect(brief[section].length, `${iso} ${section}`).toBeGreaterThan(80)
-        expect(brief[section], `${iso} ${section}`).not.toMatch(/undefined|NaN|null|\(\)|  /)
+      const brief = rulesCountryBrief(iso, file.countries[iso], [], NOW)
+      // English, and the same five sections in each of the other languages.
+      expect(['en', ...Object.keys(brief.i18n ?? {})]).toEqual([...LANGS])
+      for (const [lang, text] of Object.entries({ en: brief, ...brief.i18n })) {
+        for (const section of SECTIONS) {
+          expect(text[section].length, `${iso} ${lang} ${section}`).toBeGreaterThan(80)
+          expect(text[section], `${iso} ${lang} ${section}`).not.toMatch(/undefined|NaN|null|\(\)|  |\{\w+\}/)
+        }
       }
     }
-    const russia = rulesCountryBrief(file.countries.RU, [], NOW)
+    // Each language names the country and the day its own way.
+    const lithuania = rulesCountryBrief('LT', file.countries.LT, [], NOW)
+    expect(lithuania.i18n?.ru?.overview).toContain('Литва')
+    expect(lithuania.i18n?.lv?.risks).toContain('2026. gada 6. oktobri')
+    const russia = rulesCountryBrief('RU', file.countries.RU, [], NOW)
     expect(russia.defence).toBe('SIPRI puts military expenditure at 7.5% of GDP (2025), US$190.42 bn. The World Bank series, an older SIPRI vintage, gives 7.05% of GDP (2024).')
     expect(russia.military).toContain('The fact file holds no sourced order of battle for Russia.')
-    expect(russia.economy).toContain('Net energy imports were -75.1% of energy use (2022), which makes it a net exporter.')
+    expect(russia.economy).toContain('Net energy imports were -75.1% of energy use (2022). That makes it a net exporter of energy.')
     expect(russia.risks).toContain('no recent headline mentions Russia')
   })
 
@@ -77,18 +86,24 @@ describe('template-written briefs', () => {
     expect(send).not.toHaveBeenCalled()
     expect(payload).toMatchObject({ shape: 'country-briefs', mode: 'rules', generatedAt: NOW })
     expect(Object.keys(payload.briefs)).toEqual([...COUNTRY_CODES])
-    expect(payload.briefs.EE).toEqual(rulesCountryBrief(file.countries.EE, [], NOW))
+    expect(payload.briefs.EE).toEqual(rulesCountryBrief('EE', file.countries.EE, [], NOW))
   })
 })
 
 describe('model-written briefs', () => {
-  const written = (over: Record<string, string> = {}) => ({
+  const sections = (over: Record<string, string> = {}) => ({
     overview: 'Latvia has 1,847,785 people (2025) and its capital is Riga.',
     defence: 'NATO puts core defence expenditure at 4.92% of GDP for 2026, an estimate.',
     military: 'NATO lists 8,300 military personnel for 2026, an estimate.',
     economy: 'GDP was US$48.62 bn in 2025.',
     risks: 'No headlines were available.',
     ...over,
+  })
+  /** The model's answer: English at the top, and the same sections under each other language unless `others` says otherwise. */
+  const written = (over: Record<string, string> = {}, others: Record<string, unknown> = {}) => ({
+    ...sections(over),
+    ...Object.fromEntries(LANGS.filter((lang) => lang !== 'en').map((lang) => [lang, sections(over)])),
+    ...others,
   })
 
   it('numbers are read the same however they are written', () => {
@@ -139,9 +154,9 @@ describe('model-written briefs', () => {
       reply(written({ economy: 'GDP was about US$50 bn in 2025.', risks: '<i>No headlines</i> were available, see https://example.org/x' })),
     )
     const payload = await buildCountryBriefs({ ...file, countries: { LV: file.countries.LV } }, [], NOW, fakeModel(send).model)
-    const rules = rulesCountryBrief(file.countries.LV, [], NOW)
+    const rules = rulesCountryBrief('LV', file.countries.LV, [], NOW)
     expect(payload.mode).toBe('ai')
-    expect(payload.briefs.LV).toEqual({
+    expect(payload.briefs.LV).toMatchObject({
       mode: 'ai',
       overview: 'Latvia has 1,847,785 people (2025) and its capital is Riga.',
       defence: 'NATO puts core defence expenditure at 4.92% of GDP for 2026, an estimate.',
@@ -150,6 +165,32 @@ describe('model-written briefs', () => {
       economy: rules.economy,
       risks: 'No headlines were available, see',
     })
+    // The same test, and the same cleaning, for the same text in another language.
+    expect(payload.briefs.LV.i18n?.ru).toMatchObject({ economy: rules.i18n?.ru?.economy, risks: 'No headlines were available, see' })
+  })
+
+  it('judges each language by itself, and writes one that did not arrive by template', async () => {
+    const send = vi.fn<Send>(async () =>
+      reply(
+        written(
+          {},
+          {
+            // A decimal comma reads as two numbers, 4 and 92: the second is nowhere in the sheet.
+            lv: sections({ overview: 'Latvijā ir 1,847,785 iedzīvotāji (2025).', defence: 'Aizsardzībai 4,92% no IKP.' }),
+            lt: sections({ economy: '' }),
+            ru: undefined,
+          },
+        ),
+      ),
+    )
+    const { briefs } = await buildCountryBriefs({ ...file, countries: { LV: file.countries.LV } }, [], NOW, fakeModel(send).model)
+    const rules = rulesCountryBrief('LV', file.countries.LV, [], NOW)
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(briefs.LV).toMatchObject({ mode: 'ai', defence: sections().defence })
+    expect(briefs.LV.i18n?.lv).toEqual({ ...sections(), overview: 'Latvijā ir 1,847,785 iedzīvotāji (2025).', defence: rules.i18n?.lv?.defence })
+    expect(briefs.LV.i18n?.lt).toEqual({ ...sections(), economy: rules.i18n?.lt?.economy })
+    expect(briefs.LV.i18n?.et).toEqual(sections())
+    expect(briefs.LV.i18n?.ru).toEqual(rules.i18n?.ru)
   })
 
   it('takes a figure from a headline as that publisher’s claim, in the risk section and nowhere else', async () => {
@@ -158,7 +199,7 @@ describe('model-written briefs', () => {
     const send = vi.fn<Send>(async () => reply(written({ defence: 'Latvia spends 0.5% of GDP on defence.', risks })))
     const { briefs } = await buildCountryBriefs({ ...file, countries: { LV: file.countries.LV } }, [claim], NOW, fakeModel(send).model)
     expect(asked(send.mock.calls[0][0])).toContain('0.5% of GDP, sources claim')
-    expect(briefs.LV.defence).toBe(rulesCountryBrief(file.countries.LV, [claim], NOW).defence)
+    expect(briefs.LV.defence).toBe(rulesCountryBrief('LV', file.countries.LV, [claim], NOW).defence)
     expect(briefs.LV.risks).toBe(risks)
   })
 
@@ -170,7 +211,7 @@ describe('model-written briefs', () => {
     const payload = await buildCountryBriefs(file, [], NOW, fakeModel(send).model)
     expect(send).toHaveBeenCalledTimes(9)
     expect(payload.mode).toBe('ai')
-    expect(payload.briefs.LV).toEqual(rulesCountryBrief(file.countries.LV, [], NOW))
+    expect(payload.briefs.LV).toEqual(rulesCountryBrief('LV', file.countries.LV, [], NOW))
     expect(payload.briefs.LT.mode).toBe('rules')
     expect(payload.briefs.EE).toMatchObject({ mode: 'ai', overview: 'A country in northern Europe.' })
   })

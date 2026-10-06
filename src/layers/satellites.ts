@@ -2,6 +2,7 @@ import type { Color } from '@deck.gl/core'
 import { IconLayer, PathLayer, TextLayer } from '@deck.gl/layers'
 import type { Entity } from '../../shared/entity'
 import type { OrbitalElement, SatGroup } from '../../shared/feeds'
+import { t } from '../i18n'
 import { formatLat, formatLon } from '../lib/coords'
 import { formatBearing, formatInt } from '../lib/format'
 import { getIconAtlas } from '../map/icons'
@@ -23,11 +24,11 @@ const FINE_INTERVAL_MS = 1000
 const OVERHEAD_ELEVATION = 10
 
 const GROUP_LABEL: Record<SatGroup, string> = {
-  stations: 'Space station',
-  military: 'Military',
-  weather: 'Weather',
-  resource: 'Earth observation',
-  gnss: 'Navigation',
+  stations: t('Space station'),
+  military: t('Military'),
+  weather: t('Weather'),
+  resource: t('Earth observation'),
+  gnss: t('Navigation'),
 }
 
 const GROUP_COLOR: Record<SatGroup, Color> = {
@@ -65,7 +66,7 @@ function refresh(now: number): void {
     reported = signature
     useFeeds.getState().report('satellites', {
       count: entities.length,
-      stats: [{ label: 'above Rīga', value: overhead, tone: 'info' }],
+      stats: [{ label: t('above Rīga'), value: overhead, tone: 'info' }],
     })
   }
 }
@@ -89,28 +90,28 @@ function describe(entity: Entity, now: number): InspectorModel {
   const badges: InspectorModel['badges'] = [
     { text: GROUP_LABEL[props.group], tone: props.group === 'military' ? 'mil' : 'info' },
   ]
-  if (props.elevation >= OVERHEAD_ELEVATION) badges.push({ text: 'Above Rīga', tone: 'ok' })
+  if (props.elevation >= OVERHEAD_ELEVATION) badges.push({ text: t('Above Rīga'), tone: 'ok' })
 
   return {
-    kicker: 'Satellite',
+    kicker: t('Satellite'),
     title: props.name,
     subtitle: `NORAD ${props.noradId}${props.intlDes ? ` · ${props.intlDes}` : ''}`,
     badges,
     rows: [
-      { label: 'Altitude', value: `${formatInt((sat.alt ?? 0) / 1000)} km` },
-      { label: 'Orbital speed', value: `${props.speedKmS.toFixed(2)} km/s` },
-      { label: 'Ground track', value: formatBearing(sat.trk ?? 0) },
-      { label: 'Elevation from Rīga', value: `${props.elevation.toFixed(1)}°` },
-      { label: 'Azimuth from Rīga', value: formatBearing(props.azimuth) },
-      { label: 'Slant range', value: `${formatInt(props.rangeKm)} km` },
-      { label: 'Inclination', value: `${props.inclination.toFixed(1)}°` },
-      { label: 'Period', value: `${props.periodMin.toFixed(1)} min` },
-      { label: 'Below it', value: `${formatLat(sat.lat)}  ${formatLon(sat.lon)}` },
-      { label: 'Orbit data age', value: Number.isFinite(ageHours) ? `${ageHours.toFixed(1)} h` : 'unknown' },
+      { label: t('Altitude'), value: `${formatInt((sat.alt ?? 0) / 1000)} km` },
+      { label: t('Orbital speed'), value: `${props.speedKmS.toFixed(2)} km/s` },
+      { label: t('Ground track'), value: formatBearing(sat.trk ?? 0) },
+      { label: t('Elevation from Rīga'), value: `${props.elevation.toFixed(1)}°` },
+      { label: t('Azimuth from Rīga'), value: formatBearing(props.azimuth) },
+      { label: t('Slant range'), value: `${formatInt(props.rangeKm)} km` },
+      { label: t('Inclination'), value: `${props.inclination.toFixed(1)}°` },
+      { label: t('Period'), value: `${props.periodMin.toFixed(1)} min` },
+      { label: t('Below it'), value: `${formatLat(sat.lat)}  ${formatLon(sat.lon)}` },
+      { label: t('Orbit data age'), value: Number.isFinite(ageHours) ? `${ageHours.toFixed(1)} h` : t('unknown') },
     ],
     links: [
       { label: 'N2YO', href: `https://www.n2yo.com/satellite/?s=${props.noradId}` },
-      { label: 'CelesTrak catalogue', href: `https://celestrak.org/satcat/table-satcat.php?CATNR=${props.noradId}` },
+      { label: t('CelesTrak catalogue'), href: `https://celestrak.org/satcat/table-satcat.php?CATNR=${props.noradId}` },
     ],
   }
 }
@@ -118,8 +119,8 @@ function describe(entity: Entity, now: number): InspectorModel {
 export const satellitesLayer: LayerDef = {
   id: 'satellites',
   group: 'space',
-  label: 'Satellites',
-  hint: 'Stations, weather, Earth-observation, military and navigation satellites passing over the region, computed live from orbital elements',
+  label: t('Satellites'),
+  hint: t('Stations, weather, Earth-observation, military and navigation satellites passing over the region, computed live from orbital elements'),
   defaultOn: true,
   swatch: '#b78cff',
   feeds: ['satellites'],

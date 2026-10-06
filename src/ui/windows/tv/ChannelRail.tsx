@@ -1,18 +1,19 @@
 import { type Air, airOf, linkOf } from '../../../../shared/adapters/tv'
 import type { TvNow } from '../../../../shared/feeds'
 import { BALTIC_TIME, TV_CHANNELS, type TvChannel, type TvCountry } from '../../../../shared/media/tv'
+import { locale, t } from '../../../i18n'
 import { useNow } from '../../../runtime/useNow'
 import { SectionTitle } from '../../kit'
 import { useTv } from './store'
 
 const COUNTRIES: readonly (readonly [TvCountry, string])[] = [
-  ['LV', 'Latvia'],
-  ['LT', 'Lithuania'],
-  ['EE', 'Estonia'],
-  ['INT', 'International'],
+  ['LV', t('Latvia')],
+  ['LT', t('Lithuania')],
+  ['EE', t('Estonia')],
+  ['INT', t('International')],
 ]
 
-const TIME = new Intl.DateTimeFormat('en-GB', { timeZone: BALTIC_TIME, hour: '2-digit', minute: '2-digit', hour12: false })
+const TIME = new Intl.DateTimeFormat(locale, { timeZone: BALTIC_TIME, hour: '2-digit', minute: '2-digit', hour12: false })
 
 /** The dot and the colour of the tag for each state. A hollow dot is a channel that is not known to be on. */
 const LOOK: Record<Air, { dot: string; tag: string }> = {
@@ -28,19 +29,19 @@ const LOOK: Record<Air, { dot: string; tag: string }> = {
 function describe(channel: TvChannel, air: Air, now: TvNow | undefined): { tag: string; say: string } {
   switch (air) {
     case 'live':
-      return channel.schedule ? { tag: 'On air', say: 'on air now' } : { tag: '24/7', say: 'on air round the clock' }
+      return channel.schedule ? { tag: t('On air'), say: t('on air now') } : { tag: '24/7', say: t('on air round the clock') }
     case 'next': {
       const at = TIME.format(now!.from)
-      return { tag: at, say: `starts at ${at}, Riga time` }
+      return { tag: at, say: t('starts at {at}, Riga time', { at }) }
     }
     case 'today':
-      return { tag: 'Today', say: 'a broadcast is listed for today' }
+      return { tag: t('Today'), say: t('a broadcast is listed for today') }
     case 'off':
-      return { tag: 'Off air', say: now?.videoId ? 'not on air; the latest broadcast is shown' : 'not on air' }
+      return { tag: t('Off air'), say: now?.videoId ? t('not on air; the latest broadcast is shown') : t('not on air') }
     case 'unknown':
-      return { tag: 'Sched', say: 'on a schedule; whether it is on air right now is not known' }
+      return { tag: t('Sched'), say: t('on a schedule; whether it is on air right now is not known') }
     case 'link':
-      return { tag: 'Site ↗', say: 'opens the broadcaster’s own site in a new tab' }
+      return { tag: t('Site ↗'), say: t('opens the broadcaster’s own site in a new tab') }
   }
 }
 
@@ -88,7 +89,7 @@ export function ChannelRail({ lookups, selected }: { lookups: ReadonlyMap<string
 
   return (
     <nav
-      aria-label="Channels"
+      aria-label={t('Channels')}
       className="order-first min-h-0 w-[40%] max-w-44 shrink-0 overflow-y-auto border-r border-line p-2 max-md:portrait:order-none max-md:portrait:w-auto max-md:portrait:max-w-none max-md:portrait:flex-1 max-md:portrait:border-t max-md:portrait:border-r-0"
     >
       {COUNTRIES.map(([country, name]) => (

@@ -1,5 +1,6 @@
 import type { Entity } from '../entity'
 import type { Cam } from '../feeds'
+import { msg } from '../i18n'
 import type { Camera } from './roads'
 
 /** A camera with a known position, as a dot on the map. */
@@ -90,7 +91,7 @@ export function eismoCams(features: readonly EismoFeature[], details: unknown, n
       {
         id: `lt-${feature.id}`,
         name: feature.name,
-        place: 'Lithuania',
+        place: msg('Lithuania'),
         country: 'LT' as const,
         lon: feature.lon,
         lat: feature.lat,
@@ -135,7 +136,7 @@ export function lvRoadCams(cameras: readonly Camera[]): Cam[] {
     // Kept as it is, so the grid can point at the same dot the road camera layer draws.
     id: camera.id,
     name: camera.props.road,
-    place: 'Latvia',
+    place: msg('Latvia'),
     country: 'LV',
     lon: camera.lon,
     lat: camera.lat,

@@ -1,7 +1,62 @@
 import type { EscalationLevel, NewsItem } from './feeds'
+import { msg } from './i18n'
 
 /** What each escalation level is called, by level. Kept apart from the scorer's word lists, which the browser has no use for. */
-export const LEVEL_NAMES = ['Routine', 'Posture', 'Hybrid pressure', 'Serious incident', 'Crisis', 'Armed attack'] as const
+export const LEVEL_NAMES = [msg('Routine'), msg('Posture'), msg('Hybrid pressure'), msg('Serious incident'), msg('Crisis'), msg('Armed attack')] as const
+
+/**
+ * The scorer's tags in plain words, for the translators: a tag is shown with its underscores
+ * as spaces ("airspace_violation" as "airspace violation"), and that text is what gets translated.
+ */
+export const TAG_WORDS = [
+  msg('armed attack'),
+  msg('martial law'),
+  msg('general mobilisation'),
+  msg('mobilisation'),
+  msg('armed clash'),
+  msg('strike'),
+  msg('blockade'),
+  msg('airspace violation'),
+  msg('airspace closed'),
+  msg('drone incursion'),
+  msg('sabotage'),
+  msg('cable cut'),
+  msg('major cyberattack'),
+  msg('border closed'),
+  msg('troop buildup'),
+  msg('cyberattack'),
+  msg('explosion'),
+  msg('troop movement'),
+  msg('hybrid'),
+  msg('gps jamming'),
+  msg('border crossing closed'),
+  msg('airport disrupted'),
+  msg('balloons'),
+  msg('shadow fleet'),
+  msg('nuclear'),
+  msg('diplomatic rupture'),
+  msg('undersea cable'),
+  msg('arson attack'),
+  msg('espionage'),
+  msg('exercise'),
+  msg('illegal migration'),
+  msg('drone'),
+  msg('defence'),
+  msg('emergency declared'),
+  msg('blackout'),
+  msg('government fall'),
+  msg('casualties'),
+  msg('critical infrastructure'),
+  msg('disaster'),
+  msg('history'),
+  msg('entertainment'),
+  msg('hypothetical'),
+  msg('denied'),
+  msg('event elsewhere'),
+  msg('outside baltics'),
+  msg('exercise scenario'),
+  msg('unconfirmed'),
+] as const
 
 /**
  * Hours, by level: how long a story takes to lose half its importance, and also how long it goes

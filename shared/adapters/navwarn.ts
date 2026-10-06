@@ -1,4 +1,5 @@
 import type { Zone } from '../feeds'
+import { msg } from '../i18n'
 import { type Ring, centreOf, clip, isCurrent, plainText, sortZones, tidyRing } from './zones'
 
 export const NAVTEX_PAGE = 'https://navvarn.sjofartsverket.se/en/Navigationsvarningar/Navtex'
@@ -10,23 +11,23 @@ const DAY_MS = 24 * 60 * 60 * 1000
 
 /** First match wins. The flag says whether it counts as military or security activity. */
 const KINDS: readonly [RegExp, string, boolean][] = [
-  [/GNSS|GPS|JAMMING|INTERFERENCE/, 'GNSS interference', true],
-  [/FIRING|GUNNERY|MISSILE|ROCKET/, 'Firing practice', true],
-  [/(NAVAL|SHIPS?) EXERCIS/, 'Naval exercise', true],
-  [/EXERCIS/, 'Military exercise', true],
-  [/\bMINES?\b|MINE-LIKE|MINEFIELD/, 'Mine danger', true],
+  [/GNSS|GPS|JAMMING|INTERFERENCE/, msg('GNSS interference'), true],
+  [/FIRING|GUNNERY|MISSILE|ROCKET/, msg('Firing practice'), true],
+  [/(NAVAL|SHIPS?) EXERCIS/, msg('Naval exercise'), true],
+  [/EXERCIS/, msg('Military exercise'), true],
+  [/\bMINES?\b|MINE-LIKE|MINEFIELD/, msg('Mine danger'), true],
   // How a closed firing or exercise area is announced when no reason is given.
-  [/DANGEROUS (TO|FOR) (SHIPPING|NAVIGATION)/, 'Danger area', true],
-  [/UNMANNED|DRONE/, 'Unmanned systems trials', false],
-  [/CABLE|PIPELINE/, 'Cable works', false],
-  [/DREDG/, 'Dredging', false],
-  [/LIGHT|BUOY|RACON|BEACON|ATON/, 'Navigation aid', false],
+  [/DANGEROUS (TO|FOR) (SHIPPING|NAVIGATION)/, msg('Danger area'), true],
+  [/UNMANNED|DRONE/, msg('Unmanned systems trials'), false],
+  [/CABLE|PIPELINE/, msg('Cable works'), false],
+  [/DREDG/, msg('Dredging'), false],
+  [/LIGHT|BUOY|RACON|BEACON|ATON/, msg('Navigation aid'), false],
 ]
 
 function classify(text: string): Pick<Zone, 'type' | 'military'> {
   // "NAVAL EXERCISES (WITHOUT FIRINGS)" is not firing practice, and "EXERCISE CAUTION" is no exercise.
   const wording = text.toUpperCase().replace(/WITHOUT FIRINGS?|EXERCISE (\w+ )?CAUTION/g, '')
-  const [, type, military] = KINDS.find(([pattern]) => pattern.test(wording)) ?? [null, 'Navigational warning', false]
+  const [, type, military] = KINDS.find(([pattern]) => pattern.test(wording)) ?? [null, msg('Navigational warning'), false]
   return { type, military }
 }
 

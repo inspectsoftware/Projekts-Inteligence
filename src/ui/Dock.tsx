@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { t } from '../i18n'
 import { useWindows } from '../state/windows'
 import { BADGE_TEXT, WINDOWS, type WindowDef, toggleWindow, useShownWindows, useWindowBadge } from './windows/registry'
 
@@ -47,7 +48,7 @@ export function Dock() {
 
   return (
     <nav
-      aria-label="Windows"
+      aria-label={t('Windows')}
       className="pointer-events-auto absolute top-10 left-0 z-20 flex [scrollbar-width:none] border-line bg-ink-900/90 font-mono backdrop-blur-md max-md:right-0 max-md:overflow-x-auto max-md:border-b md:bottom-0 md:w-11 md:flex-col md:overflow-y-auto md:border-r"
     >
       {WINDOWS.filter((def) => !def.hideInDock).map((def) => (
@@ -55,12 +56,12 @@ export function Dock() {
       ))}
       <button
         type="button"
-        title="Reset window layout"
-        aria-label="Reset window layout"
+        title={t('Reset window layout')}
+        aria-label={t('Reset window layout')}
         onClick={resetLayout}
         className={`${BUTTON} text-fg-mute hover:bg-ink-700 hover:text-fg max-md:ml-auto md:mt-auto`}
       >
-        <DockIcon path="M13 8a5 5 0 11-1.5-3.5M13 2.5V5h-2.5">Reset</DockIcon>
+        <DockIcon path="M13 8a5 5 0 11-1.5-3.5M13 2.5V5h-2.5">{t('Reset')}</DockIcon>
       </button>
     </nav>
   )

@@ -2,6 +2,7 @@ import type { Color } from '@deck.gl/core'
 import { IconLayer, TextLayer } from '@deck.gl/layers'
 import type { TransitMode, TransitVehicle } from '../../shared/adapters/transit'
 import type { Entity } from '../../shared/entity'
+import { t } from '../i18n'
 import { formatLat, formatLon } from '../lib/coords'
 import { formatAge, formatBearing, formatInt } from '../lib/format'
 import { getIconAtlas } from '../map/icons'
@@ -18,10 +19,10 @@ const MODE_COLOR: Record<TransitMode, Color> = {
 }
 
 const MODE_LABEL: Record<TransitMode, string> = {
-  bus: 'Bus',
-  tram: 'Tram',
-  trolleybus: 'Trolleybus',
-  minibus: 'Minibus',
+  bus: t('Bus'),
+  tram: t('Tram'),
+  trolleybus: t('Trolleybus'),
+  minibus: t('Minibus'),
 }
 
 /** Route numbers only become readable once a town fills a good part of the screen. */
@@ -30,28 +31,28 @@ const LABEL_ZOOM = 10.5
 function describe(entity: Entity, now: number): InspectorModel {
   const vehicle = entity as TransitVehicle
   const { props } = vehicle
-  const rows: InspectorModel['rows'] = [{ label: 'Network', value: props.network }]
-  if (props.vehicle) rows.push({ label: 'Vehicle', value: props.vehicle })
-  rows.push({ label: 'Speed', value: `${formatInt((vehicle.spd ?? 0) * 3.6)} km/h` })
-  if (vehicle.trk !== undefined && (vehicle.spd ?? 0) > 0.5) rows.push({ label: 'Heading', value: formatBearing(vehicle.trk) })
-  rows.push({ label: 'Position', value: `${formatLat(vehicle.lat)}  ${formatLon(vehicle.lon)}` })
-  rows.push({ label: 'Last update', value: formatAge(now - vehicle.ts) })
+  const rows: InspectorModel['rows'] = [{ label: t('Network'), value: props.network }]
+  if (props.vehicle) rows.push({ label: t('Vehicle'), value: props.vehicle })
+  rows.push({ label: t('Speed'), value: `${formatInt((vehicle.spd ?? 0) * 3.6)} km/h` })
+  if (vehicle.trk !== undefined && (vehicle.spd ?? 0) > 0.5) rows.push({ label: t('Heading'), value: formatBearing(vehicle.trk) })
+  rows.push({ label: t('Position'), value: `${formatLat(vehicle.lat)}  ${formatLon(vehicle.lon)}` })
+  rows.push({ label: t('Last update'), value: formatAge(now - vehicle.ts) })
 
   return {
     kicker: MODE_LABEL[props.mode],
-    title: props.route ? `Route ${props.route}` : 'Not in service',
+    title: props.route ? t('Route {route}', { route: props.route }) : t('Not in service'),
     subtitle: props.network,
-    badges: props.route ? [] : [{ text: 'No route', tone: 'info' }],
+    badges: props.route ? [] : [{ text: t('No route'), tone: 'info' }],
     rows,
-    links: [{ label: 'Timetables (marsruti.lv)', href: 'https://marsruti.lv' }],
+    links: [{ label: t('Timetables (marsruti.lv)'), href: 'https://marsruti.lv' }],
   }
 }
 
 export const transitLayer: LayerDef = {
   id: 'transit',
   group: 'land',
-  label: 'Public transport',
-  hint: 'Buses, trams and minibuses in Liepāja and Rēzekne, and regional buses, where the operator publishes live positions',
+  label: t('Public transport'),
+  hint: t('Buses, trams and minibuses in Liepāja and Rēzekne, and regional buses, where the operator publishes live positions'),
   defaultOn: true,
   swatch: '#ffc460',
   feeds: ['transit'],
@@ -60,7 +61,7 @@ export const transitLayer: LayerDef = {
 
   stats(entities) {
     const idle = (entities as TransitVehicle[]).filter((vehicle) => !vehicle.props.route).length
-    return [{ label: 'not in service', value: idle, tone: 'info' }]
+    return [{ label: t('not in service'), value: idle, tone: 'info' }]
   },
 
   build({ now, zoom, selectedId, hoveredId, fontsReady }) {

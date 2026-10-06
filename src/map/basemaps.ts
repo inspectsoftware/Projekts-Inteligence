@@ -1,5 +1,6 @@
 import { type Attribution, LITHUANIA_ENABLED, LITHUANIA_ORIGIN, TILE_ORIGINS } from '../../shared/origins'
 import { LATVIA_BBOX } from '../../shared/region'
+import { t } from '../i18n'
 import { CLIP_SCHEME, TRIM_SCHEME } from './orthoClip'
 
 export type BaseMode = 'dark' | 'imagery' | 'daily' | 'night'
@@ -154,13 +155,15 @@ export function clampZoom(zoom: number, mode: BaseMode): number {
 
 /** `detail` says where a base stops getting sharper; the Display window adds the zoom limit to it. */
 export const BASE_MODES: readonly { id: BaseMode; label: string; hint: string; detail: string }[] = [
-  { id: 'dark', label: 'Dark', hint: 'Vector tactical basemap', detail: 'Sharp at any zoom.' },
+  { id: 'dark', label: t('Dark'), hint: t('Vector tactical basemap'), detail: t('Sharp at any zoom.') },
   {
     id: 'imagery',
-    label: 'Sat',
-    hint: 'National orthophotos over the Sentinel-2 cloudless mosaic (2025)',
-    detail: `Air photos of ${LITHUANIA_ENABLED ? 'the Baltic states' : 'Latvia and Estonia'}, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.`,
+    label: t('Sat'),
+    hint: t('National orthophotos over the Sentinel-2 cloudless mosaic (2025)'),
+    detail: LITHUANIA_ENABLED
+      ? t('Air photos of the Baltic states, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.')
+      : t('Air photos of Latvia and Estonia, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.'),
   },
-  { id: 'daily', label: 'Daily', hint: "Yesterday's VIIRS true-colour pass", detail: 'About 250 m per pixel: soft past zoom 8.' },
-  { id: 'night', label: 'Night', hint: 'VIIRS night lights composite (2016)', detail: 'About 500 m per pixel: soft past zoom 7.' },
+  { id: 'daily', label: t('Daily'), hint: t("Yesterday's VIIRS true-colour pass"), detail: t('About 250 m per pixel: soft past zoom 8.') },
+  { id: 'night', label: t('Night'), hint: t('VIIRS night lights composite (2016)'), detail: t('About 500 m per pixel: soft past zoom 7.') },
 ]

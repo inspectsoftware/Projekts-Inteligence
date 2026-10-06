@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { normaliseEnergy, normaliseInternet } from '../../shared/adapters/panels'
 import { normaliseGauges, normaliseRadiation } from '../../shared/adapters/sensors'
 import { radiationRule } from '../../shared/alerts/rules'
+import { translate } from '../../shared/i18n'
 
 const T0 = Date.parse('2026-10-06T11:00:00Z')
 const HOUR = 3600
@@ -64,7 +65,7 @@ describe('sensors', () => {
       { id: 'radiation:LV0001', label: 'Demene', ts: T0 - HOUR * 1000, props: { usvh: 0.079 } },
       { id: 'radiation:LV0002', props: { usvh: 0.41 } },
     ])
-    const alerts = radiationRule.evaluate({ now: T0, entities: () => stations, warnings: () => [], news: () => [], insideLatvia: () => true })
+    const alerts = radiationRule.evaluate({ now: T0, entities: () => stations, warnings: () => [], news: () => [], insideLatvia: () => true, tr: translate.bind(null, 'en') })
     expect(alerts).toMatchObject([{ severity: 'critical', title: 'Raised radiation: Elsewhere', entityId: 'radiation:LV0002' }])
   })
 

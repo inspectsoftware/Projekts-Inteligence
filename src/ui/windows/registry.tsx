@@ -1,4 +1,5 @@
 import { type ComponentType, useMemo, useSyncExternalStore } from 'react'
+import { t } from '../../i18n'
 import { useAlerts } from '../../state/alerts'
 import { isLayerOn, useLayers } from '../../state/layers'
 import { useSelection } from '../../state/selection'
@@ -74,8 +75,8 @@ function useAlertBadge(): WindowBadge | null {
 export const WINDOWS: readonly WindowDef[] = [
   {
     id: 'layers',
-    title: 'Layers',
-    short: 'Layer',
+    title: t('Layers'),
+    short: t('dock::Layer'),
     icon: 'M8 2l6 3-6 3-6-3zM2 8l6 3 6-3M2 11l6 3 6-3',
     defaultOpen: true,
     placement: { corner: 'tl', dx: 56, dy: 52 },
@@ -86,8 +87,8 @@ export const WINDOWS: readonly WindowDef[] = [
   },
   {
     id: 'display',
-    title: 'Display',
-    short: 'Disp',
+    title: t('Display'),
+    short: t('Disp'),
     icon: 'M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8 2.5v11',
     defaultOpen: true,
     placement: { corner: 'tl', dx: 56, dy: 480 },
@@ -98,8 +99,8 @@ export const WINDOWS: readonly WindowDef[] = [
   },
   {
     id: 'views',
-    title: 'Views',
-    short: 'Views',
+    title: t('Views'),
+    short: t('dock::Views'),
     icon: 'M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8zM8 6.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z',
     defaultOpen: false,
     placement: { corner: 'tl', dx: 304, dy: 608 },
@@ -109,8 +110,8 @@ export const WINDOWS: readonly WindowDef[] = [
   },
   {
     id: 'situation',
-    title: 'Situation',
-    short: 'Sit',
+    title: t('Situation'),
+    short: t('Sit'),
     icon: 'M1.5 8.5h3l2-5 3 9 2-4h3',
     defaultOpen: true,
     // Left of the map buttons, not under them.
@@ -122,8 +123,8 @@ export const WINDOWS: readonly WindowDef[] = [
   },
   {
     id: 'alerts',
-    title: 'Alerts',
-    short: 'Alert',
+    title: t('Alerts'),
+    short: t('Alert'),
     icon: 'M8 2.5l6 10.5H2zM8 6.5v3M8 11v.5',
     defaultOpen: true,
     placement: { corner: 'tc', dx: 0, dy: 52 },
@@ -134,8 +135,8 @@ export const WINDOWS: readonly WindowDef[] = [
   },
   {
     id: 'radar',
-    title: 'Radar',
-    short: 'Radar',
+    title: t('Radar'),
+    short: t('dock::Radar'),
     icon: 'M8 8l4-4M8 2.5A5.5 5.5 0 1013.5 8',
     defaultOpen: false,
     placement: { corner: 'bc', dx: 0, dy: 56 },
@@ -151,7 +152,7 @@ export const WINDOWS: readonly WindowDef[] = [
   },
   {
     id: 'tv',
-    title: 'Live TV',
+    title: t('Live TV'),
     short: 'TV',
     icon: 'M2 4h12v8H2zM6 14h4',
     defaultOpen: false,
@@ -165,7 +166,7 @@ export const WINDOWS: readonly WindowDef[] = [
   },
   {
     id: 'cctv',
-    title: 'Live CCTV',
+    title: t('Live CCTV'),
     short: 'CCTV',
     icon: 'M2 5h8v6H2zM10 7l4-2v6l-4-2',
     defaultOpen: false,
@@ -178,8 +179,8 @@ export const WINDOWS: readonly WindowDef[] = [
   },
   {
     id: 'intel',
-    title: 'Intel feed',
-    short: 'Intel',
+    title: t('Intel feed'),
+    short: t('Intel'),
     icon: 'M3 4h10M3 8h10M3 12h6',
     defaultOpen: true,
     // Raised off the bottom edge: on wide screens the data credits fill that corner.
@@ -192,8 +193,8 @@ export const WINDOWS: readonly WindowDef[] = [
   },
   {
     id: 'countries',
-    title: 'Country briefs',
-    short: 'Brief',
+    title: t('Country briefs'),
+    short: t('dock::Brief'),
     icon: 'M4 14V2.5M4 3h8l-2 3 2 3H4',
     defaultOpen: false,
     placement: { corner: 'tc', dx: 0, dy: 300 },
@@ -204,8 +205,8 @@ export const WINDOWS: readonly WindowDef[] = [
   },
   {
     id: 'military',
-    title: 'Military',
-    short: 'Mil',
+    title: t('Military'),
+    short: t('Mil'),
     icon: 'M8 2l5 2v4c0 3-2.2 5-5 6-2.8-1-5-3-5-6V4z',
     defaultOpen: false,
     placement: { corner: 'tr', dx: 362, dy: 300 },
@@ -219,8 +220,8 @@ export const WINDOWS: readonly WindowDef[] = [
   // listed before it, and this one opens on top of the Intel feed.
   {
     id: 'inspector',
-    title: 'Inspector',
-    short: 'Insp',
+    title: t('Inspector'),
+    short: t('Insp'),
     icon: 'M7 2.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9zM10.5 10.5L14 14',
     defaultOpen: false,
     // Under Situation, over the Intel feed's slot: off the map, and clear of the data credits.

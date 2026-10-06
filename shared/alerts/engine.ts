@@ -28,6 +28,10 @@ export interface AlertInput {
    */
   zones?(): readonly Zone[]
   insideLatvia(lon: number, lat: number): boolean
+  /** Puts a title or a detail into the reader's language. Keys never pass through it. */
+  tr(text: string, vars?: Record<string, string | number>): string
+  /** For the days and hours in a detail ("lv-LV"). British English when absent. */
+  locale?: string
 }
 
 export interface AlertRule {

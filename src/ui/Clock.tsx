@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
+import { locale } from '../i18n'
 
 const time = (timeZone: string) =>
-  new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+  new Intl.DateTimeFormat(locale, { timeZone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
 
 const RIGA_TIME = time('Europe/Riga')
 const UTC_TIME = time('UTC')
-const RIGA_DATE = new Intl.DateTimeFormat('en-GB', {
+const RIGA_DATE = new Intl.DateTimeFormat(locale, {
   timeZone: 'Europe/Riga',
   day: '2-digit',
   month: 'short',

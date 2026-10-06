@@ -1,4 +1,5 @@
 import { type KeyboardEvent, type PointerEvent as ReactPointerEvent, useLayoutEffect, useRef } from 'react'
+import { t } from '../../i18n'
 import { prefersReducedMotion } from '../../map/camera'
 import { useWindows } from '../../state/windows'
 import { Panel } from '../kit'
@@ -296,7 +297,13 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
     >
       <header
         role="toolbar"
-        aria-label={sheet ? def.title : `${def.title}: arrow keys move this window${def.resizable ? ', with Alt they resize it' : ''}`}
+        aria-label={
+          sheet
+            ? def.title
+            : def.resizable
+              ? t('{title}: arrow keys move this window, with Alt they resize it', { title: def.title })
+              : t('{title}: arrow keys move this window', { title: def.title })
+        }
         tabIndex={sheet ? undefined : 0}
         onPointerDown={startDrag}
         onKeyDown={nudge}
@@ -316,8 +323,8 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
           <button
             type="button"
             aria-expanded={!collapsed}
-            aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${def.title}`}
-            title={collapsed ? 'Expand' : 'Collapse'}
+            aria-label={collapsed ? t('Expand {title}', { title: def.title }) : t('Collapse {title}', { title: def.title })}
+            title={collapsed ? t('Expand') : t('Collapse')}
             onClick={toggleCollapsed}
             className={HEADER_BUTTON}
           >
@@ -326,8 +333,8 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
         )}
         <button
           type="button"
-          aria-label={`Close ${def.title}`}
-          title="Close"
+          aria-label={t('Close {title}', { title: def.title })}
+          title={t('Close')}
           onClick={() => closeWindow(def)}
           className={HEADER_BUTTON}
         >

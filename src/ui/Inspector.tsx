@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Entity } from '../../shared/entity'
+import { t } from '../i18n'
 import { layerFor } from '../layers/registry'
 import type { Tone } from '../layers/types'
 import { useMap } from '../map/instance'
@@ -49,7 +50,7 @@ export function Inspector() {
   // Either a fixed map feature, which describes itself, or a live entity described by its layer.
   const describe = entity ? layerFor(entity)?.describe : undefined
   const model = feature ? feature.model : entity && describe ? describe(entity, serverNow()) : null
-  if (!model) return <p className="p-3 text-[11px] text-fg-mute">Nothing known about this object</p>
+  if (!model) return <p className="p-3 text-[11px] text-fg-mute">{t('Nothing known about this object')}</p>
 
   const lost = !feature && !live
   const following = entity !== undefined && followId === entity.id
@@ -66,7 +67,7 @@ export function Inspector() {
           <ul className="mt-2 flex flex-wrap gap-1.5">
             {lost && (
               <li className={`border px-1.5 py-px text-[9.5px] tracking-[0.16em] uppercase ${BADGE.danger}`}>
-                No longer tracked
+                {t('No longer tracked')}
               </li>
             )}
             {model.badges.map((badge) => (
@@ -105,7 +106,7 @@ export function Inspector() {
             }}
             className="bg-ink-850 py-1.5 text-[10px] tracking-[0.16em] text-fg-dim uppercase transition-colors hover:bg-ink-700 hover:text-accent disabled:opacity-40"
           >
-            Centre
+            {t('Centre')}
           </button>
           {entity && (
             <button
@@ -117,7 +118,7 @@ export function Inspector() {
                 following ? 'bg-accent/15 text-accent' : 'bg-ink-850 text-fg-dim hover:bg-ink-700 hover:text-accent'
               }`}
             >
-              {following ? 'Following' : 'Follow'}
+              {following ? t('Following') : t('Follow')}
             </button>
           )}
         </div>

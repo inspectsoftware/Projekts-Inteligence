@@ -8,21 +8,22 @@ import {
   formatFact,
   formatYear,
 } from '../../../shared/countries'
+import { lang, locale, t } from '../../i18n'
 import { formatAge } from '../../lib/format'
 import { useFeed } from '../../runtime/useFeed'
 import { useNow } from '../../runtime/useNow'
 import { COUNTRY_TABS, type CountryTab, useCountry } from '../../state/country'
 import { SectionTitle, Segmented } from '../kit'
 
-const names = new Intl.DisplayNames(['en'], { type: 'region' })
+const names = new Intl.DisplayNames([locale], { type: 'region' })
 const COUNTRIES = COUNTRY_CODES.map((id) => ({ id, label: id, hint: names.of(id) ?? id }))
 
 const SECTIONS = [
-  { id: 'overview', title: 'Overview' },
-  { id: 'defence', title: 'Defence' },
-  { id: 'military', title: 'Military' },
-  { id: 'economy', title: 'Economy' },
-  { id: 'risks', title: 'Risks' },
+  { id: 'overview', title: t('Overview') },
+  { id: 'defence', title: t('Defence') },
+  { id: 'military', title: t('Military') },
+  { id: 'economy', title: t('Economy') },
+  { id: 'risks', title: t('Risks') },
 ] as const
 
 let facts: Promise<CountryFile | null> | undefined
@@ -54,25 +55,27 @@ function Brief({ country }: { country: CountryCode }) {
   const now = useNow(60_000)
   const brief = payload?.briefs[country]
   // With a model the first writing after a restart takes a minute or two; without one it is immediate.
-  if (!payload || !brief) return <Note>Writing the briefs… The figures are in the other tabs meanwhile.</Note>
+  if (!payload || !brief) return <Note>{t('Writing the briefs… The figures are in the other tabs meanwhile.')}</Note>
   const ai = (brief.mode ?? payload.mode) === 'ai'
+  // In the reader's language where the server wrote it, in English where it did not.
+  const text = brief.i18n?.[lang] ?? brief
 
   return (
     <>
       <p className="mb-3 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[10px] text-fg-mute">
         <span
-          title={ai ? 'Written by a language model' : 'Written by template, without a language model'}
+          title={ai ? t('Written by a language model') : t('Written by template, without a language model')}
           className={`border px-1 tracking-[0.16em] uppercase ${ai ? 'border-accent/50 text-accent' : 'border-line-strong text-fg-dim'}`}
         >
-          {ai ? 'AI' : 'Rules'}
+          {ai ? t('AI') : t('Rules')}
         </span>
         <span>{formatAge(now - payload.generatedAt)}</span>
-        <span>Written from the cited figures in the other tabs.</span>
+        <span>{t('Written from the cited figures in the other tabs.')}</span>
       </p>
       {SECTIONS.map(({ id, title }) => (
         <section key={id} className="mb-3 last:mb-0">
           <SectionTitle>{title}</SectionTitle>
-          {brief[id].split('\n\n').map((paragraph) => (
+          {text[id].split('\n\n').map((paragraph) => (
             <p key={paragraph} className="mb-1.5 font-sans text-xs leading-relaxed text-fg">
               {paragraph}
             </p>
@@ -88,14 +91,15 @@ function FactRow({ fact }: { fact: CountryFact }) {
     <li className="border-b border-line/50 py-1.5 last:border-0">
       {/* A long value, a head of government with a footnote say, wraps onto a line of its own. */}
       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-        <span className="text-fg-dim">{fact.label}</span>
+        {/* The labels the countries share are translated (FACT_WORDS); one written for a single country stays as the file has it. */}
+        <span className="text-fg-dim">{t(fact.label)}</span>
         <span className="ml-auto text-right text-fg tabular-nums">
-          {formatFact(fact)}
-          {fact.rank !== undefined && ` · rank ${fact.rank}`}
+          {formatFact(fact, t)}
+          {fact.rank !== undefined && ` · ${t('rank {rank}', { rank: fact.rank })}`}
         </span>
       </div>
       <div className="mt-0.5 text-[10px] text-fg-mute">
-        {formatYear(fact.year)} · <Source href={fact.url}>{fact.source}</Source>
+        {formatYear(fact.year, t)} · <Source href={fact.url}>{fact.source}</Source>
       </div>
     </li>
   )
@@ -104,10 +108,10 @@ function FactRow({ fact }: { fact: CountryFact }) {
 function ForceRow({ note }: { note: ForceNote }) {
   return (
     <li className="border-b border-line/50 py-2 last:border-0">
-      <h3 className="text-[10px] tracking-[0.12em] text-fg-dim uppercase">{note.label}</h3>
+      <h3 className="text-[10px] tracking-[0.12em] text-fg-dim uppercase">{t(note.label)}</h3>
       <p className="mt-1 font-sans text-xs leading-relaxed text-fg">{note.text}</p>
       <div className="mt-1 text-[10px] text-fg-mute">
-        As of {note.asOf} · <Source href={note.url}>{new URL(note.url).hostname.replace(/^www\./, '')}</Source>
+        {t('As of {date}', { date: note.asOf })} · <Source href={note.url}>{new URL(note.url).hostname.replace(/^www\./, '')}</Source>
       </div>
     </li>
   )
@@ -116,8 +120,8 @@ function ForceRow({ note }: { note: ForceNote }) {
 function Facts({ country, tab }: { country: CountryCode; tab: Exclude<CountryTab, 'brief'> }) {
   const file = use(loadFacts())
   const profile = file?.countries[country]
-  if (!file || !profile) return <Note>The figures could not be loaded. Reload the page to try again.</Note>
-  if (tab === 'forces' && profile.forces.length === 0) return <Note>No sourced entries are held for {profile.name}.</Note>
+  if (!file || !profile) return <Note>{t('The figures could not be loaded. Reload the page to try again.')}</Note>
+  if (tab === 'forces' && profile.forces.length === 0) return <Note>{t('No sourced entries are held for {name}.', { name: names.of(country) ?? profile.name })}</Note>
 
   return (
     <>
@@ -126,7 +130,9 @@ function Facts({ country, tab }: { country: CountryCode; tab: Exclude<CountryTab
           ? profile.forces.map((note) => <ForceRow key={note.label} note={note} />)
           : profile[tab === 'economy' ? 'facts' : 'defence'].map((fact) => <FactRow key={fact.key} fact={fact} />)}
       </ul>
-      <p className="mt-2 text-[10px] text-fg-mute">Collected by hand on {file.generatedAt.slice(0, 10)}; each row links to where its figure came from.</p>
+      <p className="mt-2 text-[10px] text-fg-mute">
+        {t('Collected by hand on {date}; each row links to where its figure came from.', { date: file.generatedAt.slice(0, 10) })}
+      </p>
     </>
   )
 }
@@ -141,14 +147,14 @@ export function CountryWindow() {
   return (
     <>
       <div className="grid shrink-0 gap-2 px-3 pt-3">
-        <Segmented<CountryCode> label="Country" value={country} options={COUNTRIES} onChange={setCountry} />
-        <Segmented<CountryTab> label="Section" value={tab} options={COUNTRY_TABS} onChange={setTab} />
+        <Segmented<CountryCode> label={t('Country')} value={country} options={COUNTRIES} onChange={setCountry} />
+        <Segmented<CountryTab> label={t('Section')} value={tab} options={COUNTRY_TABS} onChange={setTab} />
       </div>
       <div className="min-h-0 overflow-y-auto p-3 text-[11px]">
         {tab === 'brief' ? (
           <Brief country={country} />
         ) : (
-          <Suspense fallback={<Note>Loading the figures…</Note>}>
+          <Suspense fallback={<Note>{t('Loading the figures…')}</Note>}>
             <Facts country={country} tab={tab} />
           </Suspense>
         )}

@@ -1,3 +1,4 @@
+import { t } from '../../i18n'
 import { BASE_MODES, zoomCeiling } from '../../map/basemaps'
 import { VISION_MODES, useUi } from '../../state/ui'
 import { SectionTitle, Segmented } from '../kit'
@@ -11,15 +12,15 @@ export function DisplayWindow() {
 
   return (
     <div className="p-3">
-      <SectionTitle>Base</SectionTitle>
-      <Segmented label="Basemap" value={base} options={BASE_MODES} onChange={setBase} />
+      <SectionTitle>{t('Base')}</SectionTitle>
+      <Segmented label={t('Basemap')} value={base} options={BASE_MODES} onChange={setBase} />
       {/* Zooming past what a base can resolve only enlarges its pixels, so say where that is. */}
       <p className="mt-2 text-[10px] text-fg-mute">
-        {BASE_MODES.find((mode) => mode.id === base)?.detail} Zoom limit {zoomCeiling(base)}.
+        {BASE_MODES.find((mode) => mode.id === base)?.detail} {t('Zoom limit {zoom}.', { zoom: zoomCeiling(base) })}
       </p>
       <div className="h-3" />
-      <SectionTitle>Vision</SectionTitle>
-      <Segmented label="Vision mode" value={vision} options={VISION_MODES} onChange={setVision} />
+      <SectionTitle>{t('Vision')}</SectionTitle>
+      <Segmented label={t('Vision mode')} value={vision} options={VISION_MODES} onChange={setVision} />
     </div>
   )
 }
