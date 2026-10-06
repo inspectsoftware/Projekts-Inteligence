@@ -1,6 +1,7 @@
 {
-  "name": "project-white-hornet",
+  "name": "projekts-inteligence",
   "private": true,
+  "license": "MIT",
   "version": "0.1.0",
   "description": "Latvia intelligence panel",
   "type": "module",

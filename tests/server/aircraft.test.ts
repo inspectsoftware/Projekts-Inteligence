@@ -119,7 +119,7 @@ describe('aircraft feed', () => {
       },
     })
     await cache.get(aircraftFeed)
-    expect(userAgent).toMatch(/^ProjectWhiteHornet\//)
+    expect(userAgent).toMatch(/^ProjektsInteligence\//)
   })
 })
 

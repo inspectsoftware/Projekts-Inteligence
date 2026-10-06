@@ -1,6 +1,6 @@
 /** Names shown in the UI and reported by the API. */
 export const APP = {
-  name: 'Project White Hornet',
-  codename: 'WHITE HORNET',
+  name: 'Projekts Inteliģence',
+  codename: 'PROJEKTS INTELIĢENCE',
   tagline: 'Latvia // intelligence panel',
 } as const

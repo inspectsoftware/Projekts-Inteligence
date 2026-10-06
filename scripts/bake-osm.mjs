@@ -19,7 +19,7 @@ const OVERPASS = [
   'https://overpass.private.coffee/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',
 ]
-const USER_AGENT = 'ProjectWhiteHornet/0.1 (non-commercial Latvia OSINT dashboard; one-off data bake)'
+const USER_AGENT = 'ProjektsInteligence/0.1 (non-commercial Latvia OSINT dashboard; one-off data bake)'
 const LATVIA = 'area["ISO3166-1"="LV"][admin_level=2]->.lv;'
 /** Latvia plus its sea approaches, as (south, west, north, east). */
 const SEA_BBOX = '55.2,18.5,59.0,25.0'

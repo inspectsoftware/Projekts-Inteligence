@@ -41,7 +41,7 @@ export const sanctionsFeed: FeedDef = {
 
 const DIGITRAFFIC = 'https://meri.digitraffic.fi/api/ais/v1'
 // Digitraffic asks callers to name themselves in this header.
-const DIGITRAFFIC_HEADERS = { 'Digitraffic-User': 'ProjectWhiteHornet' }
+const DIGITRAFFIC_HEADERS = { 'Digitraffic-User': 'ProjektsInteligence' }
 /** Ship names and types change rarely; the whole list is small, so it is simply re-read now and then. */
 const STATIC_REFRESH_MS = 6 * HOUR
 

@@ -14,7 +14,7 @@ import mapshaper from 'mapshaper'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const cacheDir = join(root, 'scripts/.cache/naval')
 const outDir = join(root, 'shared/data')
-const USER_AGENT = 'ProjectWhiteHornet/0.1 (non-commercial Latvia OSINT dashboard; one-off data bake)'
+const USER_AGENT = 'ProjektsInteligence/0.1 (non-commercial Latvia OSINT dashboard; one-off data bake)'
 const today = new Date().toISOString().slice(0, 10)
 
 mkdirSync(cacheDir, { recursive: true })

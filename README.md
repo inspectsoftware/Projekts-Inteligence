@@ -1,4 +1,4 @@
-# Project White Hornet
+# Projekts Inteliģence
 
 A Latvia-only intelligence panel: one dark tactical map that fuses live OSINT data about the
 country (air, sea, land, space, signals, weather, energy, internet, news).
@@ -285,5 +285,6 @@ are refreshed the same way.
 
 ## Terms of use
 
-Several upstream feeds are licensed for non-commercial use only, so this site must stay free of
-advertising and paid access.
+The code is under the [MIT licence](LICENSE). The data is not: every source in the table above keeps
+its own terms, and several are licensed for non-commercial use only, so this site must stay free of
+advertising and paid access. Anyone reusing the code with these feeds takes on those terms too.

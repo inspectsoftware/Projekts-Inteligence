@@ -15,7 +15,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const cacheDir = join(root, 'scripts/.cache/military')
 const outDir = join(root, 'public/data')
 const refresh = process.argv.includes('--refresh')
-const USER_AGENT = 'ProjectWhiteHornet/0.1 (non-commercial Latvia OSINT dashboard; one-off data bake)'
+const USER_AGENT = 'ProjektsInteligence/0.1 (non-commercial Latvia OSINT dashboard; one-off data bake)'
 
 mkdirSync(cacheDir, { recursive: true })
 mkdirSync(outDir, { recursive: true })

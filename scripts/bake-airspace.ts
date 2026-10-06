@@ -15,7 +15,7 @@ import { type Ring, tidyRing } from '../shared/adapters/zones'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const cacheDir = join(root, 'scripts/.cache/airspace')
 const refresh = process.argv.includes('--refresh')
-const USER_AGENT = 'ProjectWhiteHornet/0.1 (non-commercial Latvia OSINT dashboard; one-off data bake)'
+const USER_AGENT = 'ProjektsInteligence/0.1 (non-commercial Latvia OSINT dashboard; one-off data bake)'
 const AIS = 'https://ais.lgs.lv'
 
 mkdirSync(cacheDir, { recursive: true })

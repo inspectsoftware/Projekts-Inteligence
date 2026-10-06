@@ -1,7 +1,7 @@
-import { APP } from '../../shared/meta'
 
 /** Sent on every upstream request, so operators can tell who is calling and why. */
-export const USER_AGENT = `${APP.name.replaceAll(' ', '')}/0.1 (non-commercial Latvia OSINT dashboard)`
+// Spelt in ASCII: a header value may not carry the name's "ģ".
+export const USER_AGENT = 'ProjektsInteligence/0.1 (non-commercial Latvia OSINT dashboard; +https://inteligence.lv)'
 
 const DEFAULT_MAX_BYTES = 8 * 1024 * 1024
 
