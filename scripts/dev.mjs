@@ -7,6 +7,10 @@ import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
+// Must match the proxy target in vite.config.ts. Set explicitly because a launcher may
+// export PORT for the web UI, and the API server would otherwise pick that up.
+const API_PORT = '8787'
+
 function binOf(pkg) {
   const dir = resolve(root, 'node_modules', pkg)
   const { bin } = JSON.parse(readFileSync(resolve(dir, 'package.json'), 'utf8'))
@@ -17,7 +21,8 @@ const children = [
   spawn(process.execPath, [binOf('vite')], { cwd: root, stdio: 'inherit' }),
   spawn(process.execPath, [binOf('tsx'), 'watch', '--env-file-if-exists=.env', 'server/index.ts'], {
     cwd: root,
-    stdio: 'inherit',
+    stdio: ['ignore', 'inherit', 'inherit'],
+    env: { ...process.env, PORT: API_PORT },
   }),
 ]
 

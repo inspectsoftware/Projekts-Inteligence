@@ -1,4 +1,4 @@
-# Project White Horney
+# Project White Hornet
 
 A Latvia-only OSINT "world view": one dark tactical map that fuses live public data about the
 country (air, sea, land, space, signals, weather, energy, internet, news).
@@ -11,7 +11,7 @@ tracked or profiled, and only officially published cameras are used.
 ```bash
 npm install
 npm run dev        # client on http://localhost:5173, API on http://localhost:8787
-npm run preview    # production build, served by the real server on http://localhost:8787
+npm run preview    # production build, served by the real server on http://localhost:4173
 npm run check      # type-check, lint, tests
 ```
 
@@ -56,6 +56,16 @@ Hostinger in hPanel → Environment Variables.
 ## Data sources
 
 Listed here as each layer lands, with the attribution its licence requires.
+
+| What                           | Source                                                                                        | Licence / terms                                 |
+| ------------------------------ | --------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Vector basemap                 | [OpenFreeMap](https://openfreemap.org), © OpenMapTiles, © OpenStreetMap contributors          | ODbL (data)                                     |
+| Satellite mosaic               | [Sentinel-2 cloudless 2024](https://s2maps.eu) by EOX (modified Copernicus Sentinel data)     | CC BY-NC-SA 4.0                                 |
+| Daily imagery, night lights    | NASA EOSDIS GIBS                                                                              | Free to use with acknowledgement                |
+| National border, municipalities | [Administratīvās teritorijas 2026](https://data.gov.lv/dati/dataset/7bb04db9-97ce-4a30-b93a-10ba8dafd104), data.gov.lv | CC0 |
+
+Baked data in `public/data/` is rebuilt by hand with the scripts in `scripts/` (for example
+`node scripts/bake-boundaries.mjs`), never as part of the build.
 
 ## Terms of use
 

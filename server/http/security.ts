@@ -1,25 +1,5 @@
 import type { MiddlewareHandler } from 'hono'
-
-/** Content-Security-Policy for every response. Third-party origins are added in one place. */
-export function buildCsp(): string {
-  const directives: Record<string, string[]> = {
-    'default-src': ["'self'"],
-    'script-src': ["'self'"],
-    // The boot screen is an inline <style>, and the map sets inline style attributes.
-    'style-src': ["'self'", "'unsafe-inline'"],
-    'img-src': ["'self'", 'data:', 'blob:'],
-    'font-src': ["'self'"],
-    'connect-src': ["'self'"],
-    'worker-src': ["'self'", 'blob:'],
-    'object-src': ["'none'"],
-    'base-uri': ["'self'"],
-    'form-action': ["'self'"],
-    'frame-ancestors': ["'none'"],
-  }
-  return Object.entries(directives)
-    .map(([name, values]) => `${name} ${values.join(' ')}`)
-    .join('; ')
-}
+import { buildCsp } from '../../shared/csp'
 
 export function securityHeaders(): MiddlewareHandler {
   const csp = buildCsp()

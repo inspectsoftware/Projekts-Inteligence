@@ -8,6 +8,8 @@ export default defineConfig({
   build: {
     outDir: 'dist/client',
     emptyOutDir: true,
+    // Never inline assets as data: URIs; the Content-Security-Policy only allows fonts from 'self'.
+    assetsInlineLimit: 0,
   },
   server: {
     port: 5173,

@@ -24,8 +24,8 @@
   --color-sat: #b78cff;
   --color-carmine: #9e3039;
 
-  --font-sans: ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 html,
@@ -40,4 +40,107 @@ body {
   color: var(--color-fg);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Map stage ---------------------------------------------------------- */
+
+.map-stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-ink-950);
+}
+
+/* MapLibre's stylesheet makes its container position: relative, so size it explicitly. */
+.map-stage > .map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transition: filter 0.35s ease;
+}
+
+.map-canvas .maplibregl-canvas:focus-visible {
+  outline: none;
+}
+
+/*
+ * Vision modes. Plain CSS filters over the whole map (basemap and data alike),
+ * so they cost nothing to switch and never touch the chrome around the map.
+ */
+.map-stage[data-vision='nvg'] .map-canvas {
+  filter: grayscale(1) brightness(1.5) contrast(1.2) sepia(1) hue-rotate(62deg) saturate(3.4);
+}
+
+.map-stage[data-vision='flir'] .map-canvas {
+  filter: grayscale(1) brightness(1.75) contrast(1.45) blur(0.3px);
+}
+
+.map-stage[data-vision='crt'] .map-canvas {
+  filter: saturate(1.4) contrast(1.12) brightness(1.1);
+}
+
+.fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+.fx-vignette {
+  background: radial-gradient(ellipse at center, transparent 52%, rgb(0 0 0 / 0.6) 100%);
+}
+
+.fx-scanlines {
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgb(0 0 0 / 0.3) 3px);
+}
+
+.fx-noise {
+  inset: -100px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: overlay;
+  animation: fx-noise 0.5s steps(4) infinite;
+}
+
+.map-stage[data-vision='nvg'] .fx-vignette,
+.map-stage[data-vision='crt'] .fx-vignette,
+.map-stage[data-vision='crt'] .fx-scanlines {
+  opacity: 1;
+}
+
+.map-stage[data-vision='flir'] .fx-vignette {
+  opacity: 0.5;
+}
+
+.map-stage[data-vision='nvg'] .fx-noise {
+  opacity: 0.55;
+}
+
+.map-stage[data-vision='flir'] .fx-noise {
+  opacity: 0.3;
+}
+
+@keyframes fx-noise {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-40px, 30px);
+  }
+  50% {
+    transform: translate(35px, -45px);
+  }
+  75% {
+    transform: translate(-25px, -20px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-noise {
+    animation: none;
+  }
 }
