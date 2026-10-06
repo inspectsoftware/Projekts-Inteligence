@@ -1,3 +1,4 @@
+import type { Ship } from '../adapters/ships'
 import { type Aircraft, Flag } from '../entity'
 import type { WarningLevel } from '../feeds'
 import type { AlertRule, Severity } from './engine'
@@ -121,4 +122,30 @@ export const weatherWarningRule: AlertRule = {
     }),
 }
 
-export const RULES: readonly AlertRule[] = [emergencyRule, militaryInsideRule, gpsInterferenceRule, weatherWarningRule]
+/** A vessel on a sanctions list inside the waters this map watches. */
+export const sanctionedVesselRule: AlertRule = {
+  id: 'sanctioned-vessel',
+  clearAfterMs: 5 * 60_000,
+  evaluate: ({ entities }) =>
+    (entities('ships') as Ship[])
+      .filter((ship) => (ship.flags & Flag.SANCTIONED) !== 0)
+      .map((ship) => ({
+        key: `sanctioned:${ship.id}`,
+        severity: 'warn' as const,
+        title: `Sanctioned vessel: ${ship.props.name ?? `MMSI ${ship.props.mmsi}`}`,
+        detail:
+          [ship.props.flagState, ship.props.destination ? `bound for ${ship.props.destination}` : null]
+            .filter(Boolean)
+            .join(' · ') || undefined,
+        at: { lon: ship.lon, lat: ship.lat },
+        entityId: ship.id,
+      })),
+}
+
+export const RULES: readonly AlertRule[] = [
+  emergencyRule,
+  militaryInsideRule,
+  gpsInterferenceRule,
+  sanctionedVesselRule,
+  weatherWarningRule,
+]

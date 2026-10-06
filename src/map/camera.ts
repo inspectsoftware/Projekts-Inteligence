@@ -56,10 +56,13 @@ export function flyToView(map: Map, view: View): void {
   })
 }
 
+/** Keeps the camera inside the Baltic region from here on. */
+export function lockToRegion(map: Map): void {
+  map.setMaxBounds([AOI_BBOX[0], AOI_BBOX[1], AOI_BBOX[2], AOI_BBOX[3]])
+}
+
 /** Opening move: descend onto Latvia, then lock the camera to the Baltic region. */
 export function runIntro(map: Map): void {
-  map.once('moveend', () => {
-    map.setMaxBounds([AOI_BBOX[0], AOI_BBOX[1], AOI_BBOX[2], AOI_BBOX[3]])
-  })
+  map.once('moveend', () => lockToRegion(map))
   flyHome(map, 3400)
 }

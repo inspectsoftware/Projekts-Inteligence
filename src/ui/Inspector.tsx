@@ -29,29 +29,32 @@ function useLastKnown(id: string | null, live: Entity | undefined): Entity | und
 export function Inspector() {
   const map = useMap()
   const selectedId = useSelection((s) => s.selectedId)
+  const feature = useSelection((s) => s.feature)
   const followId = useSelection((s) => s.followId)
   const select = useSelection((s) => s.select)
   const follow = useSelection((s) => s.follow)
   const live = useEntity(selectedId)
   const entity = useLastKnown(selectedId, live)
 
+  const open = selectedId !== null || feature !== null
   useEffect(() => {
-    if (!selectedId) return
+    if (!open) return
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') select(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selectedId, select])
+  }, [open, select])
 
-  if (!selectedId || !entity) return null
-  const layer = layerFor(entity)
-  if (!layer?.describe) return null
+  // Either a fixed map feature, which describes itself, or a live entity described by its layer.
+  const describe = entity ? layerFor(entity)?.describe : undefined
+  const model = feature ? feature.model : entity && describe ? describe(entity, serverNow()) : null
+  if (!model) return null
 
-  const now = serverNow()
-  const model = layer.describe(entity, now)
-  const lost = !live
-  const following = followId === entity.id
+  const lost = !feature && !live
+  const following = entity !== undefined && followId === entity.id
+  const centreOn = (): [number, number] | null =>
+    feature ? [feature.lon, feature.lat] : entity ? positionAt(entity, serverNow()) : null
 
   return (
     <Panel className="absolute top-13 right-14 z-10 flex max-h-[calc(100%-7.5rem)] w-72 flex-col font-mono max-md:inset-x-3 max-md:top-auto max-md:bottom-16 max-md:max-h-[45%] max-md:w-auto">
@@ -99,26 +102,31 @@ export function Inspector() {
       </dl>
 
       <footer className="grid gap-2 border-t border-line p-3">
-        <div className="grid grid-cols-2 gap-px bg-line p-px">
+        <div className={`grid gap-px bg-line p-px ${entity ? 'grid-cols-2' : ''}`}>
           <button
             type="button"
             disabled={!map || lost}
-            onClick={() => map?.flyTo({ center: positionAt(entity, serverNow()), zoom: Math.max(map.getZoom(), 9), duration: 1200 })}
+            onClick={() => {
+              const center = centreOn()
+              if (map && center) map.flyTo({ center, zoom: Math.max(map.getZoom(), 9), duration: 1200 })
+            }}
             className="bg-ink-850 py-1.5 text-[10px] tracking-[0.16em] text-fg-dim uppercase transition-colors hover:bg-ink-700 hover:text-accent disabled:opacity-40"
           >
             Centre
           </button>
-          <button
-            type="button"
-            aria-pressed={following}
-            disabled={!map || lost}
-            onClick={() => follow(following ? null : entity.id)}
-            className={`py-1.5 text-[10px] tracking-[0.16em] uppercase transition-colors disabled:opacity-40 ${
-              following ? 'bg-accent/15 text-accent' : 'bg-ink-850 text-fg-dim hover:bg-ink-700 hover:text-accent'
-            }`}
-          >
-            {following ? 'Following' : 'Follow'}
-          </button>
+          {entity && (
+            <button
+              type="button"
+              aria-pressed={following}
+              disabled={!map || lost}
+              onClick={() => follow(following ? null : entity.id)}
+              className={`py-1.5 text-[10px] tracking-[0.16em] uppercase transition-colors disabled:opacity-40 ${
+                following ? 'bg-accent/15 text-accent' : 'bg-ink-850 text-fg-dim hover:bg-ink-700 hover:text-accent'
+              }`}
+            >
+              {following ? 'Following' : 'Follow'}
+            </button>
+          )}
         </div>
         {model.links.length > 0 && (
           <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] tracking-[0.08em]">

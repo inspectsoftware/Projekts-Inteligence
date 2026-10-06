@@ -18,6 +18,10 @@ const SHAPES = {
   dot: 'M32 20L44 32L32 44L20 32Z',
   // Satellite: a bus with a solar panel on each side.
   sat: 'M26 24H38V40H26ZM4 27H22V37H4ZM42 27H60V37H42ZM22 30.5H26V33.5H22ZM38 30.5H42V33.5H38Z',
+  // Ship seen from above: a hull with a pointed bow.
+  ship: 'M32 3C38 11 42 20 42 29V54C42 57 40 59 37 59H27C24 59 22 57 22 54V29C22 20 26 11 32 3Z',
+  // Bus or tram seen from above: a box with a pointed front.
+  bus: 'M32 3L45 14V51C45 54.5 42.5 57 39 57H25C21.5 57 19 54.5 19 51V14Z',
   // Train seen from above, rounded nose forward.
   train: 'M32 4C38 4 41 9 41 15L41 54C41 57.5 38.5 60 35 60L29 60C25.5 60 23 57.5 23 54L23 15C23 9 26 4 32 4Z',
 } as const

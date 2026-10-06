@@ -7,11 +7,12 @@ import { setBorder } from '../runtime/border'
 import { useUi } from '../state/ui'
 import { finishBoot } from '../ui/boot'
 import { applyBaseMode } from './baseMode'
-import { INTRO_START, runIntro } from './camera'
+import { INTRO_START, lockToRegion, runIntro } from './camera'
 import { setMap, setMapFailure, useMap, useMapFailure } from './instance'
 import { startScene } from './scene'
 import { addSpotlight } from './spotlight'
 import { buildStyle } from './style'
+import { readUrlView, writeUrlView } from './urlView'
 
 // MapLibre 6 is ESM-only: under a bundler its worker has to be given as a URL.
 setWorkerUrl(workerUrl)
@@ -24,13 +25,17 @@ export function MapView() {
   const error = useMapFailure()
 
   useEffect(() => {
+    // Someone following a shared link wants that view, not the opening fly-in.
+    const urlView = readUrlView()
     let created: MapLibreMap
     try {
       created = new MapLibreMap({
         container: containerRef.current!,
         style: buildStyle(),
-        center: INTRO_START.center,
-        zoom: INTRO_START.zoom,
+        center: urlView?.center ?? INTRO_START.center,
+        zoom: urlView?.zoom ?? INTRO_START.zoom,
+        bearing: urlView?.bearing ?? 0,
+        pitch: urlView?.pitch ?? 0,
         minZoom: 3,
         maxPitch: 70,
         attributionControl: false,
@@ -49,6 +54,13 @@ export function MapView() {
     // Never leave the boot screen up if the style or tiles cannot be reached.
     const bootTimeout = setTimeout(finishBoot, 8000)
 
+    // A link to another view opened in this same tab only changes the fragment: go there.
+    const followLink = () => {
+      const view = readUrlView()
+      if (view) created.jumpTo(view)
+    }
+    window.addEventListener('hashchange', followLink)
+
     created.once('load', () => {
       void (async () => {
         try {
@@ -64,13 +76,19 @@ export function MapView() {
         setMap(created)
         stopScene = startScene(created)
         finishBoot()
-        runIntro(created)
+        if (urlView) lockToRegion(created)
+        else runIntro(created)
+        created.on('moveend', () => {
+          const { lng, lat } = created.getCenter()
+          writeUrlView({ center: [lng, lat], zoom: created.getZoom(), bearing: created.getBearing(), pitch: created.getPitch() })
+        })
       })()
     })
 
     return () => {
       cancelled = true
       clearTimeout(bootTimeout)
+      window.removeEventListener('hashchange', followLink)
       stopScene?.()
       setMap(null)
       created.remove()

@@ -1,7 +1,18 @@
 import type { Entity } from './entity'
 import type { Attribution } from './origins'
 
-export const FEED_IDS = ['aircraft', 'trains', 'satellites', 'gps-hex', 'warnings', 'stations', 'fires'] as const
+export const FEED_IDS = [
+  'aircraft',
+  'trains',
+  'transit',
+  'ships',
+  'sanctions',
+  'satellites',
+  'gps-hex',
+  'warnings',
+  'stations',
+  'fires',
+] as const
 export type FeedId = (typeof FEED_IDS)[number]
 
 export function isFeedId(value: string): value is FeedId {
@@ -66,6 +77,7 @@ export type FeedPayload =
   | { shape: 'elements'; sats: OrbitalElement[] }
   | { shape: 'cells'; windowStart: number; cells: GpsCell[] }
   | { shape: 'warnings'; warnings: WeatherWarning[] }
+  | { shape: 'vessel-list'; imo: number[]; mmsi: number[] }
 
 export type PayloadOf<S extends FeedPayload['shape']> = Extract<FeedPayload, { shape: S }>
 
@@ -80,6 +92,8 @@ export function countOf(payload: FeedPayload): number {
       return payload.cells.length
     case 'warnings':
       return payload.warnings.length
+    case 'vessel-list':
+      return payload.imo.length
   }
 }
 

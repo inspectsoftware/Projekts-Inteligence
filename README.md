@@ -71,9 +71,22 @@ Listed here as each layer lands, with the attribution its licence requires.
 | Rain radar                     | [RainViewer](https://www.rainviewer.com)                                                       | Personal / non-commercial use, credit required  |
 | Fires                          | [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov) (VIIRS, last 24 h)                          | Free to use with acknowledgement                |
 | National border, municipalities | [Administratīvās teritorijas 2026](https://data.gov.lv/dati/dataset/7bb04db9-97ce-4a30-b93a-10ba8dafd104), data.gov.lv | CC0 |
+| Airfields, power grid, defence sites, border crossings, undersea cables, place search | © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, via the Overpass API | ODbL |
+| Ships                          | [Digitraffic](https://www.digitraffic.fi/en/marine-traffic/) (Fintraffic), plus [AISStream](https://aisstream.io) when a key is set | CC BY 4.0 / free key, AISStream's terms |
+| Sanctioned-vessel flag         | [OpenSanctions](https://www.opensanctions.org/datasets/maritime/) maritime list                | CC BY-NC 4.0                                    |
+| Buses and trams                | Operators' public live maps on [marsruti.lv](https://www.marsruti.lv) (Liepāja, Rēzekne, regional buses) | No published terms; used lightly      |
 
-Baked data in `public/data/` is rebuilt by hand with the scripts in `scripts/` (for example
-`node scripts/bake-boundaries.mjs`), never as part of the build.
+Baked data in `public/data/` is rebuilt by hand with the scripts in `scripts/`
+(`node scripts/bake-boundaries.mjs`, `node scripts/bake-osm.mjs`), never as part of the build.
+
+### Known gaps
+
+- **Ships:** without `AISSTREAM_API_KEY` only the northern approaches (the Irbe Strait and beyond)
+  are covered, because that is as far as the open Finnish receivers reach.
+- **Rīga public transport:** Rīgas Satiksme's vehicle-position file has been unreachable from
+  outside its own site, so Rīga's buses, trams and trolleybuses are not on the map.
+- **Defence sites** are simply what OpenStreetMap maps as military land: a public map's view, not an
+  inventory.
 
 ## Terms of use
 

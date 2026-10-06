@@ -2,7 +2,9 @@ import type { FeedId } from '../../shared/feeds'
 import { aircraftFeed } from './aircraft'
 import { gpsHexFeed } from './gpsHex'
 import { satellitesFeed } from './satellites'
+import { sanctionsFeed, shipsFeed } from './ships'
 import { trainsFeed } from './trains'
+import { transitFeed } from './transit'
 import type { FeedDef } from './types'
 import { firesFeed, stationsFeed, warningsFeed } from './weather'
 
@@ -13,6 +15,9 @@ export type FeedRegistry = Partial<Record<FeedId, FeedDef>>
 export const FEEDS: FeedRegistry = {
   aircraft: aircraftFeed,
   trains: trainsFeed,
+  transit: transitFeed,
+  ships: shipsFeed,
+  sanctions: sanctionsFeed,
   satellites: satellitesFeed,
   'gps-hex': gpsHexFeed,
   warnings: warningsFeed,

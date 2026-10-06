@@ -5,7 +5,7 @@ import type { FeedId } from '../../shared/feeds'
 import type { Attribution } from '../../shared/origins'
 import type { Stat } from '../state/feeds'
 
-export type LayerGroup = 'air' | 'sea' | 'land' | 'space' | 'signals' | 'environment'
+export type LayerGroup = 'air' | 'sea' | 'land' | 'space' | 'signals' | 'environment' | 'reference'
 
 export const GROUP_LABELS: Record<LayerGroup, string> = {
   air: 'Air',
@@ -14,6 +14,7 @@ export const GROUP_LABELS: Record<LayerGroup, string> = {
   space: 'Space',
   signals: 'Signals',
   environment: 'Environment',
+  reference: 'Reference',
 }
 
 /** What a layer needs to know to draw one frame. */
@@ -39,6 +40,22 @@ export interface InspectorModel {
   links: { label: string; href: string }[]
 }
 
+/** A fixed feature on the map (an airfield, a substation) picked for the inspector. */
+export interface StaticSelection {
+  model: InspectorModel
+  lon: number
+  lat: number
+}
+
+export interface NativeLayer {
+  show(map: MapLibreMap): void
+  hide(): void
+  /** Map style layers whose features can be clicked. */
+  interactive?: readonly string[]
+  /** Describes a clicked feature from one of the interactive layers. */
+  pick?(properties: Record<string, unknown>, lon: number, lat: number): StaticSelection | null
+}
+
 /**
  * One toggleable layer. Adding a layer to the product means writing one of these
  * and listing it in registry.ts; the scene, layer list and inspector pick it up from there.
@@ -55,8 +72,8 @@ export interface LayerDef {
   feeds: readonly FeedId[]
   /** Credits for data the browser loads directly, which no feed lists. */
   attribution?: readonly Attribution[]
-  /** For layers the map draws itself (raster tiles) instead of deck.gl. */
-  native?: { show(map: MapLibreMap): void; hide(): void }
+  /** For layers the map draws itself (raster tiles, baked GeoJSON) instead of deck.gl. */
+  native?: NativeLayer
   /**
    * Called before every frame while the layer is visible, for layers that work out
    * their own entities (satellite positions). Must throttle itself.

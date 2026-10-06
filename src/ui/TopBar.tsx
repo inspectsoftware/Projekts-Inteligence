@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { APP } from '../../shared/meta'
+import { usePalette } from '../state/palette'
 import { Clock } from './Clock'
 
 type Uplink = { state: 'connecting' } | { state: 'up'; commit: string } | { state: 'down' }
@@ -23,6 +24,7 @@ function useUplink(): Uplink {
 
 export function TopBar() {
   const uplink = useUplink()
+  const openSearch = usePalette((s) => s.setOpen)
 
   return (
     <header className="pointer-events-auto absolute inset-x-0 top-0 z-20 flex h-10 items-center gap-3 border-b border-line bg-ink-900/90 px-3 font-mono text-[11px] tracking-[0.14em] text-fg-dim uppercase backdrop-blur-md">
@@ -36,6 +38,16 @@ export function TopBar() {
       <span className="hidden border border-ok/40 px-1.5 py-px text-[9px] tracking-[0.2em] text-ok xl:inline">
         Public sources only
       </span>
+
+      <button
+        type="button"
+        onClick={() => openSearch(true)}
+        title="Search places, callsigns, trains, satellites and layers"
+        className="ml-2 flex items-center gap-2 border border-line px-2 py-0.5 text-[10px] tracking-[0.16em] text-fg-mute transition-colors hover:border-line-strong hover:text-fg max-sm:hidden"
+      >
+        Search
+        <kbd className="font-mono text-[9px] text-fg-mute">Ctrl K</kbd>
+      </button>
 
       <div className="ml-auto flex items-center gap-4">
         <Clock />

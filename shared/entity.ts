@@ -13,6 +13,8 @@ export const Flag = {
   EMERGENCY: 2,
   GPS_DEGRADED: 4,
   ON_GROUND: 8,
+  /** A vessel on a sanctions list. */
+  SANCTIONED: 16,
 } as const
 
 export interface Entity<P extends object = object> {

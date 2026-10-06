@@ -2,8 +2,11 @@ import { USER_AGENT, UpstreamError } from './upstream'
 
 /** The slice of the WebSocket API this module uses, so tests can supply a fake. */
 export interface SocketLike {
+  /** Set to 'arraybuffer' so binary frames arrive as bytes we can decode at once. */
+  binaryType?: string
   addEventListener(type: 'open' | 'close' | 'error', listener: () => void): void
   addEventListener(type: 'message', listener: (event: { data: unknown }) => void): void
+  send(data: string): void
   close(): void
 }
 
@@ -21,6 +24,8 @@ export interface StreamOptions {
    * ready once that is true, since the first frames are often greetings or metadata.
    */
   onMessage(raw: string, receivedAt: number): boolean
+  /** Called once the connection is open, for upstreams that expect a subscription message first. */
+  onOpen?(send: (message: string) => void): void
   /** Called when the connection drops, so stale state can be discarded. */
   onClose?(): void
   createSocket?: SocketFactory
@@ -28,6 +33,11 @@ export interface StreamOptions {
 }
 
 const RECONNECT_BACKOFF_MS = [0, 2000, 5000, 15_000, 30_000]
+function decodeFrame(data: unknown): string | null {
+  if (data instanceof ArrayBuffer) return Buffer.from(data).toString('utf8')
+  if (ArrayBuffer.isView(data)) return Buffer.from(data.buffer, data.byteOffset, data.byteLength).toString('utf8')
+  return null
+}
 
 function defaultSocketFactory(url: string): SocketLike {
   const Impl = (globalThis as { WebSocket?: new (url: string, options?: unknown) => SocketLike }).WebSocket
@@ -119,10 +129,17 @@ export class LazyStream {
       throw err
     }
     this.socket = socket
+    socket.binaryType = 'arraybuffer'
 
+    socket.addEventListener('open', () => {
+      if (this.socket === socket) this.options.onOpen?.((message) => socket.send(message))
+    })
     socket.addEventListener('message', (event) => {
-      if (this.socket !== socket || typeof event.data !== 'string') return
-      const usable = this.options.onMessage(event.data, this.now())
+      if (this.socket !== socket) return
+      // Some upstreams send their JSON as binary frames.
+      const text = typeof event.data === 'string' ? event.data : decodeFrame(event.data)
+      if (text === null) return
+      const usable = this.options.onMessage(text, this.now())
       this.failures = 0
       if (usable && !this.hasData) {
         this.hasData = true

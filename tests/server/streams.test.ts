@@ -6,6 +6,7 @@ import { LazyStream, type SocketLike } from '../../server/core/stream'
 import type { FeedDef } from '../../server/feeds/types'
 import { mergeElements, normaliseElements } from '../../shared/adapters/satellites'
 import { type RawTrain, type TrainFixes, normaliseTrains } from '../../shared/adapters/trains'
+import { normaliseGpsTxt } from '../../shared/adapters/transit'
 import type { FeedPayload } from '../../shared/feeds'
 
 const fixture = <T>(name: string): T =>
@@ -19,10 +20,14 @@ class FakeSocket implements SocketLike {
   addEventListener(type: string, listener: (event: { data: unknown }) => void): void {
     ;(this.listeners[type] ??= []).push(listener)
   }
+  sent: string[] = []
+  send(data: string): void {
+    this.sent.push(data)
+  }
   close(): void {
     this.closed = true
   }
-  emit(type: 'message' | 'close' | 'error', data?: unknown): void {
+  emit(type: 'open' | 'message' | 'close' | 'error', data?: unknown): void {
     for (const listener of this.listeners[type] ?? []) listener({ data })
   }
 }
@@ -131,13 +136,36 @@ describe('LazyStream', () => {
     await again
   })
 
-  it('ignores binary frames', async () => {
+  it('decodes binary frames as text, and ignores anything else', async () => {
     const { stream, sockets, messages } = setup()
     const ready = stream.ready(5000)
-    sockets[0].emit('message', new Uint8Array([1, 2, 3]))
-    sockets[0].emit('message', 'text')
+    sockets[0].emit('message', new TextEncoder().encode('from bytes'))
+    sockets[0].emit('message', new TextEncoder().encode('from buffer').buffer)
+    sockets[0].emit('message', { not: 'a frame' })
     await ready
-    expect(messages).toEqual(['text'])
+    expect(messages).toEqual(['from bytes', 'from buffer'])
+  })
+
+  it('lets the feed send a subscription as soon as the connection opens', async () => {
+    const sockets: FakeSocket[] = []
+    const stream = new LazyStream({
+      name: 'The test feed',
+      url: 'wss://example.org/ws',
+      idleCloseMs: 60_000,
+      onOpen: (send) => send('{"subscribe":true}'),
+      onMessage: () => true,
+      createSocket: () => {
+        const socket = new FakeSocket()
+        sockets.push(socket)
+        return socket
+      },
+    })
+    const ready = stream.ready(5000)
+    expect(sockets[0].sent).toEqual([])
+    sockets[0].emit('open')
+    expect(sockets[0].sent).toEqual(['{"subscribe":true}'])
+    sockets[0].emit('message', 'ok')
+    await ready
   })
 })
 
@@ -296,5 +324,40 @@ describe('FeedCache persistence', () => {
     const hit = await new FeedCache({ disk, log: () => {} }).get(def(load))
     expect(load).toHaveBeenCalledTimes(1)
     expect(hit.stale).toBe(false)
+  })
+})
+
+describe('normaliseGpsTxt', () => {
+  const read = (name: string) => readFileSync(new URL(`../fixtures/${name}`, import.meta.url), 'utf8')
+  const T0 = Date.parse('2026-10-06T10:40:00Z')
+
+  it('reads positions, speed and heading from a city feed', () => {
+    const vehicles = normaliseGpsTxt(read('transit.liepaja.txt'), { id: 'liepaja', name: 'Liepāja' }, T0)
+    expect(vehicles).toHaveLength(12)
+    const tram = vehicles[0]
+    expect(tram).toMatchObject({ id: 'transit:liepaja:250', kind: 'transit', label: 'T', trk: 176, ts: T0 })
+    expect(tram.lon).toBeCloseTo(21.00568, 5)
+    expect(tram.lat).toBeCloseTo(56.487476, 5)
+    // 9 km/h in the file, metres per second here.
+    expect(tram.spd).toBeCloseTo(2.5, 2)
+    expect(tram.props).toEqual({ network: 'Liepāja', mode: 'tram', route: 'T', vehicle: '250' })
+  })
+
+  it('gives vehicles without an identifier a stable place within their route', () => {
+    const vehicles = normaliseGpsTxt(read('transit.lsa.txt'), { id: 'regional', name: 'Regional buses' }, T0)
+    expect(vehicles.length).toBeGreaterThan(4)
+    expect(new Set(vehicles.map((v) => v.id)).size).toBe(vehicles.length)
+    expect(vehicles[0]).toMatchObject({ id: 'transit:regional:2-6821-1', label: '6821' })
+    expect(vehicles[0].props).toMatchObject({ mode: 'bus', vehicle: null })
+  })
+
+  it('treats an empty feed, and rows that make no sense, as no vehicles', () => {
+    const network = { id: 'x', name: 'X' }
+    expect(normaliseGpsTxt('0', network, T0)).toEqual([])
+    expect(normaliseGpsTxt('', network, T0)).toEqual([])
+    expect(normaliseGpsTxt('2,5,0,0,10,90,,\n9,5,24000000,57000000,10,90,,\n2,5,x,y,1,1,,', network, T0)).toEqual([])
+    const [idle] = normaliseGpsTxt('2,,24100000,56950000,0,0,,', network, T0)
+    expect(idle).toMatchObject({ label: undefined, spd: 0 })
+    expect(idle.props.route).toBeNull()
   })
 })

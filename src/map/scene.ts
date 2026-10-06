@@ -2,7 +2,7 @@ import { MapLibreOverlay } from '@deck.gl/maplibre'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { Entity } from '../../shared/entity'
 import { LAYERS } from '../layers/registry'
-import type { LayerContext } from '../layers/types'
+import type { LayerContext, StaticSelection } from '../layers/types'
 import { startAlerts } from '../runtime/alertRunner'
 import { fetchFeedList } from '../runtime/api'
 import { serverNow } from '../runtime/clock'
@@ -39,15 +39,41 @@ export function startScene(map: MapLibreMap): () => void {
     layers: [],
     pickingRadius: 8,
     onClick: (info) => {
-      useSelection.getState().select((info.object as Entity | undefined)?.id ?? null)
+      const id = (info.object as Entity | undefined)?.id
+      if (id) return useSelection.getState().select(id)
+      // Nothing live under the cursor: maybe a fixed feature drawn by the map itself.
+      const feature = pickStatic(info.x, info.y)
+      if (feature) useSelection.getState().selectFeature(feature)
+      else useSelection.getState().select(null)
     },
     onHover: (info) => {
       const id = (info.object as Entity | undefined)?.id ?? null
       useSelection.getState().hover(id)
-      map.getCanvas().style.cursor = id ? 'pointer' : ''
+      map.getCanvas().style.cursor = id || pickStatic(info.x, info.y) ? 'pointer' : ''
     },
   })
   map.addControl(overlay)
+
+  /** The topmost clickable feature of a visible native layer at this screen position, described for the inspector. */
+  function pickStatic(x: number, y: number): StaticSelection | null {
+    const { visible } = useLayers.getState()
+    const shown = LAYERS.filter((layer) => layer.native?.pick && isLayerOn(visible, layer.id, layer.defaultOn))
+    const ids = shown.flatMap((layer) => layer.native?.interactive ?? []).filter((id) => map.getLayer(id))
+    if (ids.length === 0) return null
+    const [hit] = map.queryRenderedFeatures(
+      [
+        [x - 4, y - 4],
+        [x + 4, y + 4],
+      ],
+      { layers: ids },
+    )
+    if (!hit) return null
+    const owner = shown.find((layer) => layer.native?.interactive?.includes(hit.layer.id))
+    const { lng, lat } = map.unproject([x, y])
+    // Points report their own position; for lines, where the user clicked is the useful answer.
+    const [lon, la] = hit.geometry.type === 'Point' ? (hit.geometry.coordinates as [number, number]) : [lng, lat]
+    return owner?.native?.pick?.(hit.properties ?? {}, lon, la) ?? null
+  }
 
   // Poll exactly the feeds that visible layers need.
   const held = new Map<string, (() => void)[]>()
