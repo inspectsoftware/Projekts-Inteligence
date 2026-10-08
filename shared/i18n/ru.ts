@@ -1112,4 +1112,9 @@ export const ru: Record<string, string> = {
   'Time zone': 'Часовой пояс',
   'Time zones': 'Часовые пояса',
   'Time zone boundaries and their offset from UTC. Click a boundary or a label for the time there now': 'Границы часовых поясов и их смещение от UTC. Нажмите на границу или подпись, чтобы увидеть текущее время там',
+  'Form of government': 'Форма правления',
+  'Official language': 'Государственный язык',
+  'Continent': 'Континент',
+  'Part of': 'Входит в',
+  'Country brief': 'Обзор страны',
 }

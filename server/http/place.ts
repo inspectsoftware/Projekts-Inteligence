@@ -1,4 +1,4 @@
-import type { PlaceInfo } from '../../shared/feeds'
+import { PLACE_FACTS, type PlaceFact, type PlaceInfo } from '../../shared/feeds'
 import { LANGS, type Lang } from '../../shared/i18n'
 import { type FetchLike, type Upstream, createUpstream } from '../core/upstream'
 
@@ -80,6 +80,7 @@ export function createPlaceLookup(fetchImpl?: FetchLike, now: () => number = Dat
       areaKm2: null,
       elevationM: Number(tags.ele) || null,
       website: /^https?:\/\//.test(tags.website ?? '') ? tags.website : null,
+      facts: [],
       extract: null,
       wiki: null,
       osm: place.osm_type && place.osm_id ? `https://www.openstreetmap.org/${place.osm_type}/${place.osm_id}` : null,
@@ -91,8 +92,16 @@ export function createPlaceLookup(fetchImpl?: FetchLike, now: () => number = Dat
     if (!entity) return info
     try {
       const article = (site: Lang, name: string) => `OPTIONAL { ?${name} schema:about wd:${entity}; schema:isPartOf <${wikipedia(site)}/>; schema:name ?${name}Title }`
-      const query = `SELECT ?pop ?area ?elev ?ownTitle ?enTitle WHERE { OPTIONAL { wd:${entity} wdt:P1082 ?pop } OPTIONAL { wd:${entity} wdt:P2046 ?area } OPTIONAL { wd:${entity} wdt:P2044 ?elev } ${article(lang, 'own')} ${article('en', 'en')} } LIMIT 1`
+      // One value of each: the statement Wikidata ranks best, which for an office is its holder today.
+      const named = (Object.entries(PLACE_FACTS) as [PlaceFact, string][]).map(([key, property]) => `OPTIONAL { wd:${entity} wdt:${property} ?${key} }`).join(' ')
+      const labels = (Object.keys(PLACE_FACTS) as PlaceFact[]).map((key) => `?${key}Label`).join(' ')
+      const query = `SELECT ?pop ?area ?elev ?ownTitle ?enTitle ${labels} WHERE { OPTIONAL { wd:${entity} wdt:P1082 ?pop } OPTIONAL { wd:${entity} wdt:P2046 ?area } OPTIONAL { wd:${entity} wdt:P2044 ?elev } ${named} ${article(lang, 'own')} ${article('en', 'en')} SERVICE wikibase:label { bd:serviceParam wikibase:language "${lang},en". } } LIMIT 1`
       const facts = (await http.json<Sparql>(`${WIKIDATA}/sparql?format=json&query=${encodeURIComponent(query)}`, { timeoutMs: 8000 })).results.bindings[0] ?? {}
+      for (const key of Object.keys(PLACE_FACTS) as PlaceFact[]) {
+        const value = facts[`${key}Label`]?.value
+        // An entry nobody has named yet comes back as its bare id, which tells the reader nothing.
+        if (value && !/^Q\d+$/.test(value)) info.facts.push({ key, value })
+      }
       info.population ??= Number(facts.pop?.value) || null
       info.areaKm2 = Number(facts.area?.value) || null
       info.elevationM ??= Number(facts.elev?.value) || null

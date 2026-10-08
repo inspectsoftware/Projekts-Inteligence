@@ -43,6 +43,8 @@ export interface InspectorModel {
   badges: { text: string; tone: Tone }[]
   rows: { label: string; value: string }[]
   links: { label: string; href: string }[]
+  /** Things to do with it inside the app, such as opening the window that says more. */
+  actions?: { label: string; run(): void }[]
 }
 
 /** A fixed feature on the map (an airfield, a substation) picked for the inspector. */

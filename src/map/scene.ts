@@ -1,17 +1,20 @@
 import { MapLibreOverlay } from '@deck.gl/maplibre'
 import type { Map as MapLibreMap } from 'maplibre-gl'
 import type { Entity } from '../../shared/entity'
+import { lang } from '../i18n'
 import { LAYERS } from '../layers/registry'
 import type { LayerContext, StaticSelection } from '../layers/types'
 import { startAlerts } from '../runtime/alertRunner'
 import { fetchFeedList } from '../runtime/api'
 import { serverNow } from '../runtime/clock'
 import { getEntity, subscribeEntities } from '../runtime/entityStore'
+import { whatIsHere } from '../runtime/place'
 import { acquireFeed } from '../runtime/poller'
 import { useFeeds } from '../state/feeds'
 import { isLayerOn, useLayers } from '../state/layers'
 import { useSelection } from '../state/selection'
 import { positionAt } from './motion'
+import { PLACE_LABEL_LEVEL } from './style'
 
 const LABEL_FONT_PROBE = '500 11px "JetBrains Mono Variable"'
 
@@ -43,13 +46,16 @@ export function startScene(map: MapLibreMap): () => void {
       if (id) return useSelection.getState().select(id)
       // Nothing live under the cursor: maybe a fixed feature drawn by the map itself.
       const feature = pickStatic(info.x, info.y)
-      if (feature) useSelection.getState().selectFeature(feature)
+      if (feature) return useSelection.getState().selectFeature(feature)
+      // Or the name of a place, which is looked up. Open map clears the selection as before.
+      const label = pickLabel(info.x, info.y)
+      if (label) whatIsHere(map, label.lon, label.lat, label.level, label.name)
       else useSelection.getState().select(null)
     },
     onHover: (info) => {
       const id = (info.object as Entity | undefined)?.id ?? null
       useSelection.getState().hover(id)
-      map.getCanvas().style.cursor = id || pickStatic(info.x, info.y) ? 'pointer' : ''
+      map.getCanvas().style.cursor = id || pickStatic(info.x, info.y) || pickLabel(info.x, info.y) ? 'pointer' : ''
     },
   })
   map.addControl(overlay)
@@ -73,6 +79,16 @@ export function startScene(map: MapLibreMap): () => void {
     // Points report their own position; for lines, where the user clicked is the useful answer.
     const [lon, la] = hit.geometry.type === 'Point' ? (hit.geometry.coordinates as [number, number]) : [lng, lat]
     return owner?.native?.pick?.(hit.properties ?? {}, lon, la) ?? null
+  }
+
+  /** The place name drawn at this screen position, with where its place is and the scale to look it up at. */
+  function pickLabel(x: number, y: number): { lon: number; lat: number; level: number; name: string } | null {
+    const layers = Object.keys(PLACE_LABEL_LEVEL).filter((id) => map.getLayer(id))
+    const [hit] = map.queryRenderedFeatures([x, y], { layers })
+    if (!hit || hit.geometry.type !== 'Point') return null
+    const [lon, lat] = hit.geometry.coordinates as [number, number]
+    const properties = hit.properties as Record<string, string | undefined>
+    return { lon, lat, level: PLACE_LABEL_LEVEL[hit.layer.id], name: properties[`name:${lang}`] ?? properties['name:latin'] ?? properties.name ?? '' }
   }
 
   // Poll exactly the feeds that visible layers need.

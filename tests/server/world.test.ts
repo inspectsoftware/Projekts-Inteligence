@@ -72,6 +72,26 @@ describe('place lookup', () => {
     expect(String(fetchImpl.mock.calls[0][0])).toMatch(/^https:\/\/nominatim\.openstreetmap\.org\/reverse\?/)
   })
 
+  it('adds political facts from Wikidata in the reader’s language, and leaves out what has no name', async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      if (url.startsWith('https://nominatim.')) return json({ ...place, name: 'Latvija', addresstype: 'country', extratags: { wikidata: 'Q211' } })
+      if (url.startsWith('https://query.wikidata.org/')) {
+        return json({ results: { bindings: [{ pop: { value: '1860000' }, area: { value: '64589' }, capitalLabel: { value: 'Rīga' }, headOfStateLabel: { value: 'Q12345' }, currencyLabel: { value: 'eiro' }, ownTitle: { value: 'Latvija' } }] } })
+      }
+      return json({ extract: 'Latvija ir valsts.', content_urls: { desktop: { page: 'https://lv.wikipedia.org/wiki/Latvija' } } })
+    })
+    const info = await createPlaceLookup(fetchImpl, () => NOW).at(24.6, 56.9, 3, 'lv')
+    expect(info).toMatchObject({ kind: 'country', population: 1860000, areaKm2: 64589, extract: 'Latvija ir valsts.', wiki: 'https://lv.wikipedia.org/wiki/Latvija' })
+    expect(info!.facts).toEqual([
+      { key: 'capital', value: 'Rīga' },
+      { key: 'currency', value: 'eiro' },
+    ])
+    const asked = decodeURIComponent(String(fetchImpl.mock.calls[1][0]))
+    expect(asked).toContain('wd:Q211 wdt:P35 ?headOfState')
+    expect(asked).toContain('wikibase:language "lv,en"')
+    expect(String(fetchImpl.mock.calls[2][0])).toBe('https://lv.wikipedia.org/api/rest_v1/page/summary/Latvija')
+  })
+
   it('refuses to queue more than a few questions for the one-a-second service', async () => {
     const lookup = createPlaceLookup(() => new Promise<Response>(() => {}), () => NOW)
     const asked = Array.from({ length: 5 }, (_, index) => lookup.search(`place ${index}`, 'en'))

@@ -1131,4 +1131,9 @@ export const et: Record<string, string> = {
   'Time zone': 'Ajavöönd',
   'Time zones': 'Ajavööndid',
   'Time zone boundaries and their offset from UTC. Click a boundary or a label for the time there now': 'Ajavööndite piirid ja nende nihe UTC suhtes. Klõpsa piiril või sildil, et näha sealset kellaaega',
+  'Form of government': 'Riigikord',
+  'Official language': 'Riigikeel',
+  'Continent': 'Manner',
+  'Part of': 'Kuulub',
+  'Country brief': 'Riigi ülevaade',
 }

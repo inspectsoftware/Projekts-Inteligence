@@ -400,6 +400,10 @@ function styleFor(C: Palette) {
     ),
     placeLabel('label-place-town', ['town'], { min: 7.5 }, 'Noto Sans Regular', [[7.5, 10], [12, 13.5]], C.label),
     placeLabel('label-place-city', ['city'], { min: 4 }, 'Noto Sans Bold', [[4, 10.5], [8, 13], [12, 17]], C.labelStrong),
+    placeLabel('label-state', ['state', 'province'], { min: 4.5, max: 8 }, 'Noto Sans Regular', [[4.5, 9.5], [8, 12]], C.labelDim, {
+      'text-transform': 'uppercase',
+      'text-letter-spacing': 0.14,
+    }),
     placeLabel('label-country', ['country'], { max: 7.5 }, 'Noto Sans Bold', [[3, 10], [7, 13]], C.labelDim, {
       'text-transform': 'uppercase',
       'text-letter-spacing': 0.28,
@@ -421,6 +425,18 @@ const STYLES: Record<MapTheme, ReturnType<typeof styleFor>> = { dark: styleFor(D
  * is lost on a sunlit roof.
  */
 export const IMAGERY_TEXT_COLOR = STYLES.dark.imageryText
+
+/**
+ * Place names that can be clicked, each with the scale its place is looked up at: 3 finds the
+ * country around a point, 5 the state, 10 the city, 12 the town, 14 the village or quarter.
+ */
+export const PLACE_LABEL_LEVEL: Record<string, number> = {
+  'label-country': 3,
+  'label-state': 5,
+  'label-place-city': 10,
+  'label-place-town': 12,
+  'label-place-small': 14,
+}
 
 /** Paint values that differ between the two palettes, as [layer, property]: all a change of theme has to touch. */
 const THEMED: [string, string][] = STYLES.dark.layers.flatMap((layer, index) => {

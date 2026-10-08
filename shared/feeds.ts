@@ -269,6 +269,20 @@ export interface ConflictProps {
   kind: 'state-based' | 'non-state' | 'one-sided'
 }
 
+/** The facts a place may carry, in the order they are shown, each with the Wikidata property it comes from. */
+export const PLACE_FACTS = {
+  capital: 'P36',
+  headOfState: 'P35',
+  headOfGovernment: 'P6',
+  government: 'P122',
+  currency: 'P38',
+  language: 'P37',
+  continent: 'P30',
+  timezone: 'P421',
+  partOf: 'P131',
+} as const
+export type PlaceFact = keyof typeof PLACE_FACTS
+
 /** What is known about a place anywhere on Earth (GET /api/place). */
 export interface PlaceInfo {
   name: string
@@ -285,6 +299,8 @@ export interface PlaceInfo {
   areaKm2: number | null
   elevationM: number | null
   website: string | null
+  /** Political and geographic facts from Wikidata, named by PLACE_FACTS, in the reader's language where there is one. */
+  facts: { key: PlaceFact; value: string }[]
   /** The opening of its Wikipedia article. */
   extract: string | null
   wiki: string | null

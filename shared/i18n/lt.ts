@@ -1100,4 +1100,9 @@ export const lt: Record<string, string> = {
   'Time zone': 'Laiko juosta',
   'Time zones': 'Laiko juostos',
   'Time zone boundaries and their offset from UTC. Click a boundary or a label for the time there now': 'Laiko juostų ribos ir jų poslinkis nuo UTC. Spustelėkite ribą arba užrašą, kad pamatytumėte dabartinį laiką ten',
+  'Form of government': 'Valdymo forma',
+  'Official language': 'Valstybinė kalba',
+  'Continent': 'Žemynas',
+  'Part of': 'Priklauso',
+  'Country brief': 'Šalies apžvalga',
 }

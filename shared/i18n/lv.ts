@@ -1130,4 +1130,9 @@ export const lv: Record<string, string> = {
   'Time zone': 'Laika josla',
   'Time zones': 'Laika joslas',
   'Time zone boundaries and their offset from UTC. Click a boundary or a label for the time there now': 'Laika joslu robežas un to nobīde no UTC. Noklikšķiniet uz robežas vai uzraksta, lai redzētu pašreizējo laiku tur',
+  'Form of government': 'Valsts iekārta',
+  'Official language': 'Valsts valoda',
+  'Continent': 'Kontinents',
+  'Part of': 'Ietilpst',
+  'Country brief': 'Valsts apskats',
 }

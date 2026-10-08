@@ -123,6 +123,16 @@ export function Inspector() {
             </button>
           )}
         </div>
+        {model.actions?.map((action) => (
+          <button
+            key={action.label}
+            type="button"
+            onClick={action.run}
+            className="border border-line bg-ink-850 py-1.5 text-[10px] tracking-[0.16em] text-fg-dim uppercase transition-colors hover:bg-ink-700 hover:text-accent"
+          >
+            {action.label}
+          </button>
+        ))}
         {model.links.length > 0 && (
           <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] tracking-[0.08em]">
             {model.links.map((link) => (
