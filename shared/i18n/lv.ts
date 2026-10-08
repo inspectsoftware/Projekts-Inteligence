@@ -1112,4 +1112,9 @@ export const lv: Record<string, string> = {
   'dock::Amber': 'Brīd',
   'Air photos of the Baltic states and ten more countries, down to 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.': 'Baltijas valstu un vēl desmit valstu aerofoto, līdz 0,25 m uz pikseli. Citur 10 m satelītdati, neasi aiz 13. tālummaiņas līmeņa.',
   'Air photos of Latvia, Estonia and ten more countries, down to 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.': 'Latvijas, Igaunijas un vēl desmit valstu aerofoto, līdz 0,25 m uz pikseli. Citur 10 m satelītdati, neasi aiz 13. tālummaiņas līmeņa.',
+  'Save this window layout for the next visit. Without it the page opens with no windows': 'Saglabāt šo logu izkārtojumu nākamajam apmeklējumam. Bez tā lapa atveras bez logiem',
+  'Save window layout': 'Saglabāt logu izkārtojumu',
+  'Saved': 'Saglab',
+  'dock::Save': 'Saglab',
+  'Close every window and forget the saved layout': 'Aizvērt visus logus un aizmirst saglabāto izkārtojumu',
 }

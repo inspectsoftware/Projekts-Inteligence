@@ -1094,4 +1094,9 @@ export const ru: Record<string, string> = {
   'dock::Amber': 'Опов',
   'Air photos of the Baltic states and ten more countries, down to 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.': 'Аэрофотоснимки стран Балтии и ещё десяти стран, до 0,25 м на пиксель. В остальных местах спутниковые данные 10 м, размытые после 13-го уровня масштаба.',
   'Air photos of Latvia, Estonia and ten more countries, down to 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.': 'Аэрофотоснимки Латвии, Эстонии и ещё десяти стран, до 0,25 м на пиксель. В остальных местах спутниковые данные 10 м, размытые после 13-го уровня масштаба.',
+  'Save this window layout for the next visit. Without it the page opens with no windows': 'Сохранить эту раскладку окон для следующего визита. Без этого страница открывается без окон',
+  'Save window layout': 'Сохранить раскладку окон',
+  'Saved': 'Сохр',
+  'dock::Save': 'Сохр',
+  'Close every window and forget the saved layout': 'Закрыть все окна и забыть сохранённую раскладку',
 }

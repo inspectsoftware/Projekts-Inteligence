@@ -71,9 +71,8 @@ function useAlertBadge(): WindowBadge | null {
 }
 
 /**
- * Dock order. Default slots are laid out for 1440x900, and the ones open at the start still clear
- * each other in a viewport some 720px high, which is what a browser leaves of a laptop screen.
- * The rest share the middle of the map until they are moved.
+ * Dock order. Nothing is open on arrival: the page starts as a clear map, and a layout comes back
+ * only if the reader saved one. Default slots are laid out for 1440x900.
  */
 export const WINDOWS: readonly WindowDef[] = [
   {
@@ -81,7 +80,7 @@ export const WINDOWS: readonly WindowDef[] = [
     title: t('Layers'),
     short: t('dock::Layer'),
     icon: 'M8 2l6 3-6 3-6-3zM2 8l6 3 6-3M2 11l6 3 6-3',
-    defaultOpen: true,
+    defaultOpen: false,
     placement: { corner: 'tl', dx: 56, dy: 52 },
     width: 240,
     height: 420,
@@ -93,11 +92,12 @@ export const WINDOWS: readonly WindowDef[] = [
     title: t('Display'),
     short: t('Disp'),
     icon: 'M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8 2.5v11',
-    defaultOpen: true,
+    defaultOpen: false,
     placement: { corner: 'tl', dx: 56, dy: 480 },
     width: 240,
     // Room for the note on where the satellite base stops being sharp, the longest of the four.
     height: 240,
+    resizable: { min: { w: 220, h: 160 }, max: { w: 420, h: 800 } },
     component: DisplayWindow,
   },
   {
@@ -109,6 +109,7 @@ export const WINDOWS: readonly WindowDef[] = [
     placement: { corner: 'tl', dx: 304, dy: 608 },
     width: 240,
     height: 280,
+    resizable: { min: { w: 200, h: 140 }, max: { w: 420, h: 800 } },
     component: ViewsWindow,
   },
   {
@@ -116,7 +117,7 @@ export const WINDOWS: readonly WindowDef[] = [
     title: t('Situation'),
     short: t('Sit'),
     icon: 'M1.5 8.5h3l2-5 3 9 2-4h3',
-    defaultOpen: true,
+    defaultOpen: false,
     // Left of the map buttons, not under them.
     placement: { corner: 'tr', dx: 54, dy: 52 },
     width: 288,
@@ -129,11 +130,12 @@ export const WINDOWS: readonly WindowDef[] = [
     title: t('Alerts'),
     short: t('Alert'),
     icon: 'M8 2.5l6 10.5H2zM8 6.5v3M8 11v.5',
-    defaultOpen: true,
+    defaultOpen: false,
     placement: { corner: 'tc', dx: 0, dy: 52 },
     width: 416,
     height: 240,
     useBadge: useAlertBadge,
+    resizable: { min: { w: 280, h: 120 }, max: { w: 720, h: 1000 } },
     component: AlertStack,
   },
   {
@@ -185,7 +187,7 @@ export const WINDOWS: readonly WindowDef[] = [
     title: t('Intel feed'),
     short: t('Intel'),
     icon: 'M3 4h10M3 8h10M3 12h6',
-    defaultOpen: true,
+    defaultOpen: false,
     // Raised off the bottom edge: on wide screens the data credits fill that corner.
     placement: { corner: 'br', dx: 12, dy: 136 },
     width: 340,
@@ -276,6 +278,7 @@ export const WINDOWS: readonly WindowDef[] = [
       },
       leave: () => useSelection.getState().select(null),
     },
+    resizable: { min: { w: 240, h: 220 }, max: { w: 560, h: 1000 } },
     component: Inspector,
   },
 ]

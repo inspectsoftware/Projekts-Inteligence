@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { savedLayout, useWindows } from '../../src/state/windows'
 import { type Rect, clamp, resolve, snap, toPlacement, usableBounds } from '../../src/ui/windows/geometry'
 
 const viewport = { w: 1440, h: 900 }
@@ -87,5 +88,29 @@ describe('window placement', () => {
   it('centres a default placement whatever the width', () => {
     expect(resolve({ corner: 'tc', dx: 0, dy: 52 }, { w: 416, h: 100 }, viewport)).toEqual({ x: 512, y: 52 })
     expect(resolve({ corner: 'bc', dx: -120, dy: 56 }, { w: 352, h: 62 }, viewport)).toEqual({ x: 424, y: 782 })
+  })
+})
+
+describe('window layout', () => {
+  it('is kept for the next visit only when saved, and forgotten on reset', () => {
+    const kept = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => kept.get(key) ?? null,
+      setItem: (key: string, value: string) => void kept.set(key, value),
+      removeItem: (key: string) => void kept.delete(key),
+    })
+    const { open, place, saveLayout, resetLayout } = useWindows.getState()
+    open('intel')
+    place('intel', { corner: 'br', dx: 20, dy: 20 })
+    // Opening and moving alone leave nothing behind.
+    expect(savedLayout()).toEqual({ windows: {}, order: [] })
+
+    saveLayout()
+    expect(savedLayout()).toEqual({ windows: { intel: { open: true, placement: { corner: 'br', dx: 20, dy: 20 } } }, order: ['intel'] })
+
+    resetLayout()
+    expect(useWindows.getState().windows).toEqual({})
+    expect(savedLayout()).toEqual({ windows: {}, order: [] })
+    vi.unstubAllGlobals()
   })
 })

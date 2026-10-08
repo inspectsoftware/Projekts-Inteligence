@@ -1113,4 +1113,9 @@ export const et: Record<string, string> = {
   'dock::Amber': 'Hoiat',
   'Air photos of the Baltic states and ten more countries, down to 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.': 'Balti riikide ja veel kümne riigi aerofotod, kuni 0,25 m piksli kohta. Mujal 10 m satelliidiandmed, hägused pärast 13. suumitaset.',
   'Air photos of Latvia, Estonia and ten more countries, down to 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.': 'Läti, Eesti ja veel kümne riigi aerofotod, kuni 0,25 m piksli kohta. Mujal 10 m satelliidiandmed, hägused pärast 13. suumitaset.',
+  'Save this window layout for the next visit. Without it the page opens with no windows': 'Salvesta see akende paigutus järgmiseks külastuseks. Ilma selleta avaneb leht ilma akendeta',
+  'Save window layout': 'Salvesta akende paigutus',
+  'Saved': 'Salv',
+  'dock::Save': 'Salv',
+  'Close every window and forget the saved layout': 'Sulge kõik aknad ja unusta salvestatud paigutus',
 }

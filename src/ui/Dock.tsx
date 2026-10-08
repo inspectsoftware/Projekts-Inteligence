@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { t } from '../i18n'
 import { useWindows } from '../state/windows'
 import { POLITICS_HREF } from './politics'
@@ -46,6 +46,13 @@ function DockButton({ def, pressed }: { def: WindowDef; pressed: boolean }) {
 export function Dock() {
   const shown = useShownWindows()
   const resetLayout = useWindows((s) => s.resetLayout)
+  const saveLayout = useWindows((s) => s.saveLayout)
+  const [saved, setSaved] = useState(false)
+  const save = () => {
+    saveLayout()
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1600)
+  }
 
   return (
     <nav
@@ -60,10 +67,19 @@ export function Dock() {
       </a>
       <button
         type="button"
-        title={t('Reset window layout')}
+        title={t('Save this window layout for the next visit. Without it the page opens with no windows')}
+        aria-label={t('Save window layout')}
+        onClick={save}
+        className={`${BUTTON} hover:bg-ink-700 max-md:ml-auto md:mt-auto ${saved ? 'text-ok' : 'text-fg-mute hover:text-fg'}`}
+      >
+        <DockIcon path="M3 2.5h8l2 2v9H3zM5.5 2.5v4h5v-4M5.5 13.5v-4h5v4">{saved ? t('Saved') : t('dock::Save')}</DockIcon>
+      </button>
+      <button
+        type="button"
+        title={t('Close every window and forget the saved layout')}
         aria-label={t('Reset window layout')}
         onClick={resetLayout}
-        className={`${BUTTON} text-fg-mute hover:bg-ink-700 hover:text-fg max-md:ml-auto md:mt-auto`}
+        className={`${BUTTON} text-fg-mute hover:bg-ink-700 hover:text-fg`}
       >
         <DockIcon path="M13 8a5 5 0 11-1.5-3.5M13 2.5V5h-2.5">{t('Reset')}</DockIcon>
       </button>
