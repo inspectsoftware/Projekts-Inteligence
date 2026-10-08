@@ -29,12 +29,12 @@ export function mountClient(app: Hono, clientDir: string | null): void {
     return files(c, next)
   })
 
-  // Only navigations fall back to the app shell. A request for a file that is gone
-  // (for example a hashed chunk from the previous deploy) must be a real 404, or the
-  // browser would try to run index.html as JavaScript.
+  // The app has one page and keeps its view in the URL hash, so only / gets the app shell.
+  // Anything else is a real 404: a hashed chunk from the previous deploy must not come back
+  // as index.html, and a scanner probing /admin or /.git/config must not be told 200.
   let indexHtml: Promise<string> | null = null
   app.get('*', async (c) => {
-    if (HAS_EXTENSION.test(c.req.path)) {
+    if (c.req.path !== '/') {
       c.header('Cache-Control', 'no-store')
       return c.text('Not found', 404)
     }

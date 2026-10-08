@@ -48,10 +48,12 @@ describe('api', () => {
 
   it('sets security headers on api, file, shell and 404 responses', async () => {
     const app = createApp({ clientDir })
-    for (const path of ['/api/health', '/assets/app-abc123.js', '/some/route', '/assets/gone.js']) {
+    for (const path of ['/api/health', '/assets/app-abc123.js', '/', '/some/route', '/assets/gone.js']) {
       const res = await app.request(path)
       expect(res.headers.get('content-security-policy'), path).toContain("default-src 'self'")
       expect(res.headers.get('x-content-type-options'), path).toBe('nosniff')
+      expect(res.headers.get('strict-transport-security'), path).toContain('max-age=')
+      expect(res.headers.get('x-frame-options'), path).toBe('DENY')
     }
   })
 })
@@ -166,10 +168,13 @@ describe('client files', () => {
     expect(res.headers.get('cache-control')).toContain('immutable')
   })
 
-  it('falls back to the app shell for navigations', async () => {
-    const res = await createApp({ clientDir }).request('/some/deep/route')
-    expect(res.status).toBe(200)
-    expect(await res.text()).toContain('id="root"')
+  it('answers paths the app does not have with a 404, not the app shell', async () => {
+    const app = createApp({ clientDir })
+    for (const path of ['/some/deep/route', '/wp-admin', '/.git/config', '/.env']) {
+      const res = await app.request(path)
+      expect(res.status, path).toBe(404)
+      expect(await res.text(), path).not.toContain('id="root"')
+    }
   })
 
   it('returns a real 404 for a missing file instead of the app shell', async () => {
