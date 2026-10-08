@@ -13,6 +13,7 @@ import { satellitesLayer } from './satellites'
 import { gaugesLayer, radiationLayer } from './sensors'
 import { shipsLayer } from './ships'
 import { stationsLayer } from './stations'
+import { timezonesLayer } from './timezones'
 import { trainsLayer } from './trains'
 import { transitLayer } from './transit'
 import type { LayerDef, LayerGroup } from './types'
@@ -23,6 +24,7 @@ import { airspaceLayer, seaWarningsLayer } from './zones'
 export const LAYERS: readonly LayerDef[] = [
   dangerLayer,
   ...REFERENCE_LAYERS,
+  timezonesLayer,
   seaExerciseAreasLayer,
   militarySitesLayer,
   conflictsLayer,

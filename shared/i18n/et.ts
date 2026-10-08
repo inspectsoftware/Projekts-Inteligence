@@ -1125,4 +1125,10 @@ export const et: Record<string, string> = {
   'Dark panels and the dark tactical map': 'Tumedad paneelid ja tume taktikaline kaart',
   'Theme': 'Teema',
   'Map': 'Kaart',
+  'Time there now': 'Kellaaeg seal praegu',
+  'Covers': 'Hõlmab',
+  'Region': 'Piirkond',
+  'Time zone': 'Ajavöönd',
+  'Time zones': 'Ajavööndid',
+  'Time zone boundaries and their offset from UTC. Click a boundary or a label for the time there now': 'Ajavööndite piirid ja nende nihe UTC suhtes. Klõpsa piiril või sildil, et näha sealset kellaaega',
 }

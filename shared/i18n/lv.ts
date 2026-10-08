@@ -1124,4 +1124,10 @@ export const lv: Record<string, string> = {
   'Dark panels and the dark tactical map': 'Tumši paneļi un tumšā taktiskā karte',
   'Theme': 'Motīvs',
   'Map': 'Karte',
+  'Time there now': 'Laiks tur pašlaik',
+  'Covers': 'Aptver',
+  'Region': 'Reģions',
+  'Time zone': 'Laika josla',
+  'Time zones': 'Laika joslas',
+  'Time zone boundaries and their offset from UTC. Click a boundary or a label for the time there now': 'Laika joslu robežas un to nobīde no UTC. Noklikšķiniet uz robežas vai uzraksta, lai redzētu pašreizējo laiku tur',
 }

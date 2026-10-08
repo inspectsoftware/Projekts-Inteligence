@@ -24,6 +24,7 @@ import {
 } from '../../src/map/orthoClip'
 import { PATIENT_SCHEME, patientUrl } from '../../src/map/patientTiles'
 import { DEM_TILES } from '../../src/map/relief'
+import { localTime } from '../../src/layers/timezones'
 import { buildMask } from '../../src/map/spotlight'
 import { WORLD_ORTHOS, WORLD_SCHEME, worldOrthoUrl } from '../../src/map/worldOrtho'
 import { FIRST_LAYER_OVER_PHOTOS, FIRST_OVERLAY_LAYER, IMAGERY_TEXT_COLOR, buildStyle } from '../../src/map/style'
@@ -342,6 +343,17 @@ describe('coordinates', () => {
     expect(bar.px).toBeLessThanOrEqual(110)
     expect(bar.px).toBeGreaterThan(40)
     expect(bar.label).toMatch(/^(1|2|5)0* (km|m)$/)
+  })
+})
+
+describe('time zones', () => {
+  it('gives the time in a named region with its daylight saving, and by plain offset elsewhere', () => {
+    const summer = Date.parse('2026-07-01T12:00:00Z')
+    const winter = Date.parse('2026-01-01T12:00:00Z')
+    expect(localTime(summer, 2, 'Europe/Helsinki')).toMatch(/15:00$/)
+    expect(localTime(winter, 2, 'Europe/Helsinki')).toMatch(/14:00$/)
+    expect(localTime(winter, 5.75)).toMatch(/17:45$/)
+    expect(localTime(winter, -10, 'Not/AZone')).toMatch(/02:00$/)
   })
 })
 

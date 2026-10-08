@@ -1094,4 +1094,10 @@ export const lt: Record<string, string> = {
   'Dark panels and the dark tactical map': 'Tamsūs skydeliai ir tamsus taktinis žemėlapis',
   'Theme': 'Tema',
   'Map': 'Žemėl',
+  'Time there now': 'Laikas ten dabar',
+  'Covers': 'Apima',
+  'Region': 'Regionas',
+  'Time zone': 'Laiko juosta',
+  'Time zones': 'Laiko juostos',
+  'Time zone boundaries and their offset from UTC. Click a boundary or a label for the time there now': 'Laiko juostų ribos ir jų poslinkis nuo UTC. Spustelėkite ribą arba užrašą, kad pamatytumėte dabartinį laiką ten',
 }

@@ -1106,4 +1106,10 @@ export const ru: Record<string, string> = {
   'Dark panels and the dark tactical map': 'Тёмные панели и тёмная тактическая карта',
   'Theme': 'Тема',
   'Map': 'Карта',
+  'Time there now': 'Время там сейчас',
+  'Covers': 'Охватывает',
+  'Region': 'Регион',
+  'Time zone': 'Часовой пояс',
+  'Time zones': 'Часовые пояса',
+  'Time zone boundaries and their offset from UTC. Click a boundary or a label for the time there now': 'Границы часовых поясов и их смещение от UTC. Нажмите на границу или подпись, чтобы увидеть текущее время там',
 }
