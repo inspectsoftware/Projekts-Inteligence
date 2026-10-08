@@ -24,6 +24,10 @@ export const FEED_IDS = [
   'energy',
   'internet',
   'news',
+  'politics',
+  'notices',
+  'advisories',
+  'conflicts',
   'brief',
   'country-briefs',
   'tv',
@@ -191,11 +195,102 @@ export interface NewsItem {
   tags: string[]
   /** How many other publishers carry the same story. */
   corroboration: number
+  /** Who those publishers are, one story from each: an official body first, five at most. */
+  confirmedBy?: { publisher: string; link: string; official: boolean }[]
   /**
    * What the publisher's terms allow a language model to do with this item: write a one-line
    * summary, only rate it, or not see it at all.
    */
   ai: 'summary' | 'rate-only' | 'none'
+}
+
+/** One outlet the headlines are read from, as the Sources list shows it. */
+export interface NewsOutlet {
+  publisher: string
+  href: string
+  kind: 'media' | 'official' | 'analysis'
+  country: 'LV' | 'LT' | 'EE' | 'INT'
+}
+
+/** A political headline exactly as published: not rated, not summarised, not reordered. */
+export interface PoliticsItem {
+  title: string
+  link: string
+  /** Epoch ms. */
+  at: number
+  publisher: string
+  lang: NewsItem['lang']
+  country: NewsOutlet['country']
+  /** Said by a government, a parliament or a ministry itself. */
+  official: boolean
+}
+
+/** A warning to the public or an appeal to find someone, as its publisher worded it. */
+export interface Notice {
+  id: string
+  kind: 'emergency' | 'missing'
+  title: string
+  /** Who sent it. */
+  issuer: string
+  official: boolean
+  /** Epoch ms. */
+  at: number
+  link: string
+  lang: NewsItem['lang']
+}
+
+/** 0 no warning, 1 avoid non-essential travel to parts, 2 avoid all travel to parts, 3 avoid non-essential travel, 4 avoid all travel. */
+export type AdvisoryLevel = 0 | 1 | 2 | 3 | 4
+
+/** One country's travel advice from a foreign ministry. */
+export interface Advisory {
+  name: string
+  level: AdvisoryLevel
+  /** The warnings in force, in the publisher's own codes. */
+  status: string[]
+  /** What the last change to the advice was about. */
+  note: string
+  /** Epoch ms. */
+  updatedAt: number
+  href: string
+}
+
+/** One event of armed violence, as the Uppsala Conflict Data Program records it. */
+export interface ConflictProps {
+  /** Epoch ms. */
+  from: number
+  to: number
+  /** Best estimate of deaths. */
+  deaths: number
+  country: string
+  conflict: string
+  sides: [string, string]
+  where: string
+  kind: 'state-based' | 'non-state' | 'one-sided'
+}
+
+/** What is known about a place anywhere on Earth (GET /api/place). */
+export interface PlaceInfo {
+  name: string
+  /** What it is, in OpenStreetMap's word: "village", "city", "state", "country"... */
+  kind: string
+  display: string
+  lon: number
+  lat: number
+  country: string | null
+  countryCode: string | null
+  /** The places it lies in, from the nearest outwards. */
+  chain: string[]
+  population: number | null
+  areaKm2: number | null
+  elevationM: number | null
+  website: string | null
+  /** The opening of its Wikipedia article. */
+  extract: string | null
+  wiki: string | null
+  osm: string | null
+  /** West, south, east, north. */
+  bbox: [number, number, number, number] | null
 }
 
 /** A reading of the news feed as a whole: by a language model, or by the rule engine when no key is set. */
@@ -277,7 +372,10 @@ export type FeedPayload =
   | { shape: 'vessel-list'; imo: number[]; mmsi: number[]; shadowImo: number[]; shadowMmsi: number[] }
   | ({ shape: 'energy' } & EnergySnapshot)
   | { shape: 'internet'; signals: InternetSignal[] }
-  | { shape: 'news'; items: NewsItem[] }
+  | { shape: 'news'; items: NewsItem[]; sources?: NewsOutlet[] }
+  | { shape: 'politics'; items: PoliticsItem[] }
+  | { shape: 'notices'; items: Notice[] }
+  | { shape: 'advisories'; countries: Advisory[] }
   | ({ shape: 'brief' } & IntelBrief)
   | { shape: 'country-briefs'; mode: 'ai' | 'rules'; generatedAt: number; briefs: Record<string, CountryBrief> }
   | { shape: 'tv'; channels: TvNow[] }
@@ -305,7 +403,11 @@ export function countOf(payload: FeedPayload): number {
       return payload.mix.length
     case 'internet':
       return payload.signals.length
+    case 'advisories':
+      return payload.countries.length
     case 'news':
+    case 'politics':
+    case 'notices':
       return payload.items.length
     case 'brief':
       return payload.points.length

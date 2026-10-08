@@ -87,6 +87,7 @@ export function Inspector() {
       )}
 
       <dl className="min-h-0 overflow-y-auto px-3 py-2 text-[11px]">
+        {model.note && <p className="border-b border-line/50 pb-2 font-sans text-xs leading-relaxed text-fg-dim">{model.note}</p>}
         {model.rows.map((row) => (
           <div key={row.label} className="flex justify-between gap-3 border-b border-line/50 py-1 last:border-0">
             <dt className="shrink-0 tracking-[0.1em] text-fg-mute uppercase">{row.label}</dt>

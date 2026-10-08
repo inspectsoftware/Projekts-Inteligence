@@ -5,11 +5,14 @@ import { type Aircraft, Flag } from '../../shared/entity'
 import { TV_CHANNELS } from '../../shared/media/tv'
 import { t } from '../i18n'
 import { LAYERS } from '../layers/registry'
+import { formatLat, formatLon, parseCoords } from '../lib/coords'
 import { type SearchItem, rank } from '../lib/search'
 import { VIEWS, flyHome, flyToView } from '../map/camera'
 import { goToEntity } from '../map/goToEntity'
 import { getMap } from '../map/instance'
+import { goToCoords } from '../map/pin'
 import { getEntities } from '../runtime/entityStore'
+import { searchWorld } from '../runtime/place'
 import { isLayerOn, useLayers } from '../state/layers'
 import { usePalette } from '../state/palette'
 import { useWindows } from '../state/windows'
@@ -167,6 +170,46 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
   return items
 }
 
+/** A typed position is not looked up in the index: it is an answer already, and goes first. */
+function coordsItem(query: string): SearchItem[] {
+  const hit = parseCoords(query)
+  if (!hit) return []
+  const [lon, lat] = hit
+  return [
+    {
+      id: 'coords',
+      group: t('Coordinates'),
+      title: `${formatLat(lat)}  ${formatLon(lon)}`,
+      subtitle: t('Go to this position'),
+      run: () => {
+        const map = getMap()
+        if (map) goToCoords(map, lon, lat)
+      },
+    },
+  ]
+}
+
+/**
+ * The gazetteer here is Latvia's. Anywhere else is looked up on request, one question per Enter:
+ * the service that answers allows no search-as-you-type.
+ */
+function worldItem(query: string): SearchItem[] {
+  const words = query.trim()
+  if (words.length < 3 || parseCoords(words)) return []
+  return [
+    {
+      id: 'world',
+      group: t('World'),
+      title: t('Search the world for “{query}”', { query: words }),
+      subtitle: 'OpenStreetMap',
+      run: () => {
+        const map = getMap()
+        if (map) searchWorld(map, words)
+      },
+    },
+  ]
+}
+
 /** Ctrl+K: find a place, a live object, a layer, a window or a view and go straight to it. */
 export function CommandPalette() {
   const open = usePalette((s) => s.open)
@@ -201,7 +244,7 @@ export function CommandPalette() {
   }, [open])
 
   // The live part of the index is rebuilt per keystroke: it is a few hundred items and always current.
-  const results = useMemo(() => (open ? rank(query, buildIndex(places)) : []), [open, query, places])
+  const results = useMemo(() => (open ? [...coordsItem(query), ...rank(query, buildIndex(places)), ...worldItem(query)] : []), [open, query, places])
   const active = Math.min(cursor, Math.max(0, results.length - 1))
 
   if (!open) return null
@@ -242,7 +285,7 @@ export function CommandPalette() {
               setCursor(Math.max(active - 1, 0))
             } else if (event.key === 'Enter') choose(results[active])
           }}
-          placeholder={t('Search places, callsigns, trains, satellites, layers…')}
+          placeholder={t('Search places, coordinates, callsigns, trains, layers…')}
           aria-label={t('Search')}
           autoComplete="off"
           spellCheck={false}

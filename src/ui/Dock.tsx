@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { t } from '../i18n'
 import { useWindows } from '../state/windows'
+import { POLITICS_HREF } from './politics'
 import { BADGE_TEXT, WINDOWS, type WindowDef, toggleWindow, useShownWindows, useWindowBadge } from './windows/registry'
 
 // In the rail a button takes the rail's width, which is a pixel short of w-11 because of the border.
@@ -54,6 +55,9 @@ export function Dock() {
       {WINDOWS.filter((def) => !def.hideInDock).map((def) => (
         <DockButton key={def.id} def={def} pressed={shown.includes(def)} />
       ))}
+      <a href={POLITICS_HREF} title={t('Baltic politics, as published')} className={`${BUTTON} text-fg-dim hover:bg-ink-700 hover:text-fg`}>
+        <DockIcon path="M2 13.5h12M3.5 13.5v-6M6.5 13.5v-6M9.5 13.5v-6M12.5 13.5v-6M2 7.5l6-5 6 5z">{t('dock::Polit')}</DockIcon>
+      </a>
       <button
         type="button"
         title={t('Reset window layout')}

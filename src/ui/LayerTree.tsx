@@ -1,26 +1,10 @@
 import type { FeedStatus } from '../../shared/feeds'
-import { t } from '../i18n'
 import { GROUP_ORDER, LAYERS } from '../layers/registry'
 import { GROUP_LABELS, type LayerDef } from '../layers/types'
 import { type FeedView, useFeeds } from '../state/feeds'
 import { isLayerOn, useLayers } from '../state/layers'
+import { STATUS_DOT, STATUS_TEXT } from './feedStatus'
 import { SectionTitle } from './kit'
-
-const STATUS_DOT: Record<FeedStatus, string> = {
-  ok: 'bg-ok',
-  stale: 'bg-warn',
-  error: 'bg-danger',
-  idle: 'bg-fg-mute',
-  'needs-key': 'bg-fg-mute',
-}
-
-const STATUS_TEXT: Record<FeedStatus, string> = {
-  ok: t('Live'),
-  stale: t('Delayed: showing the last good data'),
-  error: t('Feed unavailable'),
-  idle: t('Waiting for data'),
-  'needs-key': t('Needs an API key'),
-}
 
 const TONE_TEXT = { info: 'text-accent', warn: 'text-warn', danger: 'text-danger', mil: 'text-mil' } as const
 

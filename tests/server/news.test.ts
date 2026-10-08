@@ -5,6 +5,7 @@ import { regionLevel } from '../../shared/escalation'
 import type { NewsItem } from '../../shared/feeds'
 import { translate } from '../../shared/i18n'
 import type { StoredSnapshot } from '../../server/core/disk'
+import { pickPolitics } from '../../server/feeds/politics'
 
 const NOW = Date.parse('2026-10-06T12:00:00Z')
 const HOUR = 3600 * 1000
@@ -349,6 +350,30 @@ describe('rank', () => {
       NOW,
     )
     expect(items.map((item) => item.corroboration)).toEqual([2, 2, 2])
+    // Each names the other two, with a link to their own report, and never itself.
+    const first = items.find((item) => item.publisher === 'LSM')!
+    expect(first.confirmedBy!.map((voice) => voice.publisher).sort()).toEqual(['ERR', 'LRT'])
+    expect(first.confirmedBy!.every((voice) => voice.link !== first.link && !voice.official)).toBe(true)
+    expect(rank([{ item: story('Fuel prices up nearly 10% in a month'), source: lsm }], NOW)[0].confirmedBy).toBeUndefined()
+  })
+
+  it('picks political stories as published, newest first, and nothing else', () => {
+    const picked = pickPolitics(
+      [
+        { item: story('Fuel prices up nearly 10% in a month'), source: lsm },
+        { item: story('Saeima passes next year’s budget', { at: NOW - 2 * HOUR }), source: lsm },
+        { item: story('Valitsus kinnitas eelarve', { at: NOW - HOUR }), source: source({ publisher: 'ERR', group: 'err', lang: 'et', country: 'EE' }) },
+        { item: story('Elephant born at the zoo'), source: lsm },
+        { item: story('Coalition talks collapsed', { at: NOW - 80 * HOUR }), source: lsm },
+        { item: story('Press release on a visit', { at: NOW - 3 * HOUR }), source: source({ id: 'eu-council', publisher: 'Council of the EU', kind: 'official', country: 'INT' }) },
+      ],
+      NOW,
+    )
+    expect(picked.map((item) => [item.title, item.publisher, item.official])).toEqual([
+      ['Valitsus kinnitas eelarve', 'ERR', false],
+      ['Saeima passes next year’s budget', 'LSM', false],
+      ['Press release on a visit', 'Council of the EU', true],
+    ])
   })
 
   it('lets a second publisher or an official body confirm a crisis', () => {

@@ -1,5 +1,5 @@
 import type { Map, PaddingOptions } from 'maplibre-gl'
-import { AOI_BBOX, LATVIA_BBOX } from '../../shared/region'
+import { LATVIA_BBOX } from '../../shared/region'
 import { t } from '../i18n'
 
 export interface View {
@@ -67,13 +67,7 @@ export function flyToView(map: Map, view: View): void {
   })
 }
 
-/** Keeps the camera inside the Baltic region from here on. */
-export function lockToRegion(map: Map): void {
-  map.setMaxBounds([AOI_BBOX[0], AOI_BBOX[1], AOI_BBOX[2], AOI_BBOX[3]])
-}
-
-/** Opening move: descend onto Latvia, then lock the camera to the Baltic region. */
+/** Opening move: descend onto Latvia. The camera is free to leave afterwards: any place on Earth can be looked up. */
 export function runIntro(map: Map): void {
-  map.once('moveend', () => lockToRegion(map))
   flyHome(map, 3400)
 }

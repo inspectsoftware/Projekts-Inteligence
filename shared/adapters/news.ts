@@ -1021,6 +1021,16 @@ export function rank(entries: readonly NewsEntry[], now: number): NewsItem[] {
         other.source.lang === 'en' && other.source.publisher === source.publisher && other.source.country === source.country && apart(other) < SAME_ARTICLE_MS
       if (source.lang !== 'en' && peers.some(retold)) return []
       const groups = new Set(peers.map((other) => other.source.group)).size
+      // One story from each other voice, an official body's word before a newsroom's.
+      const voices = new Map<string, NewsEntry>()
+      for (const other of peers.toSorted((a, b) => Number(b.source.kind === 'official') - Number(a.source.kind === 'official'))) {
+        if (other.source.group !== source.group && !voices.has(other.source.group)) voices.set(other.source.group, other)
+      }
+      const confirmedBy = [...voices.values()].slice(0, 5).map((other) => ({
+        publisher: other.source.publisher,
+        link: other.item.link,
+        official: other.source.kind === 'official',
+      }))
       const { importance, escalation, tags, countries } =
         peers.length > 1 ? score(item, source, now, { groups, official: peers.some((other) => other.source.kind === 'official') }) : alone
       return [
@@ -1036,6 +1046,7 @@ export function rank(entries: readonly NewsEntry[], now: number): NewsItem[] {
           escalation,
           tags,
           corroboration: groups - 1,
+          ...(confirmedBy.length > 0 && { confirmedBy }),
           ai: source.ai,
         },
       ]

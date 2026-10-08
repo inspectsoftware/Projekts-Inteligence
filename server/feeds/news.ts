@@ -1,6 +1,6 @@
 import { type NewsEntry, type NewsSource, type RawNews, linksOf, parseFeed, rank } from '../../shared/adapters/news'
 import type { NewsItem } from '../../shared/feeds'
-import { UpstreamError } from '../core/upstream'
+import { type Upstream, UpstreamError } from '../core/upstream'
 import { setBlurbs } from './newsBlurbs'
 import type { FeedDef } from './types'
 
@@ -75,6 +75,28 @@ const lastRead = new Map<string, { at: number; items: RawNews[] }>()
 /** The stories behind the last answer: a busy feed lets go of a story within hours, long before it stops mattering. */
 let served: NewsEntry[] = []
 
+/** Reads every feed that is due. One dead feed never sinks the panel; all of them dead is a failure. */
+export async function readSources(http: Upstream, now: number): Promise<void> {
+  const due = SOURCES.filter((source) => source.kind === 'media' || now - (lastRead.get(source.id)?.at ?? -Infinity) >= SLOW_FEED_MS)
+  const results = await Promise.allSettled(
+    due.map(async (source) => {
+      const items = parseFeed(await http.text(source.url, { maxBytes: MAX_BYTES, timeoutMs: 12_000 }), source)
+      // A challenge page or an error page served with a 200 is not a feed.
+      if (items.length === 0) throw new UpstreamError('bad-body', `${new URL(source.url).host} did not send any stories`)
+      lastRead.set(source.id, { at: now, items })
+    }),
+  )
+  const failed = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+  if (failed.length === due.length) throw failed[0].reason
+}
+
+/** Every story the newsrooms still carry, unrated: what the politics page picks from. */
+export function newsEntries(now: number): NewsEntry[] {
+  return SOURCES.flatMap((source) =>
+    (lastRead.get(source.id)?.items ?? []).filter((item) => now - item.at < WINDOW_MS).map((item) => ({ item, source })),
+  )
+}
+
 /** The most important stories always make the list. What room is left goes to the newest of the rest. */
 function pick(ranked: readonly NewsItem[]): NewsItem[] {
   const newest = ranked.slice(TOP).toSorted((a, b) => b.at - a.at).slice(0, LIMIT - TOP)
@@ -99,18 +121,7 @@ export const newsFeed: FeedDef = {
     (source) => ({ label: source.publisher, href: linksOf(source)[0] }),
   ),
   async load({ http, now }) {
-    const due = SOURCES.filter((source) => source.kind === 'media' || now - (lastRead.get(source.id)?.at ?? -Infinity) >= SLOW_FEED_MS)
-    const results = await Promise.allSettled(
-      due.map(async (source) => {
-        const items = parseFeed(await http.text(source.url, { maxBytes: MAX_BYTES, timeoutMs: 12_000 }), source)
-        // A challenge page or an error page served with a 200 is not a feed.
-        if (items.length === 0) throw new UpstreamError('bad-body', `${new URL(source.url).host} did not send any stories`)
-        lastRead.set(source.id, { at: now, items })
-      }),
-    )
-    // One dead feed never sinks the panel; all of them dead is a failure.
-    const failed = results.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
-    if (failed.length === due.length) throw failed[0].reason
+    await readSources(http, now)
 
     const recent = (item: RawNews) => now - item.at < WINDOW_MS
     const pool = new Map<string, NewsEntry>()
@@ -128,7 +139,10 @@ export const newsFeed: FeedDef = {
     const items = pick(rank([...pool.values()], now))
     served = items.map((item) => pool.get(item.link)!)
     setBlurbs(served.filter(({ item, source }) => source.ai !== 'none' && item.desc).map(({ item }) => [item.link, item.desc]))
-    return { shape: 'news', items }
+    const sources = SOURCES.filter((source, index) => SOURCES.findIndex((other) => other.publisher === source.publisher) === index).map(
+      ({ publisher, kind, country, ...source }) => ({ publisher, href: linksOf(source)[0], kind, country }),
+    )
+    return { shape: 'news', items, sources }
   },
   // Also turns away the copy an older build left on disk: its headlines carry no ratings, and the cache drops a copy that cannot be counted.
   count(payload) {

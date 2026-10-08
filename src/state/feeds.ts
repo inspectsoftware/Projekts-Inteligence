@@ -49,6 +49,7 @@ export const useFeeds = create<FeedsState>()((set) => ({
           ...current,
           title: meta.title,
           attribution: meta.attribution,
+          updatedAt: current?.updatedAt ?? meta.updatedAt,
           // A feed being polled already knows its own status better than the list does.
           status: current && current.status !== 'idle' ? current.status : meta.status,
         }

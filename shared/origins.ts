@@ -10,8 +10,21 @@ export const TILE_ORIGINS = {
   /** National orthophotos laid over it at street zoom: Latvia (LVM GEO) and Estonia. */
   lvmGeo: 'https://geoserver.lvmgeo.lv',
   maaamet: 'https://tiles.maaamet.ee',
+  /** Open national orthophotos elsewhere: USA, Japan, Spain, France, the Netherlands, Luxembourg, Switzerland, Austria, Czechia, Poland. */
+  usgs: 'https://basemap.nationalmap.gov',
+  gsiJapan: 'https://cyberjapandata.gsi.go.jp',
+  ignSpain: 'https://www.ign.es',
+  ignFrance: 'https://data.geopf.fr',
+  pdok: 'https://service.pdok.nl',
+  geoportailLu: 'https://wmts1.geoportail.lu',
+  swisstopo: 'https://wmts.geo.admin.ch',
+  basemapAt: 'https://mapsneu.wien.gv.at',
+  cuzk: 'https://ags.cuzk.gov.cz',
+  geoportalPl: 'https://mapy.geoportal.gov.pl',
   /** NASA GIBS daily imagery and night lights. */
   gibs: 'https://gibs.earthdata.nasa.gov',
+  /** Ground elevation for the 3D relief. */
+  mapterhorn: 'https://tiles.mapterhorn.com',
   /** RainViewer: the list of radar scans, and the radar tiles themselves. */
   rainViewerApi: 'https://api.rainviewer.com',
   rainViewerTiles: 'https://tilecache.rainviewer.com',

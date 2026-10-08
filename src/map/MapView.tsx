@@ -3,19 +3,23 @@ import { Map as MapLibreMap, addProtocol, setWorkerUrl } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef } from 'react'
+import { AOI_BBOX, inBBox } from '../../shared/region'
 import { t } from '../i18n'
 import { setBorder } from '../runtime/border'
 import { useRecent, useUi } from '../state/ui'
+import { whatIsHere } from '../runtime/place'
 import { finishBoot } from '../ui/boot'
 import { applyBaseMode, applyZoomCeiling, rasterId } from './baseMode'
 import { ORTHO_LITHUANIA, clampZoom, recentEnd, zoomCeiling } from './basemaps'
-import { INTRO_START, lockToRegion, runIntro } from './camera'
+import { INTRO_START, runIntro } from './camera'
 import { setMap, setMapFailure, useMap, useMapFailure } from './instance'
 import { CLIP_SCHEME, TRIM_SCHEME, loadEstoniaTile, loadLatviaTile, setClipBorder } from './orthoClip'
 import { PATIENT_SCHEME, loadPatientTile } from './patientTiles'
+import { applyRelief } from './relief'
 import { startScene } from './scene'
 import { addSpotlight } from './spotlight'
 import { buildStyle } from './style'
+import { WORLD_SCHEME, loadWorldOrthoTile } from './worldOrtho'
 import { readUrlView, writeUrlView } from './urlView'
 
 // MapLibre 6 is ESM-only: under a bundler its worker has to be given as a URL.
@@ -25,11 +29,13 @@ setWorkerUrl(workerUrl)
 addProtocol(CLIP_SCHEME, loadLatviaTile)
 addProtocol(TRIM_SCHEME, loadEstoniaTile)
 addProtocol(PATIENT_SCHEME, loadPatientTile)
+addProtocol(WORLD_SCHEME, loadWorldOrthoTile)
 
 export function MapView() {
   const containerRef = useRef<HTMLDivElement>(null)
   const vision = useUi((s) => s.vision)
   const base = useUi((s) => s.base)
+  const relief = useUi((s) => s.relief)
   const back = useRecent((s) => s.back)
   const map = useMap()
   const error = useMapFailure()
@@ -41,6 +47,11 @@ export function MapView() {
     applyBaseMode(map, base, base === 'recent' ? recentEnd(new Date(), back) : new Date())
     return applyZoomCeiling(map, zoomCeiling(base))
   }, [map, base, back])
+
+  // After the one above, every time it runs: a new base hides the buildings and buries the shading.
+  useEffect(() => {
+    if (map) applyRelief(map, relief, base !== 'dark')
+  }, [map, base, back, relief])
 
   useEffect(() => {
     // Someone following a shared link wants that view, not the opening fly-in.
@@ -56,7 +67,7 @@ export function MapView() {
         zoom: clampZoom(urlView?.zoom ?? INTRO_START.zoom, startBase),
         bearing: urlView?.bearing ?? 0,
         pitch: urlView?.pitch ?? 0,
-        minZoom: 3,
+        minZoom: 1.5,
         maxZoom: zoomCeiling(startBase),
         maxPitch: 70,
         attributionControl: false,
@@ -122,10 +133,12 @@ export function MapView() {
         setMap(created)
         stopScene = startScene(created)
         finishBoot()
-        if (urlView) lockToRegion(created)
-        else runIntro(created)
+        if (!urlView) runIntro(created)
+        created.on('contextmenu', (event) => whatIsHere(created, event.lngLat.lng, event.lngLat.lat))
         created.on('moveend', () => {
           const { lng, lat } = created.getCenter()
+          // The shade that sets Latvia apart would only darken a map of somewhere else.
+          if (created.getLayer('lv-mask')) created.setLayoutProperty('lv-mask', 'visibility', inBBox(lng, lat, AOI_BBOX) ? 'visible' : 'none')
           writeUrlView({ center: [lng, lat], zoom: created.getZoom(), bearing: created.getBearing(), pitch: created.getPitch() })
         })
       })()

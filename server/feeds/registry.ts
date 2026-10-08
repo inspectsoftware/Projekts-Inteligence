@@ -1,10 +1,14 @@
 import type { FeedId } from '../../shared/feeds'
+import { advisoriesFeed } from './advisories'
 import { aircraftFeed, militaryAirFeed } from './aircraft'
 import { briefFeed } from './brief'
 import { camsFeed } from './cams'
+import { conflictsFeed } from './conflicts'
 import { countryBriefsFeed } from './countryBriefs'
 import { gpsHexFeed } from './gpsHex'
 import { newsFeed } from './news'
+import { noticesFeed } from './notices'
+import { politicsFeed } from './politics'
 import { energyFeed, internetFeed, radiationFeed, riversFeed } from './panels'
 import { camerasFeed, roadsFeed } from './roads'
 import { satellitesFeed } from './satellites'
@@ -42,6 +46,10 @@ export const FEEDS: FeedRegistry = {
   energy: energyFeed,
   internet: internetFeed,
   news: newsFeed,
+  politics: politicsFeed,
+  notices: noticesFeed,
+  advisories: advisoriesFeed,
+  conflicts: conflictsFeed,
   brief: briefFeed,
   'country-briefs': countryBriefsFeed,
   tv: tvFeed,

@@ -4,7 +4,7 @@ import type { Map, RequestParameters } from 'maplibre-gl'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildCsp } from '../../shared/csp'
 import { BROWSER_ORIGINS, LITHUANIA_ENABLED, LITHUANIA_ORIGIN, RADAR_INDEX_URL, TILE_ORIGINS } from '../../shared/origins'
-import { formatLat, formatLon, formatMgrs, scaleBar } from '../../src/lib/coords'
+import { formatLat, formatLon, formatMgrs, parseCoords, scaleBar } from '../../src/lib/coords'
 import { applyZoomCeiling } from '../../src/map/baseMode'
 import { BASE_MODES, MAX_ZOOM, ORTHO_LITHUANIA, RASTER_BASES, clampZoom, gibsDate, zoomCeiling } from '../../src/map/basemaps'
 import {
@@ -23,7 +23,9 @@ import {
   toWorld,
 } from '../../src/map/orthoClip'
 import { PATIENT_SCHEME, patientUrl } from '../../src/map/patientTiles'
+import { DEM_TILES } from '../../src/map/relief'
 import { buildMask } from '../../src/map/spotlight'
+import { WORLD_ORTHOS, WORLD_SCHEME, worldOrthoUrl } from '../../src/map/worldOrtho'
 import { FIRST_LAYER_OVER_PHOTOS, FIRST_OVERLAY_LAYER, IMAGERY_TEXT_COLOR, buildStyle } from '../../src/map/style'
 
 afterEach(() => vi.unstubAllGlobals())
@@ -51,8 +53,9 @@ describe('content security policy', () => {
       ...Object.values(RASTER_BASES)
         .flatMap((base) => base.sources)
         .map((source) => source.tiles(now))
-        .map((tiles) => behind[tiles] ?? (tiles.startsWith(PATIENT_SCHEME) ? patientUrl(tiles) : tiles)),
+        .map((tiles) => behind[tiles] ?? (tiles.startsWith(PATIENT_SCHEME) ? patientUrl(tiles) : tiles.startsWith(WORLD_SCHEME) ? worldOrthoUrl(tiles.replace('{z}/{x}/{y}', '15/1/2')) : tiles)),
       RADAR_INDEX_URL,
+      DEM_TILES,
       `${TILE_ORIGINS.rainViewerTiles}/v2/radar/abc123/256/6/36/19/2/1_1.png`,
     ]
     // Nor is anything allowed that the map does not load from.
@@ -87,12 +90,17 @@ describe('basemaps', () => {
   it('stacks the orthophotos in the order that hides their edges', () => {
     // Estonia under Latvia (its navy edge), Lithuania on top (its own clean cut), and only when switched on.
     const ids = RASTER_BASES.imagery.sources.map((source) => source.id)
-    expect(ids).toEqual(['eox', 'ee', 'lv', ...(LITHUANIA_ENABLED ? ['lt'] : [])])
+    const abroad = WORLD_ORTHOS.map((ortho) => ortho.id)
+    expect(ids).toEqual(['eox', ...abroad, 'ee', 'lv', ...(LITHUANIA_ENABLED ? ['lt'] : [])])
   })
 
   it('lays only the air photos over the drawn streets', () => {
     const over = Object.values(RASTER_BASES).flatMap((base) => base.sources.filter((source) => source.coversStreets).map((source) => source.id))
-    expect(over).toEqual(['ee', 'lv', ...(LITHUANIA_ENABLED ? ['lt'] : [])])
+    expect(over).toEqual([...WORLD_ORTHOS.map((ortho) => ortho.id), 'ee', 'lv', ...(LITHUANIA_ENABLED ? ['lt'] : [])])
+    // Level, column and row land where each service expects them.
+    expect(worldOrthoUrl('ortho://jp/15/7/9')).toBe('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/15/7/9.jpg')
+    expect(worldOrthoUrl('ortho://us/15/7/9')).toMatch(/\/tile\/15\/9\/7$/)
+    expect(worldOrthoUrl('ortho://pl/15/7/9')).toContain('TILEMATRIX=EPSG:3857:15&TILEROW=9&TILECOL=7')
     expect(ORTHO_LITHUANIA.coversStreets).toBe(true)
   })
 
@@ -309,6 +317,24 @@ describe('coordinates', () => {
     expect(formatLat(56.9496)).toBe('56.94960° N')
     expect(formatLon(24.1052)).toBe('024.10520° E')
     expect(formatLon(-3.5)).toBe('003.50000° W')
+  })
+
+  it('reads a typed position in the forms people paste', () => {
+    const near = (text: string, lon: number, lat: number) => {
+      const hit = parseCoords(text)
+      expect(hit, text).not.toBeNull()
+      expect(hit![0], text).toBeCloseTo(lon, 3)
+      expect(hit![1], text).toBeCloseTo(lat, 3)
+    }
+    near('56.9496, 24.1052', 24.1052, 56.9496)
+    near('56.9496 24.1052', 24.1052, 56.9496)
+    near('-33.8688, 151.2093', 151.2093, -33.8688)
+    near('56.9496N 24.1052E', 24.1052, 56.9496)
+    near('E24.1052 N56.9496', 24.1052, 56.9496)
+    near('40.7128° N, 74.0060° W', -74.006, 40.7128)
+    near(`56°56'58.6"N 24°06'18.7"E`, 24.10519, 56.94961)
+    near('35V LD 23939 15504', 24.1052, 56.9496)
+    for (const text of ['', 'riga', '101', '95, 24', '56.9, 240', `56°75'N 24°E`, 'train 56 24']) expect(parseCoords(text), text).toBeNull()
   })
 
   it('picks a round scale bar that fits', () => {

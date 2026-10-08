@@ -3,6 +3,7 @@ import { LATVIA_BBOX } from '../../shared/region'
 import { t } from '../i18n'
 import { CLIP_SCHEME, TRIM_SCHEME } from './orthoClip'
 import { PATIENT_SCHEME } from './patientTiles'
+import { WORLD_ORTHO_SOURCES } from './worldOrtho'
 
 export type BaseMode = 'dark' | 'imagery' | 'recent' | 'daily' | 'night'
 
@@ -116,6 +117,8 @@ export const RASTER_BASES: Record<Exclude<BaseMode, 'dark'>, RasterBase> = {
           href: 'https://s2maps.eu',
         },
       },
+      // Under the Baltic photos, which are cut to their borders with more care.
+      ...WORLD_ORTHO_SOURCES,
       {
         id: 'ee',
         tiles: () => `${TRIM_SCHEME}://{z}/{x}/{y}`,
@@ -216,8 +219,8 @@ export const BASE_MODES: readonly { id: BaseMode; label: string; hint: string; d
     label: t('Sat'),
     hint: t('National orthophotos over the Sentinel-2 cloudless mosaic (2025)'),
     detail: LITHUANIA_ENABLED
-      ? t('Air photos of the Baltic states, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.')
-      : t('Air photos of Latvia and Estonia, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.'),
+      ? t('Air photos of the Baltic states and ten more countries, down to 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.')
+      : t('Air photos of Latvia, Estonia and ten more countries, down to 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.'),
   },
   {
     id: 'recent',

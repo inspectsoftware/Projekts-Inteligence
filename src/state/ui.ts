@@ -15,8 +15,10 @@ export const VISION_MODES: readonly { id: VisionMode; label: string; hint: strin
 interface UiState {
   vision: VisionMode
   base: BaseMode
+  relief: boolean
   setVision(vision: VisionMode): void
   setBase(base: BaseMode): void
+  setRelief(relief: boolean): void
 }
 
 /** How many days into the past the recent imagery is turned back. Starts at the newest on every visit. */
@@ -31,8 +33,10 @@ export const useUi = create<UiState>()(
     (set) => ({
       vision: 'normal',
       base: 'dark',
+      relief: false,
       setVision: (vision) => set({ vision }),
       setBase: (base) => set({ base }),
+      setRelief: (relief) => set({ relief }),
     }),
     { name: 'pwh-ui', version: 1 },
   ),

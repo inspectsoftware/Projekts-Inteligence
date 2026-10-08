@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LEVEL_NAMES, regionLevel } from '../../../shared/escalation'
-import type { EscalationLevel, IntelBrief, NewsItem } from '../../../shared/feeds'
+import type { EscalationLevel, IntelBrief, NewsItem, NewsOutlet } from '../../../shared/feeds'
 import { lang, t } from '../../i18n'
 import { formatAge } from '../../lib/format'
 import { useFeed } from '../../runtime/useFeed'
@@ -171,7 +171,11 @@ function Reading({ brief, items, now }: { brief: IntelBrief | undefined; items: 
 
 function Headline({ row, now }: { row: Row; now: number }) {
   // A tag in plain words is the text the translators were given (TAG_WORDS).
-  const notes = [...row.tags.map((tag) => t(tag.replaceAll('_', ' '))), ...(row.corroboration > 0 ? [t('also reported by {n}', { n: row.corroboration })] : [])]
+  const voices = row.confirmedBy ?? []
+  const notes = [
+    ...row.tags.map((tag) => t(tag.replaceAll('_', ' '))),
+    ...(row.corroboration > 0 && voices.length === 0 ? [t('also reported by {n}', { n: row.corroboration })] : []),
+  ]
   return (
     <li className="border-b border-line/50 px-3 py-2 last:border-0">
       <div className={`flex items-center gap-2 ${CHROME}`}>
@@ -198,7 +202,58 @@ function Headline({ row, now }: { row: Row; now: number }) {
         </p>
       )}
       {notes.length > 0 && <p className={`mt-1 text-fg-mute ${CHROME}`}>{notes.join(' · ')}</p>}
+      {voices.length > 0 && (
+        <p className={`mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-fg-mute ${CHROME}`}>
+          <span title={t('Other publishers carrying the same story, each linked to its own report')}>{t('Confirmed by')}</span>
+          {voices.map((voice) => (
+            <a
+              key={voice.link}
+              href={voice.link}
+              target="_blank"
+              rel="noreferrer noopener"
+              title={voice.official ? t('An official body') : undefined}
+              className={`underline decoration-line-strong underline-offset-2 hover:text-accent ${voice.official ? 'text-ok' : 'text-fg-dim'}`}
+            >
+              {voice.publisher}
+            </a>
+          ))}
+        </p>
+      )}
     </li>
+  )
+}
+
+const OUTLET_KINDS = [
+  { id: 'official', label: t('Official bodies') },
+  { id: 'media', label: t('Newsrooms') },
+  { id: 'analysis', label: t('Analysis and investigations') },
+] as const
+
+/** Every outlet the headlines are read from, by what kind of voice it is. */
+function Sources({ outlets }: { outlets: readonly NewsOutlet[] }) {
+  return (
+    <div className="px-3 py-2">
+      <p className="font-sans text-xs leading-relaxed text-fg-dim">
+        {t('A story counts as confirmed when a second, unrelated publisher or an official body carries it. These are the publishers read.')}
+      </p>
+      {OUTLET_KINDS.map((kind) => (
+        <section key={kind.id} className="mt-2">
+          <h4 className={`text-fg-mute ${CHROME}`}>{kind.label}</h4>
+          <ul className="mt-0.5">
+            {outlets
+              .filter((outlet) => outlet.kind === kind.id)
+              .map((outlet) => (
+                <li key={outlet.publisher} className="flex items-baseline gap-2 py-0.5">
+                  <span className={`w-6 shrink-0 text-fg-mute ${CHROME}`}>{outlet.country}</span>
+                  <a href={outlet.href} target="_blank" rel="noreferrer noopener" className="truncate font-sans text-xs text-fg hover:text-accent">
+                    {outlet.publisher}
+                  </a>
+                </li>
+              ))}
+          </ul>
+        </section>
+      ))}
+    </div>
   )
 }
 
@@ -207,6 +262,7 @@ export function IntelWindow() {
   const news = useFeed('news', 'news')
   const brief = useFeed('brief', 'brief')
   const now = useNow(60_000)
+  const [showSources, setShowSources] = useState(false)
   const { sort, country, minLevel, setSort, setCountry, setMinLevel } = useIntel()
   const rows = rowsFor(news?.items ?? [], brief?.ratings, { sort, country, minLevel })
 
@@ -239,9 +295,20 @@ export function IntelWindow() {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            aria-pressed={showSources}
+            title={t('The publishers the headlines are read from')}
+            onClick={() => setShowSources(!showSources)}
+            className={`shrink-0 border border-line px-1.5 text-[10px] tracking-[0.08em] uppercase hover:text-fg ${showSources ? 'bg-accent/15 text-accent' : 'bg-ink-850 text-fg-dim'}`}
+          >
+            {t('Sources')}
+          </button>
         </div>
       </div>
-      {rows.length > 0 ? (
+      {showSources ? (
+        <Sources outlets={news?.sources ?? []} />
+      ) : rows.length > 0 ? (
         <ul>
           {rows.map((row) => (
             <Headline key={row.link} row={row} now={now} />

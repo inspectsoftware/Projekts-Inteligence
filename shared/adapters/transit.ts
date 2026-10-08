@@ -20,8 +20,8 @@ export interface TransitNetwork {
 
 const MODES: Record<string, TransitMode> = { '1': 'trolleybus', '2': 'bus', '3': 'tram', '4': 'minibus' }
 
-/** Roughly Latvia: anything outside is a vehicle reporting from the depot's default position, or garbage. */
-const inRange = (lon: number, lat: number) => lon > 20 && lon < 29 && lat > 55 && lat < 59
+/** Roughly the Baltic states: anything outside is a vehicle reporting from the depot's default position, or garbage. */
+const inRange = (lon: number, lat: number) => lon > 20 && lon < 29 && lat > 53.8 && lat < 59.8
 
 /**
  * Parses the headerless "gps.txt" position files several Latvian operators publish:

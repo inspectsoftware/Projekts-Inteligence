@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { FEED_HEADERS, type FeedMeta, type FeedStatus, type FeedsResponse, isFeedId } from '../../shared/feeds'
+import { isLang } from '../../shared/i18n'
 import { APP } from '../../shared/meta'
 import type { BuildInfo } from '../buildInfo'
 import { type FeedCache, type FeedState, FeedUnavailable } from '../core/cache'
@@ -7,6 +8,7 @@ import { camStill } from '../feeds/cams'
 import type { FeedRegistry } from '../feeds/registry'
 import { cameraFrame } from '../feeds/roads'
 import type { FeedDef } from '../feeds/types'
+import { PlaceBusy, createPlaceLookup } from './place'
 
 export interface ApiDeps {
   build: BuildInfo
@@ -45,6 +47,7 @@ function describe(def: FeedDef, state: FeedState, now: number, env: NodeJS.Proce
 
 export function apiRoutes(deps: ApiDeps): Hono {
   const api = new Hono()
+  const places = createPlaceLookup()
 
   api.get('/health', (c) => {
     c.header('Cache-Control', 'no-store')
@@ -126,6 +129,25 @@ export function apiRoutes(deps: ApiDeps): Hono {
     c.header('Content-Type', 'image/jpeg')
     c.header('Cache-Control', 'public, max-age=30')
     return c.body(new Uint8Array(still))
+  })
+
+  /** What is known about a point on the map (?lon=&lat=&zoom=) or about a place by name (?q=). */
+  api.get('/place', async (c) => {
+    const { lon, lat, zoom, q } = c.req.query()
+    const asked = c.req.query('lang') ?? ''
+    const lang = isLang(asked) ? asked : 'en'
+    const [x, y] = [Number(lon), Number(lat)]
+    const byName = typeof q === 'string' && q.trim().length >= 2
+    if (!byName && !(lon && lat && Math.abs(x) <= 180 && Math.abs(y) <= 90)) return c.json({ error: 'bad_request' }, 400)
+    try {
+      const place = byName ? await places.search(q, lang) : await places.at(x, y, Number(zoom) || 10, lang)
+      if (!place) return c.json({ error: 'not_found' }, 404)
+      c.header('Cache-Control', 'public, max-age=3600')
+      return c.json(place)
+    } catch (err) {
+      if (err instanceof PlaceBusy) c.header('Retry-After', '5')
+      return c.json({ error: 'unavailable' }, 503)
+    }
   })
 
   api.all('*', (c) => c.json({ error: 'not_found' }, 404))

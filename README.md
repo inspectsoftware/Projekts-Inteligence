@@ -4,7 +4,9 @@ A Latvia-only intelligence panel: one dark tactical map that fuses live OSINT da
 country (air, sea, land, space, signals, weather, energy, internet, news).
 
 Everything shown comes from public, open feeds used within their terms. No individual people are
-tracked or profiled, and only officially published cameras are used.
+tracked or profiled, and only officially published cameras are used. The one exception is a public
+appeal to find a missing person: its headline is relayed with a link to its publisher, never a
+photo or a profile, and it is dropped after two weeks.
 
 ## Run it
 
@@ -55,6 +57,8 @@ Hostinger in hPanel → Environment Variables.
 | `ANTHROPIC_API_KEY`    | Briefs written by a language model (Claude). Without it the regional brief and the country briefs are written by rules and templates, and everything else works the same. A process that stays up makes at most 81 calls a day: 72 for the regional brief (one per 20 minutes, and only while somebody has it open) and 9 for the country briefs (once a day). A start that finds the temp folder empty writes all of them again, up to 10 calls each time, so on a host that wipes the folder the daily total follows the number of starts |
 | `ANTHROPIC_MODEL`      | Which model writes them. Default `claude-haiku-4-5` (the cheapest and fastest). `claude-sonnet-5-5` and `claude-opus-5-5` write better briefs at a higher price; a model that rejects the request leaves the briefs written by rules |
 | `AI_MAX_CALLS_PER_DAY` | Ceiling on model calls per UTC day, counted by the running process. Default 120; 0 switches the model off. Once it is reached the briefs are written by rules until midnight UTC. The count is kept in the temp folder, and a start that finds the folder empty counts from zero: this stops a busy day or a bug, not a host that keeps wiping the folder. The cap that holds whatever the host does is a spend limit on the key's workspace in the Claude Console |
+| `UCDP_TOKEN`           | The armed-conflict events layer. The token is free and comes by email from the Uppsala Conflict Data Program ([API docs](https://ucdp.uu.se/apidocs/)); without it the layer says it needs a key |
+| `UCDP_VERSION`         | Which UCDP candidate release to read, such as `26.0.9`. Default: the newest of the last three months that answers |
 
 ## Data sources
 
@@ -64,6 +68,8 @@ Listed here as each layer lands, with the attribution its licence requires.
 | ------------------------------ | --------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | Vector basemap                 | [OpenFreeMap](https://openfreemap.org), © OpenMapTiles, © OpenStreetMap contributors          | ODbL (data)                                     |
 | Satellite mosaic               | [Sentinel-2 cloudless 2025](https://s2maps.eu) by EOX (Contains modified Copernicus Sentinel data 2025). 10 m per pixel; the whole satellite view up to zoom 13 and everything outside the orthophotos beyond it | CC BY-NC-SA 4.0 |
+| Orthophotos, other countries   | Open national air photos, shown from zoom 13 inside each country: USA ([USGS](https://www.usgs.gov/programs/national-geospatial-program/national-map), to about 1 m), Japan ([GSI](https://maps.gsi.go.jp/development/ichiran.html)), Spain ([PNOA, IGN](https://pnoa.ign.es)), France ([IGN](https://geoservices.ign.fr)), the Netherlands ([PDOK](https://www.pdok.nl)), Luxembourg ([ACT](https://data.public.lu)), Switzerland ([swisstopo](https://www.swisstopo.admin.ch)), Austria ([basemap.at](https://basemap.at)), Czechia ([ČÚZK](https://geoportal.cuzk.cz)) and Poland ([GUGiK](https://www.geoportal.gov.pl)). Fetched by the browser, keyless | Public domain (USA), CC0 (Luxembourg), Licence Ouverte 2.0 (France), CC BY 4.0 (Spain, Netherlands, Austria), open with credit (the rest). Recalled, not re-read when added: check each before launch |
+| 3D relief                      | Elevation tiles from [Mapterhorn](https://mapterhorn.com/attribution) (Copernicus GLO-30 and national surveys), fetched only while the 3D button is on | Open data, credit required |
 | Orthophoto, Latvia             | Ortofoto © Latvijas Ģeotelpiskās informācijas aģentūra (LĢIA), serviss: [LVM GEO](https://www.lvmgeo.lv/dati/tabmenu-two/brivpieejas-wms-wfs-servisi) (the `Orto_LKS` mosaic, 0.25 m per pixel). Shown from zoom 13 and cut to the national border in the browser, because the service is opaque white outside it | LVM GEO's free-access service (fees none, access constraints none); LĢIA gives cycle 7 under Creative Commons 4.0, credit required |
 | Orthophoto, Estonia            | Maa- ja Ruumiameti ortofoto 2026: the `foto` tiles of [Maa- ja Ruumiamet](https://geoportaal.maaamet.ee/est/teenused/wms-wfs-wcs-teenused/maa-ameti-kaarditeenuste-kasutustingimused-p24.html), about 0.3 m per pixel, from zoom 13. The navy the service fills the edge of its coverage with is taken out in the browser | Free for any lawful use; the data, its age and the agency must be named; bulk caching discouraged |
 | Orthophoto, Lithuania (switched off) | ORT10LT © Nacionalinė žemės tarnyba, © [geoportal.lt](https://www.geoportal.lt) © SSVA. Built, but off until the operator has been written to: see the known gaps | Data CC BY 4.0; the service asks to be told by email before it is used in another system |
@@ -100,6 +106,12 @@ Listed here as each layer lands, with the attribution its licence requires.
 | News headlines, other newsrooms | RSS feeds of Delfi ([Latvia](https://www.delfi.lv), [Lithuania](https://www.delfi.lt)), [15min](https://www.15min.lt), [BNN](https://bnn-news.com), [The Kyiv Independent](https://kyivindependent.com), [RFE/RL](https://www.rferl.org), [Meduza](https://meduza.io), [The Moscow Times](https://www.themoscowtimes.com), [The Insider](https://theins.press), [Re:Baltica](https://en.rebaltica.lv), [ICDS](https://icds.ee) and [EUvsDisinfo](https://euvsdisinfo.eu) | 15min: title with a link and its name. RFE/RL: excerpts with a link. The Insider: with an active link. Delfi and BNN: no terms found, robots.txt shuts language models out. No terms found for the rest |
 | News headlines, official bodies | RSS feeds of [CERT.LV](https://cert.lv), Latvia's [State Border Guard](https://www.rs.gov.lv), [Interior](https://www.iem.gov.lv) and [Foreign](https://www.mfa.gov.lv) ministries; Estonia's [Government](https://valitsus.ee), [Defence](https://kaitseministeerium.ee) and [Foreign](https://vm.ee) ministries, [Defence Forces](https://mil.ee) and [RIA](https://ria.ee); Lithuania's [State Border Guard](https://vsat.lrv.lt) and [Interior Ministry](https://vrm.lrv.lt); the [Council of the EU](https://www.consilium.europa.eu) | Latvian government sites reserve all rights; the others publish no licence. Headline and link only |
 | News ratings                   | Importance (0 to 100) and escalation level (0 to 5) are worked out on this server by keyword rules in English, Latvian, Lithuanian, Estonian and Russian. A publisher's own description is read for that and never shown. Newsrooms are read every 10 min, official bodies and analysis every 30 | As the headlines |
+| Politics page                  | The same feeds as the news list, plus the [Lithuanian Government](https://lrv.lt), the [Riigikogu](https://www.riigikogu.ee) and the [Estonian Government](https://valitsus.ee) in Estonian. Picked by a keyword net in four languages and shown newest first at `/?politics`: headline, publisher, time and link, never rated or summarised | As the news rows above; government press feeds, credit and a link |
+| Place information              | [Nominatim](https://nominatim.org) (© OpenStreetMap contributors), facts from [Wikidata](https://www.wikidata.org) and the opening of the [Wikipedia](https://www.wikipedia.org) article. Asked only on a right-click or a world search, through this server, cached for a day and held to one Nominatim request a second | ODbL; CC0; CC BY-SA 4.0, credit and a link |
+| Danger by country              | Travel advice of the UK [Foreign, Commonwealth & Development Office](https://www.gov.uk/foreign-travel-advice), one level per country, drawn on [Natural Earth](https://www.naturalearthdata.com) 1:110m outlines | Open Government Licence v3.0; public domain |
+| Armed conflict events          | [UCDP Candidate Events Dataset](https://ucdp.uu.se), the latest monthly release, about a month behind. Needs `UCDP_TOKEN`. Written from the API documentation and not yet run against the live service | Free with a token; cite UCDP and the release |
+| Public alerts                  | No Baltic state publishes a machine-readable alert feed and Latvia has no AMBER Alert system. The window lists the weather service's orange and red warnings, and headlines of the news feeds above picked by keyword: warnings to the public, and appeals to find missing people | As the news and weather rows |
+| Public transport, Tallinn and Vilnius | Vehicle position files of [Tallinna Transport](https://transport.tallinn.ee) and [stops.lt](https://www.stops.lt/vilnius/) | Tallinn: city open data, free use. Vilnius: no published terms; used lightly |
 | Radiation                      | EURDEP network, via [BfS](https://odlinfo.bfs.de) open data                                    | Free to use with acknowledgement                |
 | River and coastal gauges       | [LVĢMC](https://videscentrs.lvgmc.lv) hydrology files                                          | No published terms; cached, read every 15 min   |
 | Country figures                | [World Bank](https://data.worldbank.org), [IMF World Economic Outlook](https://www.imf.org/external/datamapper), [Eurostat](https://ec.europa.eu/eurostat), [Wikidata](https://www.wikidata.org), NATO's [defence expenditure report](https://www.nato.int/en/news-and-events/articles/news/2026/07/07/defence-investment-update-record-spending-in-europe-and-canada), the [SIPRI Military Expenditure Database](https://doi.org/10.55163/CQGC9685), Transparency International's CPI and the Global Peace Index (IEP). Notes on the armed forces come from defence ministries, NATO and public broadcasters. Every figure links to its source in the window | World Bank CC BY 4.0; Wikidata CC0; SIPRI free to cite for non-commercial use; the rest cited with a link |
@@ -118,6 +130,26 @@ are refreshed the same way.
 
 ### Known gaps
 
+- **No taxis, no Mobilly, no Rīga city transport.** No taxi operator publishes vehicle positions,
+  Mobilly has no public API, and Rīgas Satiksme's position file cannot be reached. The Transport
+  window says so instead of showing an empty tab.
+- **Latvia's cabinet, president and Saeima publish no feed**, so on the politics page their word
+  arrives through the newsrooms. The keyword net lets through a "party" that is a celebration.
+- **The camera is no longer held to the Baltic**: typed coordinates (decimal, degrees-minutes-seconds
+  or MGRS) go anywhere on Earth. The data layers, the place search and the sharp imagery are still
+  regional, so elsewhere there is only the base map.
+- **The alert log is a keyword net, not an alert system.** It can show a headline that is not an
+  alert and miss one that is, and it lives in memory: a restart keeps only what the disk copy and
+  the newsrooms still hold. Police and rescue services publish no feed to read instead.
+- **Danger by country is one government's travel advice**, not a map of fighting. Territories too
+  small for the 1:110m outlines are in the list but not on the map.
+- **Sharp imagery is not worldwide.** No keyless service with usable terms covers the whole Earth
+  below a metre, so the air photos stop at the twelve countries listed above; everywhere else is
+  the 10 m mosaic. Along a border a tile that is half photo is shown whole, blank half included.
+  Finland, Norway, Belgium and Slovakia were tried and need a key or refuse other sites' pages.
+- **The live layers are still Baltic.** Aircraft, ships, trains, roads, weather and the place
+  gazetteer come from regional services. Elsewhere there is the map, the imagery, place lookup,
+  danger by country and satellites.
 - **Map sharpness:** nothing here is 1:1. The sharpest imagery that may be used without a key is
   the national orthophoto, at about 0.2 to 0.3 m of ground per pixel, so that is what the deepest
   zoom (19) shows over Latvia and Estonia; past zoom 18 the photo is only being enlarged. Each base

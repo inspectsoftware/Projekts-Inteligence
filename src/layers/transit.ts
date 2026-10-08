@@ -8,6 +8,7 @@ import { formatAge, formatBearing, formatInt } from '../lib/format'
 import { getIconAtlas } from '../map/icons'
 import { positionAt } from '../map/motion'
 import { getEntities } from '../runtime/entityStore'
+import { useLayers } from '../state/layers'
 import { HALO, LABEL_FONT, OUTLINE, SELECTED, iconScale, selectionRing } from './common'
 import type { InspectorModel, LayerDef } from './types'
 
@@ -18,7 +19,7 @@ const MODE_COLOR: Record<TransitMode, Color> = {
   minibus: [214, 214, 130],
 }
 
-const MODE_LABEL: Record<TransitMode, string> = {
+export const MODE_LABEL: Record<TransitMode, string> = {
   bus: t('Bus'),
   tram: t('Tram'),
   trolleybus: t('Trolleybus'),
@@ -44,7 +45,7 @@ function describe(entity: Entity, now: number): InspectorModel {
     subtitle: props.network,
     badges: props.route ? [] : [{ text: t('No route'), tone: 'info' }],
     rows,
-    links: [{ label: t('Timetables (marsruti.lv)'), href: 'https://marsruti.lv' }],
+    links: props.network === 'Tallinn' ? [{ label: 'transport.tallinn.ee', href: 'https://transport.tallinn.ee' }] : props.network === 'Vilnius' ? [{ label: 'stops.lt', href: 'https://www.stops.lt/vilnius/' }] : [{ label: t('Timetables (marsruti.lv)'), href: 'https://marsruti.lv' }],
   }
 }
 
@@ -52,7 +53,7 @@ export const transitLayer: LayerDef = {
   id: 'transit',
   group: 'land',
   label: t('Public transport'),
-  hint: t('Buses, trams and minibuses in Liepāja and Rēzekne, and regional buses, where the operator publishes live positions'),
+  hint: t('Buses, trams, trolleybuses and minibuses in Liepāja, Rēzekne, Tallinn and Vilnius, and Latvia’s regional buses: wherever the operator publishes live positions'),
   defaultOn: true,
   swatch: '#ffc460',
   feeds: ['transit'],
@@ -65,7 +66,9 @@ export const transitLayer: LayerDef = {
   },
 
   build({ now, zoom, selectedId, hoveredId, fontsReady }) {
-    const data = getEntities('transit') as TransitVehicle[]
+    const { hiddenModes } = useLayers.getState()
+    // The selected one is drawn whatever its kind: it was asked for by name.
+    const data = (getEntities('transit') as TransitVehicle[]).filter((vehicle) => !hiddenModes[vehicle.props.mode] || vehicle.id === selectedId)
     const { canvas, mapping } = getIconAtlas()
     const iconAtlas = canvas as unknown as string
     const scale = iconScale(zoom)

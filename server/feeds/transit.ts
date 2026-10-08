@@ -9,17 +9,24 @@ const NETWORKS: readonly (TransitNetwork & { url: string })[] = [
   { id: 'liepaja', name: 'Liepāja', url: 'https://marsruti.lv/liepaja/gps.txt' },
   { id: 'rezekne', name: 'Rēzekne', url: 'https://marsruti.lv/rezekne/gps.txt' },
   { id: 'regional', name: 'Regional buses', url: 'https://marsruti.lv/LSA/gps.txt' },
+  // The same file format from the same software, published by Tallinn and Vilnius themselves.
+  { id: 'tallinn', name: 'Tallinn', url: 'https://transport.tallinn.ee/gps.txt' },
+  { id: 'vilnius', name: 'Vilnius', url: 'https://www.stops.lt/vilnius/gps.txt' },
 ]
 
 export const transitFeed: FeedDef = {
   id: 'transit',
   title: 'Public transport',
-  origins: ['https://marsruti.lv'],
+  origins: [...new Set(NETWORKS.map((network) => new URL(network.url).origin))],
   ttlMs: 12_000,
   staleMs: 90_000,
   waitMs: 1500,
   timeoutMs: 9000,
-  attribution: [{ label: 'marsruti.lv', href: 'https://marsruti.lv' }],
+  attribution: [
+    { label: 'marsruti.lv', href: 'https://marsruti.lv' },
+    { label: 'Tallinna Transport', href: 'https://transport.tallinn.ee' },
+    { label: 'stops.lt (Vilnius)', href: 'https://www.stops.lt/vilnius/' },
+  ],
   async load({ http }) {
     const results = await Promise.allSettled(
       NETWORKS.map(async (network) => normaliseGpsTxt(await http.text(network.url, { timeoutMs: 6000 }), network, Date.now())),
@@ -31,7 +38,7 @@ export const transitFeed: FeedDef = {
       else failures += 1
     }
     // One network being down should not blank the others; all of them down is a failed refresh.
-    if (failures === NETWORKS.length) throw new UpstreamError('network', 'marsruti.lv could not be reached')
+    if (failures === NETWORKS.length) throw new UpstreamError('network', 'No public transport network could be reached')
     return { shape: 'entities', entities }
   },
 }

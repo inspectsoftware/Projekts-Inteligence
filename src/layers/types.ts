@@ -36,6 +36,8 @@ export interface InspectorModel {
   kicker: string
   title: string
   subtitle?: string
+  /** A few sentences of running text, such as the opening of an encyclopaedia article. */
+  note?: string
   /** A picture of the thing itself, such as a camera's latest frame. */
   image?: { src: string; alt: string }
   badges: { text: string; tone: Tone }[]

@@ -17,6 +17,9 @@ import { useIntelBadge } from './intel'
 import { IntelWindow } from './IntelWindow'
 import { useMilitaryBadge } from './military/badge'
 import { MilitaryWindow } from './MilitaryWindow'
+import { NoticesWindow } from './NoticesWindow'
+import { SyncWindow } from './SyncWindow'
+import { TransportWindow } from './TransportWindow'
 import { TvWindow } from './TvWindow'
 import { ViewsWindow } from './ViewsWindow'
 
@@ -215,6 +218,42 @@ export const WINDOWS: readonly WindowDef[] = [
     resizable: { min: { w: 260, h: 200 }, max: { w: 640, h: 1000 } },
     useBadge: useMilitaryBadge,
     component: MilitaryWindow,
+  },
+  {
+    id: 'transport',
+    title: t('Transport'),
+    short: t('dock::Trans'),
+    icon: 'M3.5 11.5v-7a2 2 0 012-2h5a2 2 0 012 2v7zM3.5 7.5h9M5 13.5v-2M11 13.5v-2',
+    defaultOpen: false,
+    placement: { corner: 'tc', dx: 0, dy: 300 },
+    width: 340,
+    height: 400,
+    resizable: { min: { w: 280, h: 200 }, max: { w: 640, h: 1000 } },
+    component: TransportWindow,
+  },
+  {
+    id: 'notices',
+    title: t('Public alerts'),
+    short: t('dock::Amber'),
+    icon: 'M8 2.5a3.5 3.5 0 00-3.5 3.5v2.5L3 11h10l-1.5-2.5V6A3.5 3.5 0 008 2.5zM6.5 13a1.5 1.5 0 003 0',
+    defaultOpen: false,
+    placement: { corner: 'tc', dx: 0, dy: 300 },
+    width: 360,
+    height: 380,
+    resizable: { min: { w: 280, h: 200 }, max: { w: 640, h: 1000 } },
+    component: NoticesWindow,
+  },
+  {
+    id: 'sync',
+    title: t('Updates'),
+    short: t('dock::Sync'),
+    icon: 'M8 4.5V8l2.5 1.5M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11z',
+    defaultOpen: false,
+    placement: { corner: 'bl', dx: 304, dy: 56 },
+    width: 240,
+    height: 260,
+    resizable: { min: { w: 200, h: 120 }, max: { w: 420, h: 1000 } },
+    component: SyncWindow,
   },
   // Last, though it has no place in the dock: until it is raised, a window is drawn over the ones
   // listed before it, and this one opens on top of the Intel feed.

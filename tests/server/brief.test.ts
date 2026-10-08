@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Send } from '../../server/ai/model'
 import { createApp } from '../../server/app'
 import { FeedCache } from '../../server/core/cache'
@@ -313,6 +313,10 @@ describe('model-written brief', () => {
 
 describe('brief feeds behind the API', () => {
   it('are derived from the news feed and served in rules mode when no key is set', async () => {
+    // The server runs on the headlines' clock: on the real one they age out of the brief within days.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(NOW)
+    onTestFinished(() => void vi.useRealTimers())
     const items = [headline({ escalation: 2, importance: 64 }), headline({ countries: ['EE'] })]
     const news: FeedDef = { id: 'news', title: 'News', origins: [], ttlMs: 60_000, staleMs: 600_000, attribution: [], load: async () => ({ shape: 'news', items }) }
     const feeds: FeedRegistry = { news, brief: briefFeed, 'country-briefs': countryBriefsFeed }
