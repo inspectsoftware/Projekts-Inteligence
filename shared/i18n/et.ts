@@ -1136,4 +1136,12 @@ export const et: Record<string, string> = {
   'Continent': 'Manner',
   'Part of': 'Kuulub',
   'Country brief': 'Riigi ülevaade',
+  'Earthquakes': 'Maavärinad',
+  'Earthquakes of magnitude 2.5 and up anywhere on Earth in the last 24 hours (US Geological Survey)': 'Maavärinad magnituudiga 2,5 ja rohkem kõikjal maailmas viimase 24 tunni jooksul (USA geoloogiateenistus)',
+  'Earthquake': 'Maavärin',
+  'Tsunami message issued': 'Väljastatud tsunamiteade',
+  'When': 'Millal',
+  'Depth': 'Sügavus',
+  'of magnitude 5 or more': 'magnituudiga 5 või rohkem',
+  'Heat sources detected by the VIIRS satellite sensor in the last 24 hours (NASA FIRMS): all of them around the Baltic, the strongest elsewhere': 'Soojusallikad, mille VIIRS-i satelliidisensor on viimase 24 tunni jooksul tuvastanud (NASA FIRMS): Balti ümbruses kõik, mujal tugevaimad',
 }

@@ -1105,4 +1105,12 @@ export const lt: Record<string, string> = {
   'Continent': 'Žemynas',
   'Part of': 'Priklauso',
   'Country brief': 'Šalies apžvalga',
+  'Earthquakes': 'Žemės drebėjimai',
+  'Earthquakes of magnitude 2.5 and up anywhere on Earth in the last 24 hours (US Geological Survey)': '2,5 ir didesnės magnitudės žemės drebėjimai bet kur pasaulyje per pastarąsias 24 valandas (JAV geologijos tarnyba)',
+  'Earthquake': 'Žemės drebėjimas',
+  'Tsunami message issued': 'Paskelbtas pranešimas apie cunamį',
+  'When': 'Kada',
+  'Depth': 'Gylis',
+  'of magnitude 5 or more': '5 ar didesnės magnitudės',
+  'Heat sources detected by the VIIRS satellite sensor in the last 24 hours (NASA FIRMS): all of them around the Baltic, the strongest elsewhere': 'Šilumos šaltiniai, per pastarąsias 24 valandas aptikti VIIRS palydovo jutiklio (NASA FIRMS): visi aplink Baltiją, kitur stipriausi',
 }

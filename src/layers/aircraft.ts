@@ -119,6 +119,9 @@ function describe(entity: Entity, now: number): InspectorModel {
   }
 }
 
+/** The entity slot for aircraft around the middle of the map while it is outside the region (runtime/viewAircraft.ts). */
+export const VIEW_AIRCRAFT = 'aircraft-view'
+
 export const aircraftLayer: LayerDef = {
   id: 'aircraft',
   group: 'air',
@@ -126,7 +129,7 @@ export const aircraftLayer: LayerDef = {
   hint: t('Live ADS-B and multilateration positions within 250 nm, refreshed every 10 s, plus military aircraft across the wider Baltic region every 30 s'),
   defaultOn: true,
   swatch: '#a4e8ff',
-  feeds: ['aircraft'],
+  feeds: ['aircraft', 'aircraft-mil'],
   describes: ['aircraft'],
   describe,
 
@@ -149,7 +152,13 @@ export const aircraftLayer: LayerDef = {
   },
 
   build({ now, zoom, selectedId, hoveredId, fontsReady }) {
-    const data = getEntities('aircraft') as Aircraft[]
+    // The region's own picture first; then the rest of the world's military aircraft, and whatever
+    // is flying around the middle of the map when that is somewhere else. One of each aircraft.
+    const seen = new Map<string, Aircraft>()
+    for (const aircraft of [...getEntities('aircraft'), ...getEntities('aircraft-mil'), ...getEntities(VIEW_AIRCRAFT)] as Aircraft[]) {
+      if (!seen.has(aircraft.id)) seen.set(aircraft.id, aircraft)
+    }
+    const data = [...seen.values()]
     const { canvas, mapping } = getIconAtlas()
     // deck.gl accepts a canvas here at runtime; its typings only list URLs and textures.
     const iconAtlas = canvas as unknown as string

@@ -9,6 +9,7 @@ import { fetchFeedList } from '../runtime/api'
 import { serverNow } from '../runtime/clock'
 import { getEntity, subscribeEntities } from '../runtime/entityStore'
 import { whatIsHere } from '../runtime/place'
+import { startViewAircraft } from '../runtime/viewAircraft'
 import { acquireFeed } from '../runtime/poller'
 import { useFeeds } from '../state/feeds'
 import { isLayerOn, useLayers } from '../state/layers'
@@ -150,6 +151,7 @@ export function startScene(map: MapLibreMap): () => void {
 
   syncFeeds()
   const stopAlerts = startAlerts()
+  const stopViewAircraft = startViewAircraft(map)
   frame = requestAnimationFrame(loop)
 
   void document.fonts.load(LABEL_FONT_PROBE).then(() => {
@@ -166,6 +168,7 @@ export function startScene(map: MapLibreMap): () => void {
     stopped = true
     cancelAnimationFrame(frame)
     stopAlerts()
+    stopViewAircraft()
     for (const off of unsubscribe) off()
     map.off('dragstart', stopFollowing)
     for (const releases of held.values()) for (const release of releases) release()

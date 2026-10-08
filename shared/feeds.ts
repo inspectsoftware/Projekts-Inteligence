@@ -16,6 +16,7 @@ export const FEED_IDS = [
   'airspace',
   'stations',
   'fires',
+  'quakes',
   'cameras',
   'cams',
   'roads',
@@ -253,6 +254,17 @@ export interface Advisory {
   /** Epoch ms. */
   updatedAt: number
   href: string
+}
+
+/** One earthquake, as the US Geological Survey lists it. */
+export interface QuakeProps {
+  magnitude: number
+  depthKm: number | null
+  /** Where, in the survey's words: "102 km NE of Norsup, Vanuatu". */
+  place: string
+  /** The survey flagged it for a tsunami message. Not a warning in itself. */
+  tsunami: boolean
+  url: string
 }
 
 /** One event of armed violence, as the Uppsala Conflict Data Program records it. */

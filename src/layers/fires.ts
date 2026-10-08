@@ -39,7 +39,7 @@ export const firesLayer: LayerDef = {
   id: 'fires',
   group: 'environment',
   label: t('Fires'),
-  hint: t('Heat sources detected by the VIIRS satellite sensor in the last 24 hours (NASA FIRMS)'),
+  hint: t('Heat sources detected by the VIIRS satellite sensor in the last 24 hours (NASA FIRMS): all of them around the Baltic, the strongest elsewhere'),
   defaultOn: true,
   swatch: '#ff7a3d',
   feeds: ['fires'],

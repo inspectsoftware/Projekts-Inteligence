@@ -1117,4 +1117,12 @@ export const ru: Record<string, string> = {
   'Continent': 'Континент',
   'Part of': 'Входит в',
   'Country brief': 'Обзор страны',
+  'Earthquakes': 'Землетрясения',
+  'Earthquakes of magnitude 2.5 and up anywhere on Earth in the last 24 hours (US Geological Survey)': 'Землетрясения магнитудой 2,5 и выше в любой точке мира за последние 24 часа (Геологическая служба США)',
+  'Earthquake': 'Землетрясение',
+  'Tsunami message issued': 'Выпущено сообщение о цунами',
+  'When': 'Когда',
+  'Depth': 'Глубина',
+  'of magnitude 5 or more': 'магнитудой 5 и выше',
+  'Heat sources detected by the VIIRS satellite sensor in the last 24 hours (NASA FIRMS): all of them around the Baltic, the strongest elsewhere': 'Источники тепла, обнаруженные спутниковым датчиком VIIRS за последние 24 часа (NASA FIRMS): вокруг Балтии все, в остальном мире самые сильные',
 }

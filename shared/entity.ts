@@ -4,7 +4,7 @@ import type { AircraftRole } from './data/aircraftRoles'
  * One moving (or fixed) object on the map, whatever feed it came from.
  * WGS84 coordinates, SI units, bearings in degrees true.
  */
-export type EntityKind = 'aircraft' | 'ship' | 'transit' | 'train' | 'satellite' | 'station' | 'fire' | 'camera' | 'webcam' | 'road-event' | 'radiation' | 'gauge' | 'conflict'
+export type EntityKind = 'aircraft' | 'ship' | 'transit' | 'train' | 'satellite' | 'station' | 'fire' | 'camera' | 'webcam' | 'road-event' | 'radiation' | 'gauge' | 'conflict' | 'quake'
 
 /** Kinds that travel, and so get a trail and dead reckoning. */
 export const MOVING_KINDS: ReadonlySet<EntityKind> = new Set(['aircraft', 'ship', 'transit', 'train'])

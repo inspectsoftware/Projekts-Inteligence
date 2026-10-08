@@ -9,6 +9,7 @@ import { gpsHexFeed } from './gpsHex'
 import { newsFeed } from './news'
 import { noticesFeed } from './notices'
 import { politicsFeed } from './politics'
+import { quakesFeed } from './quakes'
 import { energyFeed, internetFeed, radiationFeed, riversFeed } from './panels'
 import { camerasFeed, roadsFeed } from './roads'
 import { satellitesFeed } from './satellites'
@@ -38,6 +39,7 @@ export const FEEDS: FeedRegistry = {
   airspace: airspaceFeed,
   stations: stationsFeed,
   fires: firesFeed,
+  quakes: quakesFeed,
   cameras: camerasFeed,
   cams: camsFeed,
   roads: roadsFeed,

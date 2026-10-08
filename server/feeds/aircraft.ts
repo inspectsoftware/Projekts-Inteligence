@@ -10,8 +10,8 @@ import type { FeedDef } from './types'
 const RADIUS_NM = 250
 const { lat, lon } = LATVIA_CENTER
 
-const ADSB_LOL = 'https://api.adsb.lol'
-const ADSB_FI = 'https://opendata.adsb.fi'
+export const ADSB_LOL = 'https://api.adsb.lol'
+export const ADSB_FI = 'https://opendata.adsb.fi'
 
 // Both run readsb and answer with the same schema. adsb.lol is ODbL-licensed and comes
 // first; adsb.fi (non-commercial use, credit required) covers for it when it is down.
@@ -64,8 +64,8 @@ async function askLolList(http: Upstream, now: number): Promise<ReadsbResponse> 
 const LIST_WAIT_MS = 1000
 
 /**
- * Military aircraft over the whole area of interest, from the worldwide lists both aggregators
- * publish. Read every 30 s, a third as often as the regional picture: seen from this far out,
+ * Military aircraft everywhere, from the worldwide lists both aggregators publish. One answer
+ * serves every visitor wherever they are looking, so the whole world costs what the Baltic did. Read every 30 s, a third as often as the regional picture: seen from this far out,
  * a position half a minute old is still in the right place on the map.
  */
 export const militaryAirFeed: FeedDef = {
@@ -87,7 +87,7 @@ export const militaryAirFeed: FeedDef = {
     // Each hears aircraft the other misses, and either alone is still worth having.
     if (fi.status === 'rejected' && lol.status === 'rejected') throw fi.reason
     const entities = mergeMilitaryLists(fi.status === 'fulfilled' ? fi.value : [], lol.status === 'fulfilled' ? lol.value : [])
-    return { shape: 'entities', entities: entities.filter((aircraft) => inBBox(aircraft.lon, aircraft.lat, AOI_BBOX)) }
+    return { shape: 'entities', entities }
   },
 }
 
@@ -109,7 +109,10 @@ export const aircraftFeed: FeedDef = {
     // unavailable, and does not wait long for it either. After a quiet spell the list has to be
     // fetched first, which can take seconds: the next refresh, ten seconds on, finds it in the cache.
     const military = Promise.race([
-      feed('aircraft-mil').then(({ payload }) => (payload.shape === 'entities' ? (payload.entities as Aircraft[]) : [])),
+      // Only the region's: the alerts, the counts and the Military window all read this feed as "here".
+      feed('aircraft-mil').then(({ payload }) =>
+        payload.shape === 'entities' ? (payload.entities as Aircraft[]).filter((aircraft) => inBBox(aircraft.lon, aircraft.lat, AOI_BBOX)) : [],
+      ),
       new Promise<Aircraft[]>((done) => setTimeout(done, LIST_WAIT_MS, [])),
     ]).catch(() => [])
 

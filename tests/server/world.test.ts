@@ -5,6 +5,10 @@ import { advisoryLevel } from '../../server/feeds/advisories'
 import { candidateVersions } from '../../server/feeds/conflicts'
 import { pickNotices } from '../../server/feeds/notices'
 import { PlaceBusy, createPlaceLookup } from '../../server/http/place'
+import { ViewBusy, cellOf, createViewAircraft } from '../../server/http/viewAircraft'
+import { normaliseQuakes } from '../../server/feeds/quakes'
+import { pickFires } from '../../server/feeds/weather'
+import type { Fire } from '../../shared/adapters/fires'
 
 const NOW = Date.parse('2026-10-08T12:00:00Z')
 
@@ -97,5 +101,46 @@ describe('place lookup', () => {
     const asked = Array.from({ length: 5 }, (_, index) => lookup.search(`place ${index}`, 'en'))
     await expect(lookup.search('one too many', 'en')).rejects.toBeInstanceOf(PlaceBusy)
     expect(asked).toHaveLength(5)
+  })
+})
+
+describe('world layers', () => {
+  it('keeps every fire near the Baltic and only the strongest elsewhere', () => {
+    const fire = (lon: number, lat: number, frpMw: number): Fire => ({ id: `fire:${lon},${lat},${frpMw}`, kind: 'fire', lon, lat, ts: NOW, flags: 0, props: { frpMw, brightnessK: null, confidence: null, satellite: null, night: false } })
+    const far = Array.from({ length: 15_010 }, (_, index) => fire(-60, -10, index))
+    const picked = pickFires([fire(24, 57, 0.1), ...far])
+    expect(picked).toHaveLength(15_001)
+    expect(picked[0]).toMatchObject({ lon: 24, lat: 57 })
+    // The ten weakest of the far ones are the ones left out.
+    expect(Math.min(...picked.slice(1).map((one) => one.props.frpMw!))).toBe(10)
+  })
+
+  it('reads earthquakes and nothing else from the survey’s list', () => {
+    const feature = (type: string, mag: number | null) => ({ id: `us${type}${mag}`, geometry: { coordinates: [168.19, -15.54, 10] as [number, number, number] }, properties: { mag, place: '102 km NE of Norsup, Vanuatu', time: NOW, url: 'https://earthquake.usgs.gov/x', tsunami: 1, type } })
+    const quakes = normaliseQuakes({ features: [feature('earthquake', 6.3), feature('quarry blast', 2.6), feature('earthquake', null)] })
+    expect(quakes).toMatchObject([{ kind: 'quake', lon: 168.19, lat: -15.54, label: 'M 6.3', props: { magnitude: 6.3, depthKm: 10, tsunami: true } }])
+  })
+
+  it('asks about aircraft by grid cell, once per cell while the answer is fresh, and refuses a long queue', async () => {
+    expect(cellOf(35.68, 139.77)).toEqual({ lat: 34, lon: 138, key: '34,138' })
+    expect(cellOf(35.1, 136.2).key).toBe('34,138')
+    expect(cellOf(-0.5, -179.5).key).toBe('-2,-178')
+
+    const asked: string[] = []
+    let now = NOW
+    const view = createViewAircraft(async (url) => {
+      asked.push(url)
+      return new Response(JSON.stringify({ now: now / 1000, ac: [{ hex: 'abc123', flight: 'JAL1', lat: 35, lon: 139, alt_baro: 30000, gs: 400, seen_pos: 1 }] }), { status: 200 })
+    }, () => now)
+    const first = await view.around(35.68, 139.77)
+    expect(first.entities).toMatchObject([{ id: 'aircraft:abc123' }])
+    expect(await view.around(35.1, 136.2)).toBe(first)
+    expect(asked).toEqual(['https://api.adsb.lol/v2/point/34/138/250'])
+
+    // Five different cells at once: the first is on its way, four wait, and the sixth is turned away.
+    const stuck = createViewAircraft(() => new Promise<Response>(() => {}), () => now)
+    for (let lon = 0; lon < 16; lon += 4) void stuck.around(10, lon).catch(() => undefined)
+    await expect(stuck.around(10, 40)).rejects.toBeInstanceOf(ViewBusy)
+    now += 1
   })
 })

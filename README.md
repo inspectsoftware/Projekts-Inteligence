@@ -30,6 +30,12 @@ One npm package, one Node process.
   upstream load does not grow with the number of visitors, and the process can be stopped and
   restarted at any time without losing anything that matters.
 
+One route is the exception. Outside the Baltic, aircraft are fetched for wherever a visitor is
+looking (`/api/aircraft`), so its load on adsb.lol and adsb.fi grows with the number of different
+places being looked at. It is bounded: answers are shared per 4° grid cell for ten seconds, 40 cells
+are held at most, the sources are asked once every 1.5 s at most across all visitors, and past a
+short queue a request is refused. Place lookups (`/api/place`) are bounded the same way.
+
 ## Deploy on Hostinger (Node.js web app)
 
 hPanel → Websites → Add Website → Node.js web app → Import Git repository → Connect with GitHub.
@@ -107,6 +113,7 @@ Listed here as each layer lands, with the attribution its licence requires.
 | News headlines, other newsrooms | RSS feeds of Delfi ([Latvia](https://www.delfi.lv), [Lithuania](https://www.delfi.lt)), [15min](https://www.15min.lt), [BNN](https://bnn-news.com), [The Kyiv Independent](https://kyivindependent.com), [RFE/RL](https://www.rferl.org), [Meduza](https://meduza.io), [The Moscow Times](https://www.themoscowtimes.com), [The Insider](https://theins.press), [Re:Baltica](https://en.rebaltica.lv), [ICDS](https://icds.ee) and [EUvsDisinfo](https://euvsdisinfo.eu) | 15min: title with a link and its name. RFE/RL: excerpts with a link. The Insider: with an active link. Delfi and BNN: no terms found, robots.txt shuts language models out. No terms found for the rest |
 | News headlines, official bodies | RSS feeds of [CERT.LV](https://cert.lv), Latvia's [State Border Guard](https://www.rs.gov.lv), [Interior](https://www.iem.gov.lv) and [Foreign](https://www.mfa.gov.lv) ministries; Estonia's [Government](https://valitsus.ee), [Defence](https://kaitseministeerium.ee) and [Foreign](https://vm.ee) ministries, [Defence Forces](https://mil.ee) and [RIA](https://ria.ee); Lithuania's [State Border Guard](https://vsat.lrv.lt) and [Interior Ministry](https://vrm.lrv.lt); the [Council of the EU](https://www.consilium.europa.eu) | Latvian government sites reserve all rights; the others publish no licence. Headline and link only |
 | News ratings                   | Importance (0 to 100) and escalation level (0 to 5) are worked out on this server by keyword rules in English, Latvian, Lithuanian, Estonian and Russian. A publisher's own description is read for that and never shown. Newsrooms are read every 10 min, official bodies and analysis every 30 | As the headlines |
+| Earthquakes                    | [USGS Earthquake Hazards Program](https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php), magnitude 2.5 and up, last 24 hours, worldwide | Public domain |
 | Politics page                  | The same feeds as the news list, plus the [Lithuanian Government](https://lrv.lt), the [Riigikogu](https://www.riigikogu.ee) and the [Estonian Government](https://valitsus.ee) in Estonian. Picked by a keyword net in four languages and shown newest first at `/?politics`: headline, publisher, time and link, never rated or summarised | As the news rows above; government press feeds, credit and a link |
 | Place information              | [Nominatim](https://nominatim.org) (© OpenStreetMap contributors), facts from [Wikidata](https://www.wikidata.org) and the opening of the [Wikipedia](https://www.wikipedia.org) article. Asked only on a right-click or a world search, through this server, cached for a day and held to one Nominatim request a second | ODbL; CC0; CC BY-SA 4.0, credit and a link |
 | Danger by country              | Travel advice of the UK [Foreign, Commonwealth & Development Office](https://www.gov.uk/foreign-travel-advice), one level per country, drawn on [Natural Earth](https://www.naturalearthdata.com) 1:110m outlines | Open Government Licence v3.0; public domain |
@@ -148,9 +155,11 @@ are refreshed the same way.
   below a metre, so the air photos stop at the twelve countries listed above; everywhere else is
   the 10 m mosaic. Along a border a tile that is half photo is shown whole, blank half included.
   Finland, Norway, Belgium and Slovakia were tried and need a key or refuse other sites' pages.
-- **The live layers are still Baltic.** Aircraft, ships, trains, roads, weather and the place
-  gazetteer come from regional services. Elsewhere there is the map, the imagery, place lookup,
-  danger by country and satellites.
+- **Some live layers now reach the world, most do not.** Military aircraft (the aggregators' world
+  lists), fires (every detection around the Baltic, the 15 000 strongest elsewhere), earthquakes and
+  satellites are worldwide. Civil aircraft follow the middle of the map from zoom 5.5 in, one 250 nm
+  circle at a time, without trails. Ships, trains, public transport, roads, weather and the place
+  gazetteer stay regional: no keyless source covers the world.
 - **The light theme stops at the map's own layers.** Panels and the vector map change; aircraft, ship
   and other live symbols keep the colours and dark outlines chosen for the dark map, and over
   imagery the map keeps its dark lettering in both themes.

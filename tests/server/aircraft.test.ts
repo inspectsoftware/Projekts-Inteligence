@@ -292,21 +292,26 @@ describe('military aircraft feed', () => {
     return payload.shape === 'entities' ? (payload.entities as Aircraft[]) : []
   }
 
-  it('merges both lists and keeps what is inside the area of interest', async () => {
+  /** The aircraft that give a callsign. The tanker over Washington in the adsb.fi list gives none. */
+  const callsigns = (list: Aircraft[]) => list.filter((a) => a.props.callsign).map((a) => a.label)
+
+  it('merges both lists, and keeps aircraft anywhere in the world', async () => {
     const list = await entitiesOf(harness().cache, militaryAirFeed)
-    expect(list.map((a) => a.label)).toEqual(['LYF278', 'PLF034H', 'BRIO66', 'T22'])
+    expect(callsigns(list)).toEqual(['LYF278', 'PLF034H', 'BRIO66', 'T22'])
+    expect(list.find((a) => a.props.hex === 'ae0673')).toMatchObject({ lat: 38.9, lon: -77 })
     expect(list.every((a) => (a.flags & Flag.MIL) !== 0)).toBe(true)
   })
 
   it('makes do with one list when the other is down, and fails only when both are', async () => {
-    expect((await entitiesOf(harness(['adsb.lol']).cache, militaryAirFeed)).map((a) => a.label)).toEqual(['LYF278', 'PLF034H', 'BRIO66'])
-    expect((await entitiesOf(harness(['adsb.fi']).cache, militaryAirFeed)).map((a) => a.label)).toEqual(['LYF278', 'PLF034H', 'T22'])
+    expect(callsigns(await entitiesOf(harness(['adsb.lol']).cache, militaryAirFeed))).toEqual(['LYF278', 'PLF034H', 'BRIO66'])
+    expect(callsigns(await entitiesOf(harness(['adsb.fi']).cache, militaryAirFeed))).toEqual(['LYF278', 'PLF034H', 'T22'])
     await expect(harness(['adsb.lol', 'adsb.fi']).cache.get(militaryAirFeed)).rejects.toThrow(/HTTP 502/)
   })
 
-  it('adds the far military aircraft to the regional picture, once each', async () => {
+  it('adds the region’s far military aircraft to the regional picture, once each, and none from further off', async () => {
     const all = await entitiesOf(harness().cache, aircraftFeed)
     expect(all).toHaveLength(aircraft.length + 3)
+    expect(all.some((a) => a.props.hex === 'ae0673')).toBe(false)
     expect(new Set(all.map((a) => a.id)).size).toBe(all.length)
 
     // Known to both: the regional record is the fresh one, the list only adds the description.
@@ -386,7 +391,7 @@ describe('military aircraft feed', () => {
         return lol && asked.lol === 1 ? new Response('too many requests', { status: 429 }) : json(lol ? MIL_LOL : MIL_FI)
       },
     })
-    const labels = async () => (await entitiesOf(cache, militaryAirFeed)).map((a) => a.label)
+    const labels = async () => callsigns(await entitiesOf(cache, militaryAirFeed))
 
     expect(await labels()).toEqual(['LYF278', 'PLF034H', 'BRIO66'])
     now += 31_000

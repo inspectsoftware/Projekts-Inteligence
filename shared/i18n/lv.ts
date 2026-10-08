@@ -1135,4 +1135,12 @@ export const lv: Record<string, string> = {
   'Continent': 'Kontinents',
   'Part of': 'Ietilpst',
   'Country brief': 'Valsts apskats',
+  'Earthquakes': 'Zemestrīces',
+  'Earthquakes of magnitude 2.5 and up anywhere on Earth in the last 24 hours (US Geological Survey)': 'Zemestrīces ar magnitūdu 2,5 un vairāk jebkur pasaulē pēdējās 24 stundās (ASV Ģeoloģijas dienests)',
+  'Earthquake': 'Zemestrīce',
+  'Tsunami message issued': 'Izdots cunami paziņojums',
+  'When': 'Kad',
+  'Depth': 'Dziļums',
+  'of magnitude 5 or more': 'ar magnitūdu 5 vai vairāk',
+  'Heat sources detected by the VIIRS satellite sensor in the last 24 hours (NASA FIRMS): all of them around the Baltic, the strongest elsewhere': 'Siltuma avoti, ko pēdējās 24 stundās konstatējis VIIRS satelīta sensors (NASA FIRMS): visi ap Baltiju, citur spēcīgākie',
 }

@@ -3,6 +3,7 @@ import type { FeedId } from '../../shared/feeds'
 import { aircraftLayer } from './aircraft'
 import { camsLayer } from './cams'
 import { conflictsLayer, dangerLayer } from './danger'
+import { quakesLayer } from './quakes'
 import { firesLayer } from './fires'
 import { gpsHexLayer } from './gpsHex'
 import { militarySitesLayer, seaExerciseAreasLayer } from './military'
@@ -31,6 +32,7 @@ export const LAYERS: readonly LayerDef[] = [
   radarLayer,
   warningsLayer,
   gpsHexLayer,
+  quakesLayer,
   firesLayer,
   stationsLayer,
   gaugesLayer,
