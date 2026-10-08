@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { t } from '../../i18n'
 import { BASE_MODES, RECENT_REACH_DAYS, recentDays, recentEnd, zoomCeiling } from '../../map/basemaps'
-import { VISION_MODES, useRecent, useUi } from '../../state/ui'
+import { THEMES, VISION_MODES, useRecent, useUi } from '../../state/ui'
 import { SectionTitle, Segmented } from '../kit'
 
 /** What the map is drawn on, and the filter it is seen through. */
@@ -10,6 +10,8 @@ export function DisplayWindow() {
   const vision = useUi((s) => s.vision)
   const setBase = useUi((s) => s.setBase)
   const setVision = useUi((s) => s.setVision)
+  const theme = useUi((s) => s.theme)
+  const setTheme = useUi((s) => s.setTheme)
   const back = useRecent((s) => s.back)
   const setBack = useRecent((s) => s.setBack)
   // The day the window was opened: the slider counts back from there.
@@ -46,6 +48,9 @@ export function DisplayWindow() {
       <div className="h-3" />
       <SectionTitle>{t('Vision')}</SectionTitle>
       <Segmented label={t('Vision mode')} value={vision} options={VISION_MODES} onChange={setVision} />
+      <div className="h-3" />
+      <SectionTitle>{t('Theme')}</SectionTitle>
+      <Segmented label={t('Theme')} value={theme} options={THEMES} onChange={setTheme} />
     </div>
   )
 }

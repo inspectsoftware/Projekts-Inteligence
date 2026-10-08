@@ -6,7 +6,7 @@ import { useEffect, useRef } from 'react'
 import { AOI_BBOX, inBBox } from '../../shared/region'
 import { t } from '../i18n'
 import { setBorder } from '../runtime/border'
-import { useRecent, useUi } from '../state/ui'
+import { useRecent, useTheme, useUi } from '../state/ui'
 import { whatIsHere } from '../runtime/place'
 import { finishBoot } from '../ui/boot'
 import { applyBaseMode, applyZoomCeiling, rasterId } from './baseMode'
@@ -18,7 +18,7 @@ import { PATIENT_SCHEME, loadPatientTile } from './patientTiles'
 import { applyRelief } from './relief'
 import { startScene } from './scene'
 import { addSpotlight } from './spotlight'
-import { buildStyle } from './style'
+import { applyMapTheme, buildStyle } from './style'
 import { WORLD_SCHEME, loadWorldOrthoTile } from './worldOrtho'
 import { readUrlView, writeUrlView } from './urlView'
 
@@ -36,6 +36,7 @@ export function MapView() {
   const vision = useUi((s) => s.vision)
   const base = useUi((s) => s.base)
   const relief = useUi((s) => s.relief)
+  const theme = useTheme()
   const back = useRecent((s) => s.back)
   const map = useMap()
   const error = useMapFailure()
@@ -52,6 +53,12 @@ export function MapView() {
   useEffect(() => {
     if (map) applyRelief(map, relief, base !== 'dark')
   }, [map, base, back, relief])
+
+  // Last of the three: it colours what the two above have just put on the map. Over imagery the
+  // map keeps its dark lettering whatever the theme, since that is what reads on a photo.
+  useEffect(() => {
+    if (map) applyMapTheme(map, base === 'dark' ? theme : 'dark', base !== 'dark')
+  }, [map, base, back, relief, theme])
 
   useEffect(() => {
     // Someone following a shared link wants that view, not the opening fly-in.

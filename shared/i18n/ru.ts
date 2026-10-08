@@ -1099,4 +1099,11 @@ export const ru: Record<string, string> = {
   'Saved': 'Сохр',
   'dock::Save': 'Сохр',
   'Close every window and forget the saved layout': 'Закрыть все окна и забыть сохранённую раскладку',
+  'Auto': 'Авто',
+  'Follow this device’s light or dark setting': 'Следовать настройке светлой или тёмной темы устройства',
+  'Light': 'Светлая',
+  'Light panels and a light map': 'Светлые панели и светлая карта',
+  'Dark panels and the dark tactical map': 'Тёмные панели и тёмная тактическая карта',
+  'Theme': 'Тема',
+  'Map': 'Карта',
 }

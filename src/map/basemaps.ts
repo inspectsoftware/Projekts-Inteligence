@@ -213,7 +213,7 @@ export function clampZoom(zoom: number, mode: BaseMode): number {
 
 /** `detail` says where a base stops getting sharper; the Display window adds the zoom limit to it. */
 export const BASE_MODES: readonly { id: BaseMode; label: string; hint: string; detail: string }[] = [
-  { id: 'dark', label: t('Dark'), hint: t('Vector tactical basemap'), detail: t('Sharp at any zoom.') },
+  { id: 'dark', label: t('Map'), hint: t('Vector tactical basemap'), detail: t('Sharp at any zoom.') },
   {
     id: 'imagery',
     label: t('Sat'),

@@ -1118,4 +1118,11 @@ export const et: Record<string, string> = {
   'Saved': 'Salv',
   'dock::Save': 'Salv',
   'Close every window and forget the saved layout': 'Sulge kõik aknad ja unusta salvestatud paigutus',
+  'Auto': 'Auto',
+  'Follow this device’s light or dark setting': 'Järgi selle seadme heleda või tumeda režiimi seadet',
+  'Light': 'Hele',
+  'Light panels and a light map': 'Heledad paneelid ja hele kaart',
+  'Dark panels and the dark tactical map': 'Tumedad paneelid ja tume taktikaline kaart',
+  'Theme': 'Teema',
+  'Map': 'Kaart',
 }

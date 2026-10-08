@@ -61,7 +61,7 @@ export function Inspector() {
     <>
       <header className="shrink-0 border-b border-line p-3">
         <p className="text-[10px] tracking-[0.22em] text-fg-mute uppercase">{model.kicker}</p>
-        <h2 className="mt-0.5 text-xl font-semibold tracking-[0.08em] text-white">{model.title}</h2>
+        <h2 className="mt-0.5 text-xl font-semibold tracking-[0.08em] text-fg-strong">{model.title}</h2>
         {model.subtitle && <p className="text-[11px] tracking-[0.1em] text-fg-dim">{model.subtitle}</p>}
         {(model.badges.length > 0 || lost) && (
           <ul className="mt-2 flex flex-wrap gap-1.5">

@@ -48,7 +48,7 @@ export function PoliticsPage() {
   return (
     <div className="flex h-full flex-col bg-ink-950 font-mono text-[11px] text-fg-dim">
       <header className="flex h-10 shrink-0 items-center gap-3 border-b border-line bg-ink-900 px-3 tracking-[0.14em] uppercase">
-        <a href="/" className="font-semibold tracking-[0.3em] whitespace-nowrap text-white hover:text-accent">
+        <a href="/" className="font-semibold tracking-[0.3em] whitespace-nowrap text-fg-strong hover:text-accent">
           {APP.codename}
         </a>
         <h1 className="whitespace-nowrap text-fg">{t('Baltic politics')}</h1>

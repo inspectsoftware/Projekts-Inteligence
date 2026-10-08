@@ -1087,4 +1087,11 @@ export const lt: Record<string, string> = {
   'Saved': 'Išsaug',
   'dock::Save': 'Saugoti',
   'Close every window and forget the saved layout': 'Uždaryti visus langus ir pamiršti išsaugotą išdėstymą',
+  'Auto': 'Auto',
+  'Follow this device’s light or dark setting': 'Sekti šio įrenginio šviesaus ar tamsaus režimo nustatymą',
+  'Light': 'Šviesi',
+  'Light panels and a light map': 'Šviesūs skydeliai ir šviesus žemėlapis',
+  'Dark panels and the dark tactical map': 'Tamsūs skydeliai ir tamsus taktinis žemėlapis',
+  'Theme': 'Tema',
+  'Map': 'Žemėl',
 }

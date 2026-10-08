@@ -11,6 +11,7 @@
   --color-line-strong: #2a3f4e;
 
   /* Text */
+  --color-fg-strong: #ffffff;
   --color-fg: #d5e1ea;
   --color-fg-dim: #8499a8;
   --color-fg-mute: #566a78;
@@ -26,6 +27,34 @@
 
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* The same names by day. Signal colours are darkened until they read on a pale surface. */
+:root[data-theme='light'] {
+  --color-ink-950: #e4e9ee;
+  --color-ink-900: #f7f9fb;
+  --color-ink-850: #eef2f5;
+  --color-ink-800: #e4eaef;
+  --color-ink-700: #d6dfe6;
+  --color-line: #c3ced8;
+  --color-line-strong: #9aabb8;
+
+  --color-fg-strong: #04080b;
+  --color-fg: #17222b;
+  --color-fg-dim: #445663;
+  --color-fg-mute: #6a7c89;
+
+  --color-accent: #006e9c;
+  --color-ok: #0b8052;
+  --color-warn: #9a5b00;
+  --color-danger: #c31a2e;
+  --color-mil: #b9520c;
+  --color-sat: #6537bd;
+}
+
+/* Native menus follow the theme, not the class that names the dark scheme. */
+:root[data-theme='light'] .scheme-dark {
+  color-scheme: light;
 }
 
 html,

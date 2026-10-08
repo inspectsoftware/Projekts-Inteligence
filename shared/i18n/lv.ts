@@ -1117,4 +1117,11 @@ export const lv: Record<string, string> = {
   'Saved': 'Saglab',
   'dock::Save': 'Saglab',
   'Close every window and forget the saved layout': 'Aizvērt visus logus un aizmirst saglabāto izkārtojumu',
+  'Auto': 'Auto',
+  'Follow this device’s light or dark setting': 'Sekot šīs ierīces gaišā vai tumšā režīma iestatījumam',
+  'Light': 'Gaišā',
+  'Light panels and a light map': 'Gaiši paneļi un gaiša karte',
+  'Dark panels and the dark tactical map': 'Tumši paneļi un tumšā taktiskā karte',
+  'Theme': 'Motīvs',
+  'Map': 'Karte',
 }

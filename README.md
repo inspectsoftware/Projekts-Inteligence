@@ -150,6 +150,9 @@ are refreshed the same way.
 - **The live layers are still Baltic.** Aircraft, ships, trains, roads, weather and the place
   gazetteer come from regional services. Elsewhere there is the map, the imagery, place lookup,
   danger by country and satellites.
+- **The light theme stops at the map's own layers.** Panels and the vector map change; aircraft, ship
+  and other live symbols keep the colours and dark outlines chosen for the dark map, and over
+  imagery the map keeps its dark lettering in both themes.
 - **Map sharpness:** nothing here is 1:1. The sharpest imagery that may be used without a key is
   the national orthophoto, at about 0.2 to 0.3 m of ground per pixel, so that is what the deepest
   zoom (19) shows over Latvia and Estonia; past zoom 18 the photo is only being enlarged. Each base
