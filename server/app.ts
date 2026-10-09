@@ -4,6 +4,7 @@ import { FeedCache } from './core/cache'
 import { createDiskStore } from './core/disk'
 import { FEEDS, type FeedRegistry } from './feeds/registry'
 import { rateLimit } from './http/ratelimit'
+import type { Room } from './http/room'
 import { apiRoutes } from './http/routes'
 import { securityHeaders } from './http/security'
 import { mountClient } from './http/static'
@@ -16,6 +17,7 @@ export interface AppOptions {
   feeds?: FeedRegistry
   cache?: FeedCache
   env?: NodeJS.ProcessEnv
+  room?: Room
   /** API requests allowed per client address per minute. An open tab makes about forty. */
   requestsPerMinute?: number
 }
@@ -35,6 +37,7 @@ export function createApp(options: AppOptions = {}): Hono {
       feeds,
       cache: options.cache ?? new FeedCache({ env, disk: createDiskStore(), resolve: (id) => feeds[id] }),
       env,
+      room: options.room,
     }),
   )
   mountClient(app, options.clientDir === undefined ? findClientDir() : options.clientDir)

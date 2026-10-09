@@ -1,7 +1,9 @@
-import { Hono } from 'hono'
+import { type Context, Hono } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
 import { FEED_HEADERS, type FeedMeta, type FeedStatus, type FeedsResponse, isFeedId } from '../../shared/feeds'
 import { isLang } from '../../shared/i18n'
 import { APP } from '../../shared/meta'
+import { type ChatResponse, type PresenceResponse, VISITOR_HEADER, isVisitorId } from '../../shared/room'
 import type { BuildInfo } from '../buildInfo'
 import { type FeedCache, type FeedState, FeedUnavailable } from '../core/cache'
 import { camStill } from '../feeds/cams'
@@ -9,6 +11,8 @@ import type { FeedRegistry } from '../feeds/registry'
 import { cameraFrame } from '../feeds/roads'
 import type { FeedDef } from '../feeds/types'
 import { PlaceBusy, createPlaceLookup } from './place'
+import { rateLimit } from './ratelimit'
+import { type Room, createRoom } from './room'
 import { ViewBusy, createViewAircraft } from './viewAircraft'
 
 export interface ApiDeps {
@@ -17,6 +21,8 @@ export interface ApiDeps {
   feeds: FeedRegistry
   cache: FeedCache
   env: NodeJS.ProcessEnv
+  /** Overridable for tests. */
+  room?: Room
 }
 
 function missingKey(def: FeedDef, env: NodeJS.ProcessEnv): boolean {
@@ -50,6 +56,7 @@ export function apiRoutes(deps: ApiDeps): Hono {
   const api = new Hono()
   const places = createPlaceLookup()
   const views = createViewAircraft()
+  const room = deps.room ?? createRoom()
 
   api.get('/health', (c) => {
     c.header('Cache-Control', 'no-store')
@@ -164,6 +171,40 @@ export function apiRoutes(deps: ApiDeps): Hono {
       if (err instanceof PlaceBusy) c.header('Retry-After', '5')
       return c.json({ error: 'unavailable' }, 503)
     }
+  })
+
+  /** The browser's own made-up id. Asking for it in a header keeps other sites from posting through a visitor's browser. */
+  const visitor = (c: Context): string | null => {
+    const id = c.req.header(VISITOR_HEADER)
+    return isVisitorId(id) ? id : null
+  }
+
+  /** How many browsers have been heard from in the last minute and a half. Asking counts as being here. */
+  api.get('/presence', (c) => {
+    const id = visitor(c)
+    if (!id) return c.json({ error: 'bad_request' }, 400)
+    room.touch(id)
+    c.header('Cache-Control', 'no-store')
+    return c.json({ online: room.online() } satisfies PresenceResponse)
+  })
+
+  /** The chat room since a message (?after=), and the name this visitor writes under. */
+  api.get('/chat', (c) => {
+    const id = visitor(c)
+    if (!id) return c.json({ error: 'bad_request' }, 400)
+    c.header('Cache-Control', 'no-store')
+    return c.json({ name: room.touch(id), messages: room.since(Number(c.req.query('after')) || 0) } satisfies ChatResponse)
+  })
+
+  api.post('/chat', rateLimit(20), bodyLimit({ maxSize: 2048, onError: (c) => c.json({ error: 'too_long' }, 413) }), async (c) => {
+    const id = visitor(c)
+    const body: unknown = await c.req.json().catch(() => null)
+    const text = (body as { text?: unknown } | null)?.text
+    if (!id || typeof text !== 'string') return c.json({ error: 'bad_request' }, 400)
+    const result = room.post(id, text)
+    c.header('Cache-Control', 'no-store')
+    if ('refused' in result) return c.json({ error: result.refused }, result.refused === 'too_fast' ? 429 : 400)
+    return c.json(result)
   })
 
   api.all('*', (c) => c.json({ error: 'not_found' }, 404))

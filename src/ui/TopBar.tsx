@@ -3,6 +3,7 @@ import { APP } from '../../shared/meta'
 import { usePalette } from '../state/palette'
 import { LANGS, LANG_NAMES, isLang } from '../../shared/i18n'
 import { lang, setLang, t } from '../i18n'
+import { useOnline } from '../runtime/presence'
 import { Clock } from './Clock'
 
 type Uplink = { state: 'connecting' } | { state: 'up'; commit: string } | { state: 'down' }
@@ -26,6 +27,7 @@ function useUplink(): Uplink {
 
 export function TopBar() {
   const uplink = useUplink()
+  const online = useOnline()
   const openSearch = usePalette((s) => s.setOpen)
 
   return (
@@ -66,6 +68,11 @@ export function TopBar() {
           ))}
         </select>
         <Clock />
+        {online !== null && (
+          <span className="hidden whitespace-nowrap tabular-nums sm:inline" title={t('Visitors on the site right now')}>
+            {t('{n} online', { n: online })}
+          </span>
+        )}
         <span
           className="flex items-center gap-1.5"
           title={uplink.state === 'up' ? t('Server build {commit}', { commit: uplink.commit }) : undefined}

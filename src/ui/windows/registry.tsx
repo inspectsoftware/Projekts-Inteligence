@@ -1,5 +1,6 @@
 import { type ComponentType, useMemo, useSyncExternalStore } from 'react'
 import { t } from '../../i18n'
+import { useLog } from '../../runtime/log'
 import { useAlerts } from '../../state/alerts'
 import { isLayerOn, useLayers } from '../../state/layers'
 import { useSelection } from '../../state/selection'
@@ -10,6 +11,8 @@ import { LayerTree } from '../LayerTree'
 import { RadarControl } from '../RadarControl'
 import { StatusPanel } from '../StatusPanel'
 import { CctvWindow } from './CctvWindow'
+import { ChatWindow } from './ChatWindow'
+import { ConsoleWindow } from './ConsoleWindow'
 import { CountryWindow } from './CountryWindow'
 import { DisplayWindow } from './DisplayWindow'
 import type { Placement, Size } from './geometry'
@@ -68,6 +71,11 @@ function useAlertBadge(): WindowBadge | null {
   // Most severe first, so the first alert sets the colour.
   const worst = active[0].severity
   return { text: String(active.length), tone: worst === 'critical' ? 'danger' : worst }
+}
+
+function useConsoleBadge(): WindowBadge | null {
+  const errors = useLog().filter((entry) => entry.level === 'error').length
+  return errors > 0 ? { text: String(errors), tone: 'danger' } : null
 }
 
 /**
@@ -256,6 +264,31 @@ export const WINDOWS: readonly WindowDef[] = [
     height: 260,
     resizable: { min: { w: 200, h: 120 }, max: { w: 420, h: 1000 } },
     component: SyncWindow,
+  },
+  {
+    id: 'chat',
+    title: t('Chat'),
+    short: t('dock::Chat'),
+    icon: 'M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z',
+    defaultOpen: false,
+    placement: { corner: 'br', dx: 364, dy: 136 },
+    width: 320,
+    height: 380,
+    resizable: { min: { w: 240, h: 220 }, max: { w: 560, h: 1000 } },
+    component: ChatWindow,
+  },
+  {
+    id: 'console',
+    title: t('Console'),
+    short: t('dock::Log'),
+    icon: 'M2 3.5h12v9H2zM4.5 6.5l2 1.5-2 1.5M8 10h3',
+    defaultOpen: false,
+    placement: { corner: 'bl', dx: 556, dy: 56 },
+    width: 420,
+    height: 260,
+    resizable: { min: { w: 260, h: 140 }, max: { w: 900, h: 1000 } },
+    useBadge: useConsoleBadge,
+    component: ConsoleWindow,
   },
   // Last, though it has no place in the dock: until it is raised, a window is drawn over the ones
   // listed before it, and this one opens on top of the Intel feed.

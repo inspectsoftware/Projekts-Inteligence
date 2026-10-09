@@ -3,6 +3,7 @@ import { layersFedBy } from '../layers/registry'
 import { useFeeds } from '../state/feeds'
 import { FeedError, fetchFeed } from './api'
 import { clearFeed, ingest } from './entityStore'
+import { logEvent } from './log'
 
 /**
  * Polls each feed that some visible layer needs, at the pace the server suggests.
@@ -65,7 +66,9 @@ async function poll(id: FeedId, job: Job): Promise<void> {
   } catch (err) {
     if (controller.signal.aborted || jobs.get(id) !== job) return
     job.failures += 1
-    report(id, { status: 'error', error: err instanceof Error ? err.message : String(err) })
+    const message = err instanceof Error ? err.message : String(err)
+    report(id, { status: 'error', error: message })
+    logEvent('warn', `Feed ${id}: ${message}`)
     const asked = err instanceof FeedError ? err.retryAfterMs : null
     schedule(id, job, asked ?? Math.min(60_000, 4000 * 2 ** (job.failures - 1)))
   } finally {
