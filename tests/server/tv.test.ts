@@ -348,7 +348,7 @@ describe('content security policy', () => {
     const links = TV_CHANNELS.filter((entry) => entry.kind === 'link')
     expect(links.length).toBeGreaterThan(6)
     for (const entry of links) {
-      for (const directive of ['frame-src', 'media-src', 'connect-src', 'img-src']) expect(allows(directive, entry.link), `${directive} ${entry.link}`).toBe(false)
+      for (const directive of ['frame-src', 'connect-src', 'img-src']) expect(allows(directive, entry.link), `${directive} ${entry.link}`).toBe(false)
     }
   })
 })

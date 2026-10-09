@@ -6,6 +6,8 @@ const SWEEP_MS = 60_000
 const MAX_VISITORS = 10_000
 const MAX_MESSAGES = 100
 const POST_GAP_MS = 2000
+const MAX_PINGS = 5
+const QUOTE_CHARS = 80
 
 const ADJECTIVES = [
   'Amber', 'Arctic', 'Bold', 'Brisk', 'Calm', 'Clever', 'Copper', 'Crimson', 'Dusty', 'Eager',
@@ -30,7 +32,10 @@ export interface Room {
   /** Marks the visitor as here now and returns the name they go by. */
   touch(id: string): string
   online(): number
-  post(id: string, text: string): { message: ChatMessage } | { refused: ChatRefusal }
+  /** `replyTo` is the seq of the message being answered; one that has scrolled away is quietly dropped. */
+  post(id: string, text: string, replyTo?: number): { message: ChatMessage } | { refused: ChatRefusal }
+  /** The newest message that calls on this visitor, or 0. */
+  pinged(id: string): number
   since(seq: number): ChatMessage[]
 }
 
@@ -40,7 +45,8 @@ export interface Room {
  */
 export function createRoom(now: () => number = Date.now, random: () => number = Math.random): Room {
   const visitors = new Map<string, Visitor>()
-  const names = new Set<string>()
+  /** Lower case to the name as given, so an @ finds its visitor however it was typed. */
+  const names = new Map<string, string>()
   const messages: ChatMessage[] = []
   // Starts at the clock rather than at one, so a browser's "after" still works across a restart.
   let seq = now()
@@ -51,7 +57,7 @@ export function createRoom(now: () => number = Date.now, random: () => number = 
   function freshName(): string {
     for (;;) {
       const name = `${pick(ADJECTIVES)}${pick(ANIMALS)}${String(Math.floor(random() * 100)).padStart(2, '0')}`
-      if (!names.has(name)) return name
+      if (!names.has(name.toLowerCase())) return name
     }
   }
 
@@ -60,7 +66,7 @@ export function createRoom(now: () => number = Date.now, random: () => number = 
     for (const [id, visitor] of visitors) {
       if (at - visitor.seen < KEEP_MS) continue
       visitors.delete(id)
-      names.delete(visitor.name)
+      names.delete(visitor.name.toLowerCase())
     }
   }
 
@@ -76,7 +82,7 @@ export function createRoom(now: () => number = Date.now, random: () => number = 
       }
       visitor = { seen: at, name: freshName(), postedAt: -Infinity }
       visitors.set(id, visitor)
-      names.add(visitor.name)
+      names.set(visitor.name.toLowerCase(), visitor.name)
     }
     visitor.seen = at
     return visitor
@@ -92,7 +98,7 @@ export function createRoom(now: () => number = Date.now, random: () => number = 
       return count
     },
 
-    post(id, raw) {
+    post(id, raw, replyTo) {
       const visitor = visit(id)
       const text = raw.replace(/\p{Cc}+/gu, ' ').trim()
       if (!text) return { refused: 'empty' }
@@ -101,11 +107,21 @@ export function createRoom(now: () => number = Date.now, random: () => number = 
       if (at - visitor.postedAt < POST_GAP_MS) return { refused: 'too_fast' }
       visitor.postedAt = at
       const message: ChatMessage = { seq: ++seq, at, name: visitor.name, text }
+      const target = replyTo === undefined ? undefined : messages.find((earlier) => earlier.seq === replyTo)
+      if (target) message.reply = { seq: target.seq, name: target.name, text: target.text.slice(0, QUOTE_CHARS) }
+      const called = [target?.name, ...Array.from(text.matchAll(/@(\w+)/g), (match) => names.get(match[1].toLowerCase()))]
+      const to = [...new Set(called.filter((name) => name !== undefined && name !== visitor.name))].slice(0, MAX_PINGS) as string[]
+      if (to.length > 0) message.to = to
       messages.push(message)
       if (messages.length > MAX_MESSAGES) messages.shift()
       return { message }
     },
 
     since: (after) => messages.filter((message) => message.seq > after),
+
+    pinged(id) {
+      const name = visitors.get(id)?.name
+      return (name && messages.findLast((message) => message.to?.includes(name))?.seq) || 0
+    },
   }
 }

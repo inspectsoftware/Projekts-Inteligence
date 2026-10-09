@@ -14,7 +14,9 @@ export function buildCsp(origins: readonly string[] = BROWSER_ORIGINS): string {
     'font-src': ["'self'"],
     'connect-src': ["'self'", ...origins, ...MEDIA_ORIGINS],
     // blob: because an HLS player hands the video element a MediaSource URL.
-    'media-src': ["'self'", 'blob:', ...MEDIA_ORIGINS],
+    // https: because the Radio window plays stations from broadcasters all over the world, far too
+    // many hosts to list. Sound and picture only: an HLS player still needs its host in connect-src.
+    'media-src': ["'self'", 'blob:', 'https:', ...MEDIA_ORIGINS],
     'frame-src': FRAME_ORIGINS.length > 0 ? [...FRAME_ORIGINS] : ["'none'"],
     'worker-src': ["'self'", 'blob:'],
     'object-src': ["'none'"],

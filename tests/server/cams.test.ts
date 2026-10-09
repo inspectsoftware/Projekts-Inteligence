@@ -292,8 +292,8 @@ describe('content security policy', () => {
 
   it('would notice a camera on a host that is not listed', () => {
     expect(allows('img-src', 'https://example.org/cam.jpg')).toBe(false)
-    expect(allows('media-src', 'https://ipcamlive.com.example.org/stream.m3u8')).toBe(false)
-    expect(allows('media-src', 'https://vstreams.ventspils.lv/x.m3u8')).toBe(false)
+    expect(allows('connect-src', 'https://ipcamlive.com.example.org/stream.m3u8')).toBe(false)
+    expect(allows('connect-src', 'https://vstreams.ventspils.lv/x.m3u8')).toBe(false)
   })
 })
 

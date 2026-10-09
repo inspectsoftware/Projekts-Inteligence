@@ -63,6 +63,29 @@ describe('room', () => {
   })
 })
 
+describe('pings', () => {
+  it('calls on the writer of a message that is answered, and on anyone named with an @', () => {
+    const { clock, room } = clocked()
+    const [ann, ben, cat] = [1, 2, 3].map((n) => room.touch(id(n)))
+    const first = room.post(id(1), 'anyone here?')
+    if (!('message' in first)) throw new Error('refused')
+    expect(first.message.to).toBeUndefined()
+    expect(room.pinged(id(1))).toBe(0)
+
+    const answer = room.post(id(2), `yes, and @${cat.toLowerCase()} too. not @nobody, not @${ben}`, first.message.seq)
+    expect(answer).toMatchObject({ message: { reply: { seq: first.message.seq, name: ann, text: 'anyone here?' }, to: [ann, cat] } })
+    const seq = 'message' in answer ? answer.message.seq : 0
+    expect(room.pinged(id(1))).toBe(seq)
+    expect(room.pinged(id(3))).toBe(seq)
+    expect(room.pinged(id(2))).toBe(0)
+    expect(room.pinged(id(9))).toBe(0)
+
+    clock.at += 2000
+    expect(room.post(id(1), 'answering one that is gone', 12345)).toMatchObject({ message: { text: 'answering one that is gone' } })
+    expect(room.since(seq)[0].reply).toBeUndefined()
+  })
+})
+
 describe('room api', () => {
   const as = (visitor: string, extra: RequestInit = {}) => ({ ...extra, headers: { 'X-Visitor': visitor, 'Content-Type': 'application/json' } })
   const say = (text: string) => ({ method: 'POST', body: JSON.stringify({ text }) })
@@ -78,7 +101,7 @@ describe('room api', () => {
   it('counts visitors and carries a message from one to another without naming the sender\'s id', async () => {
     const app = createApp({ clientDir: null })
     await app.request('/api/presence', as(id(1)))
-    expect(await (await app.request('/api/presence', as(id(2)))).json()).toEqual({ online: 2 })
+    expect(await (await app.request('/api/presence', as(id(2)))).json()).toEqual({ online: 2, pinged: 0 })
 
     const posted = await app.request('/api/chat', as(id(1), say('hello')))
     expect(posted.status).toBe(200)

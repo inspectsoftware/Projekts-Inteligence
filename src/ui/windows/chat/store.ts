@@ -12,7 +12,7 @@ interface ChatState {
   refused: string | null
   poll(): Promise<void>
   /** True when the message went through. */
-  send(text: string): Promise<boolean>
+  send(text: string, replyTo?: number): Promise<boolean>
 }
 
 const KEPT = 200
@@ -40,10 +40,10 @@ export const useChat = create<ChatState>()((set, get) => ({
     }
   },
 
-  async send(text) {
+  async send(text, replyTo) {
     set({ refused: null })
     try {
-      const res = await roomFetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) })
+      const res = await roomFetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text, replyTo }) })
       const body = (await res.json()) as { message?: ChatMessage; error?: string }
       if (!res.ok || !body.message) {
         set({ refused: body.error ?? 'failed' })

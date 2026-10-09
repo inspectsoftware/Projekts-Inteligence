@@ -5,6 +5,7 @@ import { roomFetch } from './visitor'
 const BEAT_MS = 30_000
 
 let online: number | null = null
+let pinged = 0
 let timer: ReturnType<typeof setTimeout> | null = null
 let busy = false
 const listeners = new Set<() => void>()
@@ -18,7 +19,7 @@ async function beat(): Promise<void> {
   try {
     const res = await roomFetch('/api/presence')
     if (res.ok) {
-      online = ((await res.json()) as PresenceResponse).online
+      ;({ online, pinged } = (await res.json()) as PresenceResponse)
       for (const listener of listeners) listener()
     }
   } catch {
@@ -46,4 +47,9 @@ function subscribe(listener: () => void): () => void {
 /** How many browsers are on the site right now, or null until the server has said. */
 export function useOnline(): number | null {
   return useSyncExternalStore(subscribe, () => online)
+}
+
+/** The newest chat message that calls on this visitor, or 0. Known even while the chat window is closed. */
+export function usePinged(): number {
+  return useSyncExternalStore(subscribe, () => pinged)
 }

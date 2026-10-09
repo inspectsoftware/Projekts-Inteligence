@@ -4,10 +4,16 @@ export interface ChatMessage {
   at: number
   name: string
   text: string
+  /** The message this one answers, as it read when the answer was written. */
+  reply?: { seq: number; name: string; text: string }
+  /** Who it calls on: the writer of the message answered, and everyone named with an @. */
+  to?: string[]
 }
 
 export interface PresenceResponse {
   online: number
+  /** The newest message that calls on this visitor, or 0. */
+  pinged: number
 }
 
 export interface ChatResponse {

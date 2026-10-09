@@ -1,6 +1,7 @@
 import { type ComponentType, useMemo, useSyncExternalStore } from 'react'
 import { t } from '../../i18n'
 import { useLog } from '../../runtime/log'
+import { usePinged } from '../../runtime/presence'
 import { useAlerts } from '../../state/alerts'
 import { isLayerOn, useLayers } from '../../state/layers'
 import { useSelection } from '../../state/selection'
@@ -11,6 +12,7 @@ import { LayerTree } from '../LayerTree'
 import { RadarControl } from '../RadarControl'
 import { StatusPanel } from '../StatusPanel'
 import { CctvWindow } from './CctvWindow'
+import { useChat } from './chat/store'
 import { ChatWindow } from './ChatWindow'
 import { ConsoleWindow } from './ConsoleWindow'
 import { CountryWindow } from './CountryWindow'
@@ -21,6 +23,7 @@ import { IntelWindow } from './IntelWindow'
 import { useMilitaryBadge } from './military/badge'
 import { MilitaryWindow } from './MilitaryWindow'
 import { NoticesWindow } from './NoticesWindow'
+import { RadioWindow } from './RadioWindow'
 import { SyncWindow } from './SyncWindow'
 import { TransportWindow } from './TransportWindow'
 import { TvWindow } from './TvWindow'
@@ -71,6 +74,13 @@ function useAlertBadge(): WindowBadge | null {
   // Most severe first, so the first alert sets the colour.
   const worst = active[0].severity
   return { text: String(active.length), tone: worst === 'critical' ? 'danger' : worst }
+}
+
+/** Someone has answered this visitor or named them, in a message the chat window has not shown yet. */
+function useChatBadge(): WindowBadge | null {
+  const pinged = usePinged()
+  const shown = useChat((s) => s.messages.at(-1)?.seq ?? 0)
+  return pinged > shown ? { text: '@', tone: 'warn' } : null
 }
 
 function useConsoleBadge(): WindowBadge | null {
@@ -266,6 +276,18 @@ export const WINDOWS: readonly WindowDef[] = [
     component: SyncWindow,
   },
   {
+    id: 'radio',
+    title: t('Radio'),
+    short: t('dock::Radio'),
+    icon: 'M2.5 6h11v7.5h-11zM4.5 6l6-3.5M5.5 9.75a1.25 1.25 0 102.5 0 1.25 1.25 0 00-2.5 0M10.5 9h1.5M10.5 11h1.5',
+    defaultOpen: false,
+    placement: { corner: 'tl', dx: 304, dy: 52 },
+    width: 320,
+    height: 400,
+    resizable: { min: { w: 260, h: 220 }, max: { w: 560, h: 1000 } },
+    component: RadioWindow,
+  },
+  {
     id: 'chat',
     title: t('Chat'),
     short: t('dock::Chat'),
@@ -275,6 +297,7 @@ export const WINDOWS: readonly WindowDef[] = [
     width: 320,
     height: 380,
     resizable: { min: { w: 240, h: 220 }, max: { w: 560, h: 1000 } },
+    useBadge: useChatBadge,
     component: ChatWindow,
   },
   {

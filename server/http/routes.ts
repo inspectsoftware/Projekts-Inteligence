@@ -3,6 +3,7 @@ import { bodyLimit } from 'hono/body-limit'
 import { FEED_HEADERS, type FeedMeta, type FeedStatus, type FeedsResponse, isFeedId } from '../../shared/feeds'
 import { isLang } from '../../shared/i18n'
 import { APP } from '../../shared/meta'
+import { type RadioResponse, isRadioBy } from '../../shared/radio'
 import { type ChatResponse, type PresenceResponse, VISITOR_HEADER, isVisitorId } from '../../shared/room'
 import type { BuildInfo } from '../buildInfo'
 import { type FeedCache, type FeedState, FeedUnavailable } from '../core/cache'
@@ -11,6 +12,7 @@ import type { FeedRegistry } from '../feeds/registry'
 import { cameraFrame } from '../feeds/roads'
 import type { FeedDef } from '../feeds/types'
 import { PlaceBusy, createPlaceLookup } from './place'
+import { createRadioSearch } from './radio'
 import { rateLimit } from './ratelimit'
 import { type Room, createRoom } from './room'
 import { ViewBusy, createViewAircraft } from './viewAircraft'
@@ -57,6 +59,7 @@ export function apiRoutes(deps: ApiDeps): Hono {
   const places = createPlaceLookup()
   const views = createViewAircraft()
   const room = deps.room ?? createRoom()
+  const radio = createRadioSearch()
 
   api.get('/health', (c) => {
     c.header('Cache-Control', 'no-store')
@@ -173,6 +176,20 @@ export function apiRoutes(deps: ApiDeps): Hono {
     }
   })
 
+  /** Radio stations anywhere, by name, country or genre (?by=&q=). Each new search costs the directory a request, so it has a limit of its own. */
+  api.get('/radio', rateLimit(30), async (c) => {
+    const by = c.req.query('by') ?? 'name'
+    const q = (c.req.query('q') ?? '').trim()
+    if (!isRadioBy(by) || q.length < 2 || q.length > 60) return c.json({ error: 'bad_request' }, 400)
+    try {
+      const stations = await radio.search(by, q)
+      c.header('Cache-Control', 'public, max-age=600')
+      return c.json({ stations } satisfies RadioResponse)
+    } catch {
+      return c.json({ error: 'unavailable' }, 503)
+    }
+  })
+
   /** The browser's own made-up id. Asking for it in a header keeps other sites from posting through a visitor's browser. */
   const visitor = (c: Context): string | null => {
     const id = c.req.header(VISITOR_HEADER)
@@ -185,7 +202,7 @@ export function apiRoutes(deps: ApiDeps): Hono {
     if (!id) return c.json({ error: 'bad_request' }, 400)
     room.touch(id)
     c.header('Cache-Control', 'no-store')
-    return c.json({ online: room.online() } satisfies PresenceResponse)
+    return c.json({ online: room.online(), pinged: room.pinged(id) } satisfies PresenceResponse)
   })
 
   /** The chat room since a message (?after=), and the name this visitor writes under. */
@@ -199,9 +216,9 @@ export function apiRoutes(deps: ApiDeps): Hono {
   api.post('/chat', rateLimit(20), bodyLimit({ maxSize: 2048, onError: (c) => c.json({ error: 'too_long' }, 413) }), async (c) => {
     const id = visitor(c)
     const body: unknown = await c.req.json().catch(() => null)
-    const text = (body as { text?: unknown } | null)?.text
+    const { text, replyTo } = (body ?? {}) as { text?: unknown; replyTo?: unknown }
     if (!id || typeof text !== 'string') return c.json({ error: 'bad_request' }, 400)
-    const result = room.post(id, text)
+    const result = room.post(id, text, typeof replyTo === 'number' ? replyTo : undefined)
     c.header('Cache-Control', 'no-store')
     if ('refused' in result) return c.json({ error: result.refused }, result.refused === 'too_fast' ? 429 : 400)
     return c.json(result)
