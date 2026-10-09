@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createApp } from '../../server/app'
-import { createRoom } from '../../server/http/room'
+import { createRoom, ownerFrom } from '../../server/http/room'
 import type { ChatResponse } from '../../shared/room'
 
 const id = (n: number) => n.toString(16).padStart(32, '0')
@@ -60,6 +60,26 @@ describe('room', () => {
     expect(room.post(id(2), 'someone else')).toHaveProperty('message')
     clock.at += 2000
     expect(room.post(id(1), 'again')).toHaveProperty('message')
+  })
+})
+
+describe('owner', () => {
+  it('marks what the owner writes, under the name they chose, and nobody else', () => {
+    const owner = ownerFrom({ CHAT_OWNER_IDS: ` ${id(1)}, not-an-id ,${id(4)}`, CHAT_OWNER_NAME: 'Overlord' })
+    expect([...owner.ids]).toEqual([id(1), id(4)])
+    const room = createRoom(() => 0, Math.random, owner)
+    expect(room.touch(id(1))).toBe('Overlord')
+    expect(room.touch(id(4))).toBe('Overlord')
+    expect(room.post(id(1), 'kneel')).toMatchObject({ message: { name: 'Overlord', owner: true } })
+    const other = room.post(id(2), 'hello @overlord')
+    expect(other).toMatchObject({ message: { to: ['Overlord'] } })
+    expect('message' in other && other.message.owner).toBeUndefined()
+  })
+
+  it('has no owner unless told, and refuses a name that could be drawn for someone else', () => {
+    expect(ownerFrom({}).ids.size).toBe(0)
+    expect(ownerFrom({ CHAT_OWNER_NAME: 'SwiftFox07' }).name).toBeUndefined()
+    expect(ownerFrom({ CHAT_OWNER_NAME: '<b>x</b>' }).name).toBeUndefined()
   })
 })
 

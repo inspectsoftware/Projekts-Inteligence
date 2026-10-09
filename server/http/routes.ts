@@ -14,7 +14,7 @@ import type { FeedDef } from '../feeds/types'
 import { PlaceBusy, createPlaceLookup } from './place'
 import { createRadioSearch } from './radio'
 import { rateLimit } from './ratelimit'
-import { type Room, createRoom } from './room'
+import { type Room, createRoom, ownerFrom } from './room'
 import { ViewBusy, createViewAircraft } from './viewAircraft'
 
 export interface ApiDeps {
@@ -58,7 +58,7 @@ export function apiRoutes(deps: ApiDeps): Hono {
   const api = new Hono()
   const places = createPlaceLookup()
   const views = createViewAircraft()
-  const room = deps.room ?? createRoom()
+  const room = deps.room ?? createRoom(Date.now, Math.random, ownerFrom(deps.env))
   const radio = createRadioSearch()
 
   api.get('/health', (c) => {

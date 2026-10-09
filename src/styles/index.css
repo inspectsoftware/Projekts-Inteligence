@@ -210,6 +210,21 @@ body {
   animation: window-guide-out 0.45s ease-out forwards;
 }
 
+/* The owner's name in the chat: the whole spectrum, sliding through the letters. */
+.chromatic {
+  background: linear-gradient(90deg, #ff4d6d, #ffb703, #9ef01a, #00d4ff, #9d4edd, #ff4d6d) 0 0 / 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: chromatic 3s linear infinite;
+}
+
+@keyframes chromatic {
+  to {
+    background-position: -200% 0;
+  }
+}
+
 @keyframes window-in {
   from {
     opacity: 0;
@@ -225,7 +240,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .fx-noise,
-  .window {
+  .window,
+  .chromatic {
     animation: none;
   }
 

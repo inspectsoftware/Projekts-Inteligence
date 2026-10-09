@@ -8,6 +8,8 @@ export interface ChatMessage {
   reply?: { seq: number; name: string; text: string }
   /** Who it calls on: the writer of the message answered, and everyone named with an @. */
   to?: string[]
+  /** Written by the site's owner. */
+  owner?: true
 }
 
 export interface PresenceResponse {

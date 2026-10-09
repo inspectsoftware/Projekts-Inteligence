@@ -91,9 +91,14 @@ export function ChatWindow() {
                 )}
                 <p className="flex items-baseline gap-2 text-[9.5px] tracking-[0.12em] uppercase">
                   {mine ? (
-                    <span className="text-accent">{message.name}</span>
+                    <span className={message.owner ? 'chromatic font-semibold' : 'text-accent'}>{message.name}</span>
                   ) : (
-                    <button type="button" onClick={() => mention(message.name)} title={t('Mention {name}', { name: message.name })} className="tracking-[0.12em] text-fg-dim uppercase hover:text-accent">
+                    <button
+                      type="button"
+                      onClick={() => mention(message.name)}
+                      title={t('Mention {name}', { name: message.name })}
+                      className={`tracking-[0.12em] uppercase ${message.owner ? 'chromatic font-semibold' : 'text-fg-dim hover:text-accent'}`}
+                    >
                       {message.name}
                     </button>
                   )}

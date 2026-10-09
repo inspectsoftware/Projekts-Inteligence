@@ -65,6 +65,8 @@ Hostinger in hPanel → Environment Variables.
 | `AI_MAX_CALLS_PER_DAY` | Ceiling on model calls per UTC day, counted by the running process. Default 120; 0 switches the model off. Once it is reached the briefs are written by rules until midnight UTC. The count is kept in the temp folder, and a start that finds the folder empty counts from zero: this stops a busy day or a bug, not a host that keeps wiping the folder. The cap that holds whatever the host does is a spend limit on the key's workspace in the Claude Console |
 | `UCDP_TOKEN`           | The armed-conflict events layer. The token is free and comes by email from the Uppsala Conflict Data Program ([API docs](https://ucdp.uu.se/apidocs/)); without it the layer says it needs a key |
 | `UCDP_VERSION`         | Which UCDP candidate release to read, such as `26.0.9`. Default: the newest of the last three months that answers |
+| `CHAT_OWNER_IDS`       | Marks the owner in the chat: their name is drawn in moving colours. Visitor ids, comma-separated, one per browser the owner uses; a browser's own is `localStorage.getItem('pwh-visitor')` in its console on the site. There is no login, so anyone holding one of these ids writes as the owner |
+| `CHAT_OWNER_NAME`      | The name the owner writes under, up to 20 letters and digits, not ending in two digits. Default: a drawn name like everyone's |
 
 ## Data sources
 

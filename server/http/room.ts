@@ -1,4 +1,4 @@
-import { CHAT_MAX_TEXT, type ChatMessage, type ChatRefusal } from '../../shared/room'
+import { CHAT_MAX_TEXT, type ChatMessage, type ChatRefusal, isVisitorId } from '../../shared/room'
 
 const ONLINE_MS = 90_000
 const KEEP_MS = 24 * 3600_000
@@ -25,6 +25,7 @@ const ANIMALS = [
 interface Visitor {
   seen: number
   name: string
+  owner: boolean
   postedAt: number
 }
 
@@ -43,7 +44,25 @@ export interface Room {
  * Who is on the site and what they have said, held in memory: the process is stopped when the
  * site goes quiet, and the room empties with it.
  */
-export function createRoom(now: () => number = Date.now, random: () => number = Math.random): Room {
+export interface Owner {
+  /** The browsers that are the owner's: their visitor ids. */
+  ids: ReadonlySet<string>
+  /** The name the owner writes under, in place of a drawn one. */
+  name?: string
+}
+
+/**
+ * Who the owner is, from CHAT_OWNER_IDS (visitor ids, comma-separated) and CHAT_OWNER_NAME. There is
+ * no login: the id a browser made up for itself is the only thing that tells the owner's from anyone's.
+ */
+export function ownerFrom(env: NodeJS.ProcessEnv): Owner {
+  const ids = new Set((env.CHAT_OWNER_IDS ?? '').split(',').map((id) => id.trim()).filter(isVisitorId))
+  const name = env.CHAT_OWNER_NAME?.trim()
+  // A drawn name always ends in two digits, so one that does not can never be drawn for someone else.
+  return { ids, name: name && /^\w{2,20}$/.test(name) && !/\d\d$/.test(name) ? name : undefined }
+}
+
+export function createRoom(now: () => number = Date.now, random: () => number = Math.random, owner: Owner = { ids: new Set() }): Room {
   const visitors = new Map<string, Visitor>()
   /** Lower case to the name as given, so an @ finds its visitor however it was typed. */
   const names = new Map<string, string>()
@@ -66,7 +85,8 @@ export function createRoom(now: () => number = Date.now, random: () => number = 
     for (const [id, visitor] of visitors) {
       if (at - visitor.seen < KEEP_MS) continue
       visitors.delete(id)
-      names.delete(visitor.name.toLowerCase())
+      // The owner's name stays taken: another of their browsers may be using it.
+      if (!visitor.owner) names.delete(visitor.name.toLowerCase())
     }
   }
 
@@ -80,7 +100,8 @@ export function createRoom(now: () => number = Date.now, random: () => number = 
         visitors.clear()
         names.clear()
       }
-      visitor = { seen: at, name: freshName(), postedAt: -Infinity }
+      const isOwner = owner.ids.has(id)
+      visitor = { seen: at, name: (isOwner && owner.name) || freshName(), owner: isOwner, postedAt: -Infinity }
       visitors.set(id, visitor)
       names.set(visitor.name.toLowerCase(), visitor.name)
     }
@@ -107,6 +128,7 @@ export function createRoom(now: () => number = Date.now, random: () => number = 
       if (at - visitor.postedAt < POST_GAP_MS) return { refused: 'too_fast' }
       visitor.postedAt = at
       const message: ChatMessage = { seq: ++seq, at, name: visitor.name, text }
+      if (visitor.owner) message.owner = true
       const target = replyTo === undefined ? undefined : messages.find((earlier) => earlier.seq === replyTo)
       if (target) message.reply = { seq: target.seq, name: target.name, text: target.text.slice(0, QUOTE_CHARS) }
       const called = [target?.name, ...Array.from(text.matchAll(/@(\w+)/g), (match) => names.get(match[1].toLowerCase()))]
