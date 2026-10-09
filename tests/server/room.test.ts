@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createApp } from '../../server/app'
-import { createRoom, ownerFrom } from '../../server/http/room'
+import { bannedFrom, createRoom, ownerFrom } from '../../server/http/room'
 import type { ChatResponse } from '../../shared/room'
 
 const id = (n: number) => n.toString(16).padStart(32, '0')
@@ -72,7 +72,8 @@ describe('owner', () => {
     expect(room.touch(id(4))).toBe('Overlord')
     expect(room.post(id(1), 'kneel')).toMatchObject({ message: { name: 'Overlord', owner: true } })
     const other = room.post(id(2), 'hello @overlord')
-    expect(other).toMatchObject({ message: { to: ['Overlord'] } })
+    expect('message' in other && [...(other.message.to ?? [])].sort()).toEqual([room.me(id(1)).id, room.me(id(4)).id].sort())
+    expect(room.rename(id(2), 'overlord')).toEqual({ refused: 'taken' })
     expect('message' in other && other.message.owner).toBeUndefined()
   })
 
@@ -83,17 +84,85 @@ describe('owner', () => {
   })
 })
 
+describe('abuse', () => {
+  it('does not believe one address is a crowd, nor let it push the others out', () => {
+    const { room } = clocked()
+    room.touch(id(1), '198.51.100.1')
+    const kept = room.me(id(1))
+    for (let n = 100; n < 400; n++) room.touch(id(n), '203.0.113.9')
+    // Five of the three hundred are counted, and the visitor from elsewhere is still who they were.
+    expect(room.online()).toBe(6)
+    expect(room.me(id(1))).toEqual(kept)
+    // The address holds twenty browsers at most: its earliest have been let go and come back renamed or not, but as new.
+    expect(room.pinged(id(100))).toBe(0)
+  })
+
+  it('lets go of the visitor silent the longest when the room is full, not of everyone', () => {
+    const { clock, room } = clocked()
+    const first = room.touch(id(1))
+    const second = room.touch(id(2))
+    clock.at += 1000
+    room.touch(id(1))
+    for (let n = 10; n < 10_009; n++) room.touch(id(n))
+    // id 2 was heard from before id 1's second call, so it went first and its name is free; id 1 is still here.
+    expect(room.touch(id(1))).toBe(first)
+    clock.at += 3000
+    expect(room.rename(id(1), second)).toMatchObject({ name: second })
+  })
+
+  it('refuses a banned browser and strips marks that reorder text', () => {
+    const plain = createRoom(() => 0)
+    const uid = plain.me(id(5)).id
+    expect([...bannedFrom({ CHAT_BANNED_IDS: ` #${uid.toUpperCase()} , nonsense` })]).toEqual([uid])
+    const room = createRoom(() => 0, Math.random, { ids: new Set() }, bannedFrom({ CHAT_BANNED_IDS: uid }))
+    expect(room.post(id(5), 'let me in')).toEqual({ refused: 'banned' })
+    expect(room.post(id(6), 'pay \u202Eeerf\u202C now\u200F')).toMatchObject({ message: { text: 'pay eerf\u202C now'.replace('\u202C', '') } })
+  })
+})
+
+describe('identity', () => {
+  it('gives each browser an id that outlives every change of name and gives the secret away to nobody', () => {
+    const { clock, room } = clocked()
+    const me = room.me(id(1))
+    expect(me.id).toMatch(/^[0-9a-f]{16}$/)
+    expect(id(1)).not.toContain(me.id)
+    expect(room.me(id(2)).id).not.toBe(me.id)
+
+    expect(room.rename(id(1), 'Night_Owl')).toEqual({ id: me.id, name: 'Night_Owl' })
+    expect(room.post(id(1), 'hello')).toMatchObject({ message: { uid: me.id, name: 'Night_Owl' } })
+    expect(room.rename(id(1))).toEqual({ refused: 'too_fast' })
+    clock.at += 3000
+    const drawn = room.rename(id(1))
+    expect(drawn).toMatchObject({ id: me.id, name: expect.stringMatching(/^[A-Z][a-z]+[A-Z][a-z]+\d\d$/) })
+    // The name let go of is free again; one in use is not, whatever the capitals.
+    expect(room.rename(id(2), 'night_owl')).toMatchObject({ name: 'night_owl' })
+    clock.at += 3000
+    expect(room.rename(id(1), 'NIGHT_OWL')).toEqual({ refused: 'taken' })
+    for (const bad of ['ab', 'x'.repeat(21), 'two words', '<b>', 'Zaķis']) expect(room.rename(id(3), bad), bad).toEqual({ refused: 'bad_name' })
+  })
+
+  it('still calls on someone by id after they have changed their name', () => {
+    const { clock, room } = clocked()
+    const first = room.post(id(1), 'before')
+    clock.at += 3000
+    room.rename(id(1), 'Renamed')
+    const answer = room.post(id(2), 'answering', 'message' in first ? first.message.seq : 0)
+    expect(room.pinged(id(1))).toBe('message' in answer ? answer.message.seq : -1)
+  })
+})
+
 describe('pings', () => {
   it('calls on the writer of a message that is answered, and on anyone named with an @', () => {
     const { clock, room } = clocked()
     const [ann, ben, cat] = [1, 2, 3].map((n) => room.touch(id(n)))
+    const [annId, , catId] = [1, 2, 3].map((n) => room.me(id(n)).id)
     const first = room.post(id(1), 'anyone here?')
     if (!('message' in first)) throw new Error('refused')
     expect(first.message.to).toBeUndefined()
     expect(room.pinged(id(1))).toBe(0)
 
     const answer = room.post(id(2), `yes, and @${cat.toLowerCase()} too. not @nobody, not @${ben}`, first.message.seq)
-    expect(answer).toMatchObject({ message: { reply: { seq: first.message.seq, name: ann, text: 'anyone here?' }, to: [ann, cat] } })
+    expect(answer).toMatchObject({ message: { reply: { seq: first.message.seq, name: ann, text: 'anyone here?' }, to: [annId, catId] } })
     const seq = 'message' in answer ? answer.message.seq : 0
     expect(room.pinged(id(1))).toBe(seq)
     expect(room.pinged(id(3))).toBe(seq)
@@ -133,6 +202,13 @@ describe('room api', () => {
     const body = JSON.parse(raw) as ChatResponse
     expect(body.messages).toMatchObject([{ text: 'hello' }])
     expect(body.messages[0].name).not.toBe(body.name)
+    expect(body.messages[0].uid).not.toBe(body.id)
+
+    const renamed = await app.request('/api/me', as(id(2), { method: 'POST', body: JSON.stringify({ name: 'Tester_2' }) }))
+    expect(await renamed.json()).toEqual({ id: body.id, name: 'Tester_2' })
+    expect(await (await app.request('/api/me', as(id(2)))).json()).toEqual({ id: body.id, name: 'Tester_2' })
+    expect((await app.request('/api/me', as(id(1), { method: 'POST', body: JSON.stringify({ name: 'tester_2' }) }))).status).toBe(400)
+    expect((await app.request('/api/me', as(id(1), { method: 'POST', body: JSON.stringify({ name: 7 }) }))).status).toBe(400)
     expect(raw).not.toContain(id(1))
     const later = await app.request(`/api/chat?after=${body.messages[0].seq}`, as(id(2)))
     expect(await later.json()).toMatchObject({ messages: [] })

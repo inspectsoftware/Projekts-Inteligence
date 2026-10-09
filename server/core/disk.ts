@@ -35,10 +35,11 @@ export function createDiskStore<T = FeedPayload>(dir = process.env.CACHE_DIR || 
     },
     async write(id, snapshot) {
       try {
-        await mkdir(dir, { recursive: true })
+        // For this account alone, where the temp folder is shared with the host's other tenants.
+        await mkdir(dir, { recursive: true, mode: 0o700 })
         // Write beside the target and rename, so a reader never sees half a file.
         const temp = `${fileFor(id)}.${process.pid}.tmp`
-        await writeFile(temp, JSON.stringify(snapshot))
+        await writeFile(temp, JSON.stringify(snapshot), { mode: 0o600 })
         await rename(temp, fileFor(id))
       } catch {
         // No writable folder: carry on without persistence.

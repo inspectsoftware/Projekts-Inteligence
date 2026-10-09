@@ -3,6 +3,7 @@ import { t } from '../../i18n'
 import { BASE_MODES, RECENT_REACH_DAYS, recentDays, recentEnd, zoomCeiling } from '../../map/basemaps'
 import { THEMES, VISION_MODES, useRecent, useUi } from '../../state/ui'
 import { SectionTitle, Segmented } from '../kit'
+import { IdentitySettings } from './chat/IdentitySettings'
 
 /** What the map is drawn on, and the filter it is seen through. */
 export function DisplayWindow() {
@@ -51,6 +52,9 @@ export function DisplayWindow() {
       <div className="h-3" />
       <SectionTitle>{t('Theme')}</SectionTitle>
       <Segmented label={t('Theme')} value={theme} options={THEMES} onChange={setTheme} />
+      <div className="h-3" />
+      <SectionTitle>{t('Identity')}</SectionTitle>
+      <IdentitySettings />
     </div>
   )
 }

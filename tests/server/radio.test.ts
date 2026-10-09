@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createApp } from '../../server/app'
-import { createRadioSearch, normaliseStations } from '../../server/http/radio'
+import { RadioBusy, createRadioSearch, normaliseStations } from '../../server/http/radio'
 import { buildCsp } from '../../shared/csp'
 
 const station = (over: Record<string, unknown> = {}) => ({
@@ -49,6 +49,21 @@ describe('radio stations', () => {
     clock.at += 11 * 60_000
     await radio.search('country', 'Latvia')
     expect(asked).toHaveLength(4)
+  })
+
+  it('asks the directory for one search at a time and refuses past a short queue', async () => {
+    let asked = 0
+    const radio = createRadioSearch(async () => {
+      asked += 1
+      return Response.json([station()])
+    })
+    const searches = Array.from({ length: 8 }, (_, n) => radio.search('name', `flood ${n}`))
+    const settled = await Promise.race([Promise.allSettled(searches.slice(5)), new Promise((resolve) => setTimeout(resolve, 200))])
+    expect(settled).toMatchObject([{ status: 'rejected' }, { status: 'rejected' }, { status: 'rejected' }])
+    await expect(searches[7]).rejects.toBeInstanceOf(RadioBusy)
+    await searches[0]
+    // The other four are still waiting their turn, a second apart.
+    expect(asked).toBe(1)
   })
 
   it('turns away a search it cannot make sense of, without asking anyone', async () => {

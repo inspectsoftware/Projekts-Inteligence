@@ -26,7 +26,10 @@ describe('api', () => {
     const res = await createApp({ clientDir: null }).request('/api/health')
     expect(res.status).toBe(200)
     expect(res.headers.get('cache-control')).toBe('no-store')
-    expect(await res.json()).toMatchObject({ ok: true, commit: expect.any(String) })
+    const body = (await res.json()) as Record<string, unknown>
+    expect(body).toMatchObject({ ok: true, commit: expect.any(String), forwarded: 0 })
+    // Nothing about the machine: no runtime version, no uptime.
+    expect(Object.keys(body).sort()).toEqual(['builtAt', 'commit', 'forwarded', 'name', 'now', 'ok'])
   })
 
   it('turns away a client that asks too often, and only that client', async () => {
@@ -38,6 +41,16 @@ describe('api', () => {
     expect(refused.status).toBe(429)
     expect(Number(refused.headers.get('retry-after'))).toBeGreaterThan(0)
     expect((await from('203.0.113.8')).status).toBe(200)
+  })
+
+  it('goes by the address the host saw once it knows how many proxies there are, whatever the caller claims', async () => {
+    const app = createApp({ clientDir: null, requestsPerMinute: 2, env: { PROXY_HOPS: '1' } })
+    const from = (claimed: string, real: string) => app.request('/api/health', { headers: { 'x-forwarded-for': `${claimed}, ${real}` } })
+    expect((await from('10.0.0.1', '203.0.113.7')).status).toBe(200)
+    expect((await from('10.0.0.2', '203.0.113.7')).status).toBe(200)
+    expect((await from('10.0.0.3', '203.0.113.7')).status).toBe(429)
+    expect((await from('10.0.0.3', '203.0.113.8')).status).toBe(200)
+    expect(await (await from('10.0.0.4', '203.0.113.9')).json()).toMatchObject({ forwarded: 2 })
   })
 
   it('answers unknown api routes with a json 404, not the app shell', async () => {

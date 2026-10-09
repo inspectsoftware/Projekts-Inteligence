@@ -12,14 +12,13 @@ import type { FeedRegistry } from '../feeds/registry'
 import { cameraFrame } from '../feeds/roads'
 import type { FeedDef } from '../feeds/types'
 import { PlaceBusy, createPlaceLookup } from './place'
-import { createRadioSearch } from './radio'
-import { rateLimit } from './ratelimit'
-import { type Room, createRoom, ownerFrom } from './room'
+import { RadioBusy, createRadioSearch } from './radio'
+import { clientAddress, forwardedChain, proxyHops, rateLimit } from './ratelimit'
+import { type Room, bannedFrom, createRoom, ownerFrom } from './room'
 import { ViewBusy, createViewAircraft } from './viewAircraft'
 
 export interface ApiDeps {
   build: BuildInfo
-  startedAt: number
   feeds: FeedRegistry
   cache: FeedCache
   env: NodeJS.ProcessEnv
@@ -58,7 +57,10 @@ export function apiRoutes(deps: ApiDeps): Hono {
   const api = new Hono()
   const places = createPlaceLookup()
   const views = createViewAircraft()
-  const room = deps.room ?? createRoom(Date.now, Math.random, ownerFrom(deps.env))
+  const room = deps.room ?? createRoom(Date.now, Math.random, ownerFrom(deps.env), bannedFrom(deps.env))
+  const hops = proxyHops(deps.env)
+  /** A limit of a route's own, on top of the one every request counts against. */
+  const limit = (perMinute: number) => rateLimit(perMinute, Date.now, hops)
   const radio = createRadioSearch()
 
   api.get('/health', (c) => {
@@ -68,10 +70,9 @@ export function apiRoutes(deps: ApiDeps): Hono {
       name: APP.name,
       commit: deps.build.commit,
       builtAt: deps.build.builtAt,
-      node: process.version,
-      startedAt: deps.startedAt,
-      uptimeS: Math.round((Date.now() - deps.startedAt) / 1000),
       now: Date.now(),
+      // How many addresses X-Forwarded-For carried on this request: asked without the header, it is what PROXY_HOPS should be.
+      forwarded: forwardedChain(c).length,
     })
   })
 
@@ -177,7 +178,7 @@ export function apiRoutes(deps: ApiDeps): Hono {
   })
 
   /** Radio stations anywhere, by name, country or genre (?by=&q=). Each new search costs the directory a request, so it has a limit of its own. */
-  api.get('/radio', rateLimit(30), async (c) => {
+  api.get('/radio', limit(30), async (c) => {
     const by = c.req.query('by') ?? 'name'
     const q = (c.req.query('q') ?? '').trim()
     if (!isRadioBy(by) || q.length < 2 || q.length > 60) return c.json({ error: 'bad_request' }, 400)
@@ -185,7 +186,8 @@ export function apiRoutes(deps: ApiDeps): Hono {
       const stations = await radio.search(by, q)
       c.header('Cache-Control', 'public, max-age=600')
       return c.json({ stations } satisfies RadioResponse)
-    } catch {
+    } catch (err) {
+      if (err instanceof RadioBusy) c.header('Retry-After', '5')
       return c.json({ error: 'unavailable' }, 503)
     }
   })
@@ -193,34 +195,59 @@ export function apiRoutes(deps: ApiDeps): Hono {
   /** The browser's own made-up id. Asking for it in a header keeps other sites from posting through a visitor's browser. */
   const visitor = (c: Context): string | null => {
     const id = c.req.header(VISITOR_HEADER)
-    return isVisitorId(id) ? id : null
+    if (!isVisitorId(id)) return null
+    // Every route that asks who is calling counts as being here, and tells the room where from.
+    room.touch(id, clientAddress(c, hops) ?? undefined)
+    return id
   }
+
+  // CHAT_DISABLED shuts the room without a deploy of new code: nothing is read or written.
+  if (/^(1|true|yes|on)$/i.test(deps.env.CHAT_DISABLED ?? '')) api.all('/chat', (c) => c.json({ error: 'closed' }, 503))
 
   /** How many browsers have been heard from in the last minute and a half. Asking counts as being here. */
   api.get('/presence', (c) => {
     const id = visitor(c)
     if (!id) return c.json({ error: 'bad_request' }, 400)
-    room.touch(id)
     c.header('Cache-Control', 'no-store')
     return c.json({ online: room.online(), pinged: room.pinged(id) } satisfies PresenceResponse)
   })
 
-  /** The chat room since a message (?after=), and the name this visitor writes under. */
+  /** Who this visitor is to everyone else: the public id that stays theirs, and the name they go by now. */
+  api.get('/me', (c) => {
+    const id = visitor(c)
+    if (!id) return c.json({ error: 'bad_request' }, 400)
+    c.header('Cache-Control', 'no-store')
+    return c.json(room.me(id))
+  })
+
+  /** A new name: the one in the body, or a drawn one when the body names none. */
+  api.post('/me', limit(20), bodyLimit({ maxSize: 2048, onError: (c) => c.json({ error: 'bad_request' }, 413) }), async (c) => {
+    const id = visitor(c)
+    const body: unknown = await c.req.json().catch(() => null)
+    const name = (body as { name?: unknown } | null)?.name
+    if (!id || !body || (name !== undefined && typeof name !== 'string')) return c.json({ error: 'bad_request' }, 400)
+    const result = room.rename(id, name)
+    c.header('Cache-Control', 'no-store')
+    if ('refused' in result) return c.json({ error: result.refused }, result.refused === 'too_fast' ? 429 : 400)
+    return c.json(result)
+  })
+
+  /** The chat room since a message (?after=), and who this visitor is in it. */
   api.get('/chat', (c) => {
     const id = visitor(c)
     if (!id) return c.json({ error: 'bad_request' }, 400)
     c.header('Cache-Control', 'no-store')
-    return c.json({ name: room.touch(id), messages: room.since(Number(c.req.query('after')) || 0) } satisfies ChatResponse)
+    return c.json({ ...room.me(id), messages: room.since(Number(c.req.query('after')) || 0) } satisfies ChatResponse)
   })
 
-  api.post('/chat', rateLimit(20), bodyLimit({ maxSize: 2048, onError: (c) => c.json({ error: 'too_long' }, 413) }), async (c) => {
+  api.post('/chat', limit(20), bodyLimit({ maxSize: 2048, onError: (c) => c.json({ error: 'too_long' }, 413) }), async (c) => {
     const id = visitor(c)
     const body: unknown = await c.req.json().catch(() => null)
     const { text, replyTo } = (body ?? {}) as { text?: unknown; replyTo?: unknown }
     if (!id || typeof text !== 'string') return c.json({ error: 'bad_request' }, 400)
     const result = room.post(id, text, typeof replyTo === 'number' ? replyTo : undefined)
     c.header('Cache-Control', 'no-store')
-    if ('refused' in result) return c.json({ error: result.refused }, result.refused === 'too_fast' ? 429 : 400)
+    if ('refused' in result) return c.json({ error: result.refused }, result.refused === 'too_fast' ? 429 : result.refused === 'banned' ? 403 : 400)
     return c.json(result)
   })
 

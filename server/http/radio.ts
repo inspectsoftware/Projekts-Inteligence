@@ -6,6 +6,11 @@ const MIRRORS = ['https://all.api.radio-browser.info', 'https://de1.api.radio-br
 const FRESH_MS = 10 * 60_000
 const MAX_HELD = 200
 const LIMIT = 80
+/** Across every visitor: the directory hears from us once a second at most, and past a short queue a search is refused. */
+const SPACING_MS = 1000
+const MAX_WAITING = 5
+
+export class RadioBusy extends Error {}
 
 interface RawStation {
   stationuuid?: string
@@ -58,6 +63,8 @@ export function normaliseStations(raw: readonly RawStation[]): RadioStation[] {
  */
 export function createRadioSearch(fetchImpl?: FetchLike, now: () => number = Date.now): { search(by: RadioBy, query: string): Promise<RadioStation[]> } {
   const held = new Map<string, { at: number; stations: Promise<RadioStation[]> }>()
+  let queue: Promise<unknown> = Promise.resolve()
+  let waiting = 0
 
   async function read(by: RadioBy, query: string): Promise<RadioStation[]> {
     const http = createUpstream(MIRRORS, AbortSignal.timeout(12_000), fetchImpl)
@@ -78,9 +85,14 @@ export function createRadioSearch(fetchImpl?: FetchLike, now: () => number = Dat
       const key = `${by}:${query.toLowerCase()}`
       const hit = held.get(key)
       if (hit && now() - hit.at < FRESH_MS) return hit.stations
+      if (waiting >= MAX_WAITING) return Promise.reject(new RadioBusy('Too many radio searches are waiting'))
+      waiting += 1
+      const stations = queue.then(() => read(by, query)).finally(() => {
+        waiting -= 1
+      })
+      queue = stations.catch(() => undefined).then(() => new Promise((resolve) => setTimeout(resolve, SPACING_MS)))
       // The oldest search makes room.
       if (held.size >= MAX_HELD && !hit) held.delete(held.keys().next().value!)
-      const stations = read(by, query)
       held.delete(key)
       held.set(key, { at: now(), stations })
       stations.catch(() => held.delete(key))

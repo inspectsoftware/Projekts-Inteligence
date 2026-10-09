@@ -12,12 +12,14 @@ const HALF_MENTION = /(^|\s)@(\w*)$/
 function refusal(code: string): string {
   if (code === 'too_fast' || code === 'rate_limited') return t('Slow down a little')
   if (code === 'too_long') return t('The message is too long')
+  if (code === 'banned') return t('You cannot write here')
+  if (code === 'closed') return t('The chat is closed')
   return t('The message could not be sent')
 }
 
 /** One public room for everyone on the site. No login: the server hands each browser a name. */
 export function ChatWindow() {
-  const { name, messages, down, refused, poll, send } = useChat()
+  const { id, name, messages, down, refused, poll, send, identify, rename } = useChat()
   const online = useOnline()
   const [draft, setDraft] = useState('')
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null)
@@ -28,12 +30,12 @@ export function ChatWindow() {
 
   // Asks only while the window is open and the tab is in view.
   useEffect(() => {
-    void poll()
+    void identify().then(poll)
     const timer = setInterval(() => {
       if (!document.hidden) void poll()
     }, POLL_MS)
     return () => clearInterval(timer)
-  }, [poll])
+  }, [identify, poll])
 
   useEffect(() => {
     if (pinned.current && list.current) list.current.scrollTop = list.current.scrollHeight
@@ -66,6 +68,11 @@ export function ChatWindow() {
     <div className="flex min-h-0 flex-1 flex-col text-[11px]">
       <p className="flex shrink-0 items-baseline gap-2 border-b border-line px-3 py-1.5 text-[10px] tracking-[0.12em] text-fg-mute uppercase">
         <span>{name ? t('You are {name}', { name }) : t('Joining…')}</span>
+        {name && (
+          <button type="button" onClick={() => void rename()} aria-label={t('Draw a new random name')} title={t('Draw a new random name. Your ID stays the same; set a name of your own in Display')} className="hover:text-accent">
+            ↻
+          </button>
+        )}
         {online !== null && <span className="ml-auto shrink-0 tabular-nums">{t('{n} online', { n: online })}</span>}
       </p>
       <div
@@ -79,9 +86,9 @@ export function ChatWindow() {
         <p className="mb-2 px-3 text-[10px] text-fg-mute">{t('A public room with no login. Anyone can read it, and messages are not kept.')}</p>
         <ul aria-live="polite" className="grid gap-0.5">
           {messages.map((message) => {
-            const mine = message.name === name
+            const mine = message.uid === id
             // Answers to this reader and messages that name them stand out.
-            const forMe = name !== null && (message.to?.includes(name) ?? false)
+            const forMe = id !== null && (message.to?.includes(id) ?? false)
             return (
               <li key={message.seq} className={`group border-l-2 px-3 py-1 ${forMe ? 'border-accent bg-accent/15' : 'border-transparent'}`}>
                 {message.reply && (
@@ -102,6 +109,9 @@ export function ChatWindow() {
                       {message.name}
                     </button>
                   )}
+                  <span className="shrink-0 text-fg-mute normal-case" title={t('Public ID: the same whatever name they go by')}>
+                    #{message.uid}
+                  </span>
                   <time dateTime={new Date(message.at).toISOString()} className="shrink-0 text-fg-mute tabular-nums">
                     {SENT.format(message.at)}
                   </time>

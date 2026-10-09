@@ -1,18 +1,39 @@
-import type { MiddlewareHandler } from 'hono'
+import type { Context, MiddlewareHandler } from 'hono'
 
 const WINDOW_MS = 60_000
+
+/** PROXY_HOPS: how many of the host's own proxies stand between a visitor and this process. 0 when it is not set. */
+export function proxyHops(env: NodeJS.ProcessEnv): number {
+  const hops = Number(env.PROXY_HOPS)
+  return Number.isInteger(hops) && hops > 0 && hops <= 10 ? hops : 0
+}
+
+/** The addresses in X-Forwarded-For, the caller's own claims first and the host's proxies' additions last. */
+export function forwardedChain(c: Context): string[] {
+  return (c.req.header('x-forwarded-for') ?? '').split(',').map((address) => address.trim()).filter(Boolean)
+}
+
+/**
+ * Who is calling, or null when nothing says. Each of the host's proxies adds the address it heard
+ * from to the end of the header, so with the number of proxies known the caller is that many from
+ * the end, and nothing the caller wrote in front of it counts. With the number unknown (0) the
+ * first address is taken, which the caller can make up: that dodges a limit, and locks nobody else out.
+ */
+export function clientAddress(c: Context, hops: number): string | null {
+  const chain = forwardedChain(c)
+  if (chain.length === 0) return null
+  return hops > 0 ? chain[Math.max(0, chain.length - hops)] : chain[0]
+}
 
 /**
  * A courtesy limit per client address. Every feed is cached, so a flood cannot reach the
  * upstreams; this only keeps one runaway script from eating the process. A visitor's own
  * polling stays far below it.
  */
-export function rateLimit(perMinute: number, now: () => number = Date.now): MiddlewareHandler {
+export function rateLimit(perMinute: number, now: () => number = Date.now, hops = 0): MiddlewareHandler {
   const clients = new Map<string, { windowStart: number; count: number }>()
   return async (c, next) => {
-    // Behind the host's proxy the caller is the first address in this header. It can be forged,
-    // which lets a caller dodge the limit but never lock anyone else out.
-    const client = c.req.header('x-forwarded-for')?.split(',')[0].trim() || 'direct'
+    const client = clientAddress(c, hops) ?? 'direct'
     const at = now()
     let entry = clients.get(client)
     if (!entry || at - entry.windowStart >= WINDOW_MS) {

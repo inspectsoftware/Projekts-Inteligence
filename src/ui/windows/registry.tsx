@@ -113,8 +113,8 @@ export const WINDOWS: readonly WindowDef[] = [
     defaultOpen: false,
     placement: { corner: 'tl', dx: 56, dy: 480 },
     width: 240,
-    // Room for the note on where the satellite base stops being sharp, the longest of the four.
-    height: 240,
+    // Room for the note on where the satellite base stops being sharp, the longest of the four, and for who the reader is.
+    height: 360,
     resizable: { min: { w: 220, h: 160 }, max: { w: 420, h: 800 } },
     component: DisplayWindow,
   },
