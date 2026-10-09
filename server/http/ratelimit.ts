@@ -13,6 +13,23 @@ export function forwardedChain(c: Context): string[] {
   return (c.req.header('x-forwarded-for') ?? '').split(',').map((address) => address.trim()).filter(Boolean)
 }
 
+const PRIVATE = /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|f[cd][0-9a-f]{2}:|fe80:)/i
+
+/**
+ * The header's make-up without a single address in it: a letter per distinct address in order of
+ * first appearance, starred when it is from a private network. "a b* b*" is one public address
+ * followed by the same internal one twice. Enough to work out PROXY_HOPS, and nothing to keep secret.
+ */
+export function forwardedShape(c: Context): string {
+  const letters = new Map<string, string>()
+  return forwardedChain(c)
+    .map((address) => {
+      if (!letters.has(address)) letters.set(address, String.fromCharCode(97 + Math.min(25, letters.size)))
+      return `${letters.get(address)}${PRIVATE.test(address) ? '*' : ''}`
+    })
+    .join(' ')
+}
+
 /**
  * Who is calling, or null when nothing says. Each of the host's proxies adds the address it heard
  * from to the end of the header, so with the number of proxies known the caller is that many from

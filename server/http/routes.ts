@@ -13,7 +13,7 @@ import { cameraFrame } from '../feeds/roads'
 import type { FeedDef } from '../feeds/types'
 import { PlaceBusy, createPlaceLookup } from './place'
 import { RadioBusy, createRadioSearch } from './radio'
-import { clientAddress, forwardedChain, proxyHops, rateLimit } from './ratelimit'
+import { clientAddress, forwardedChain, forwardedShape, proxyHops, rateLimit } from './ratelimit'
 import { type Room, bannedFrom, createRoom, ownerFrom } from './room'
 import { ViewBusy, createViewAircraft } from './viewAircraft'
 
@@ -73,6 +73,7 @@ export function apiRoutes(deps: ApiDeps): Hono {
       now: Date.now(),
       // How many addresses X-Forwarded-For carried on this request: asked without the header, it is what PROXY_HOPS should be.
       forwarded: forwardedChain(c).length,
+      forwardedShape: forwardedShape(c),
     })
   })
 

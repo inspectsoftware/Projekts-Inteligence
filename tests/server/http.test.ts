@@ -29,7 +29,7 @@ describe('api', () => {
     const body = (await res.json()) as Record<string, unknown>
     expect(body).toMatchObject({ ok: true, commit: expect.any(String), forwarded: 0 })
     // Nothing about the machine: no runtime version, no uptime.
-    expect(Object.keys(body).sort()).toEqual(['builtAt', 'commit', 'forwarded', 'name', 'now', 'ok'])
+    expect(Object.keys(body).sort()).toEqual(['builtAt', 'commit', 'forwarded', 'forwardedShape', 'name', 'now', 'ok'])
   })
 
   it('turns away a client that asks too often, and only that client', async () => {
@@ -50,7 +50,11 @@ describe('api', () => {
     expect((await from('10.0.0.2', '203.0.113.7')).status).toBe(200)
     expect((await from('10.0.0.3', '203.0.113.7')).status).toBe(429)
     expect((await from('10.0.0.3', '203.0.113.8')).status).toBe(200)
-    expect(await (await from('10.0.0.4', '203.0.113.9')).json()).toMatchObject({ forwarded: 2 })
+    expect(await (await from('10.0.0.4', '203.0.113.9')).json()).toMatchObject({ forwarded: 2, forwardedShape: 'a* b' })
+    const shaped = await app.request('/api/health', { headers: { 'x-forwarded-for': '203.0.113.9, 192.168.1.4, 203.0.113.9, fd00::1' } })
+    const text = await shaped.text()
+    expect(JSON.parse(text)).toMatchObject({ forwardedShape: 'a b* a c*' })
+    expect(text).not.toContain('203.0.113.9')
   })
 
   it('answers unknown api routes with a json 404, not the app shell', async () => {
