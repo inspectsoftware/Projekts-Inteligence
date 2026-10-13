@@ -1069,7 +1069,6 @@ export const et: Record<string, string> = {
   'Hidden on the map': 'Kaardil peidetud',
   'No operator is publishing live positions for these right now.': 'Praegu ei avalda ükski vedaja nende sõidukite asukohti.',
   'Kind of transport': 'Transpordiliik',
-  'Taxis and ticketing apps are not here: none of them publishes vehicle positions. Rīga’s own buses and trams are missing for the same reason.': 'Taksosid ja piletirakendusi siin ei ole: ükski neist ei avalda sõidukite asukohti. Samal põhjusel puuduvad Riia bussid ja trammid.',
   'No travel warning': 'Reisihoiatust pole',
   'Avoid non-essential travel to parts': 'Vältida mittevajalikku reisimist osasse riigist',
   'Avoid all travel to parts': 'Vältida igasugust reisimist osasse riigist',
@@ -1208,4 +1207,16 @@ export const et: Record<string, string> = {
   'Your ID was given to this browser on its first visit and never changes, whatever name you pick. It is shown beside your chat messages.': 'Teie ID anti sellele brauserile esimesel külastusel ja see ei muutu, olgu nimi milline tahes. Seda näidatakse teie vestlussõnumite kõrval.',
   'You cannot write here': 'Te ei saa siia kirjutada',
   'The chat is closed': 'Vestlus on suletud',
+
+  // src/layers/rigaTransit.ts
+  'Taxis and ticketing apps are not here: none of them publishes vehicle positions. Nor does Rīgas satiksme: its routes, stops and timetables are in the map layer “Rīga routes and stops”.': 'Taksosid ja piletirakendusi siin ei ole: ükski neist ei avalda sõidukite asukohti. Seda ei tee ka Rīgas satiksme: selle liinid, peatused ja sõiduplaanid on kaardikihis „Riia liinid ja peatused“.',
+  'Rīga routes and stops': 'Riia liinid ja peatused',
+  'Routes, stops and timetables of Rīgas satiksme buses, trams and trolleybuses. Scheduled times, not live positions': 'Rīgas satiksme busside, trammide ja trollide liinid, peatused ja sõiduplaanid. Ajad sõiduplaani järgi, mitte asukohad reaalajas',
+  'Public transport stop': 'Ühistranspordi peatus',
+  'Request stop': 'Nõudepeatus',
+  'Timetable, not live': 'Sõiduplaani järgi, mitte reaalajas',
+  'Departures': 'Väljumised',
+  'None in the next 3 hours': 'Järgmise 3 tunni jooksul ei ole',
+  'Timetable (saraksti.lv)': 'Sõiduplaan (saraksti.lv)',
+  'Rīgas satiksme open data (CC0)': 'Rīgas satiksme avaandmed (CC0)',
 }

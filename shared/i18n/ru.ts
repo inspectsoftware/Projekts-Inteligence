@@ -1050,7 +1050,6 @@ export const ru: Record<string, string> = {
   'Hidden on the map': 'Скрыто на карте',
   'No operator is publishing live positions for these right now.': 'Сейчас ни один перевозчик не публикует их местоположение.',
   'Kind of transport': 'Вид транспорта',
-  'Taxis and ticketing apps are not here: none of them publishes vehicle positions. Rīga’s own buses and trams are missing for the same reason.': 'Такси и билетных приложений здесь нет: никто из них не публикует местоположение машин. По той же причине нет рижских автобусов и трамваев.',
   'No travel warning': 'Предупреждений нет',
   'Avoid non-essential travel to parts': 'Избегать необязательных поездок в часть страны',
   'Avoid all travel to parts': 'Избегать любых поездок в часть страны',
@@ -1189,4 +1188,16 @@ export const ru: Record<string, string> = {
   'Your ID was given to this browser on its first visit and never changes, whatever name you pick. It is shown beside your chat messages.': 'Ваш ID был выдан этому браузеру при первом посещении и не меняется, какое бы имя вы ни выбрали. Он показан рядом с вашими сообщениями в чате.',
   'You cannot write here': 'Вы не можете здесь писать',
   'The chat is closed': 'Чат закрыт',
+
+  // src/layers/rigaTransit.ts
+  'Taxis and ticketing apps are not here: none of them publishes vehicle positions. Nor does Rīgas satiksme: its routes, stops and timetables are in the map layer “Rīga routes and stops”.': 'Такси и билетных приложений здесь нет: ни одно из них не публикует положение транспорта. Не публикует его и Rīgas satiksme: её маршруты, остановки и расписания находятся в слое карты «Маршруты и остановки Риги».',
+  'Rīga routes and stops': 'Маршруты и остановки Риги',
+  'Routes, stops and timetables of Rīgas satiksme buses, trams and trolleybuses. Scheduled times, not live positions': 'Маршруты, остановки и расписания автобусов, трамваев и троллейбусов Rīgas satiksme. Время по расписанию, а не положение в реальном времени',
+  'Public transport stop': 'Остановка общественного транспорта',
+  'Request stop': 'Остановка по требованию',
+  'Timetable, not live': 'По расписанию, не в реальном времени',
+  'Departures': 'Отправления',
+  'None in the next 3 hours': 'В ближайшие 3 часа нет',
+  'Timetable (saraksti.lv)': 'Расписание (saraksti.lv)',
+  'Rīgas satiksme open data (CC0)': 'Открытые данные Rīgas satiksme (CC0)',
 }

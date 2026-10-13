@@ -126,7 +126,7 @@ export function TransportWindow() {
       <div className="min-h-0 flex-1 overflow-y-auto p-3 text-[11px]">
         {tab === 'trains' ? <TrainsTab /> : <TransitTab key={tab} modes={MODES[tab]} />}
         <p className="mt-2 text-[10px] text-fg-mute">
-          {t('Taxis and ticketing apps are not here: none of them publishes vehicle positions. Rīga’s own buses and trams are missing for the same reason.')}
+          {t('Taxis and ticketing apps are not here: none of them publishes vehicle positions. Nor does Rīgas satiksme: its routes, stops and timetables are in the map layer “Rīga routes and stops”.')}
         </p>
       </div>
     </div>

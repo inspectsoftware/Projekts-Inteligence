@@ -1038,7 +1038,6 @@ export const lt: Record<string, string> = {
   'Hidden on the map': 'Paslėpta žemėlapyje',
   'No operator is publishing live positions for these right now.': 'Šiuo metu joks vežėjas neskelbia šių transporto priemonių buvimo vietos.',
   'Kind of transport': 'Transporto rūšis',
-  'Taxis and ticketing apps are not here: none of them publishes vehicle positions. Rīga’s own buses and trams are missing for the same reason.': 'Taksi ir bilietų programėlių čia nėra: nė viena neskelbia transporto priemonių buvimo vietos. Dėl tos pačios priežasties trūksta Rygos autobusų ir tramvajų.',
   'No travel warning': 'Kelionių įspėjimo nėra',
   'Avoid non-essential travel to parts': 'Vengti nebūtinų kelionių į dalį teritorijos',
   'Avoid all travel to parts': 'Vengti visų kelionių į dalį teritorijos',
@@ -1177,4 +1176,16 @@ export const lt: Record<string, string> = {
   'Your ID was given to this browser on its first visit and never changes, whatever name you pick. It is shown beside your chat messages.': 'Jūsų ID šiai naršyklei buvo suteiktas per pirmą apsilankymą ir nesikeičia, kad ir kokį vardą pasirinktumėte. Jis rodomas šalia jūsų pokalbių žinučių.',
   'You cannot write here': 'Jūs negalite čia rašyti',
   'The chat is closed': 'Pokalbiai uždaryti',
+
+  // src/layers/rigaTransit.ts
+  'Taxis and ticketing apps are not here: none of them publishes vehicle positions. Nor does Rīgas satiksme: its routes, stops and timetables are in the map layer “Rīga routes and stops”.': 'Taksi ir bilietų programėlių čia nėra: nė viena iš jų neskelbia transporto priemonių buvimo vietos. Neskelbia ir „Rīgas satiksme“: jos maršrutai, stotelės ir tvarkaraščiai yra žemėlapio sluoksnyje „Rygos maršrutai ir stotelės“.',
+  'Rīga routes and stops': 'Rygos maršrutai ir stotelės',
+  'Routes, stops and timetables of Rīgas satiksme buses, trams and trolleybuses. Scheduled times, not live positions': '„Rīgas satiksme“ autobusų, tramvajų ir troleibusų maršrutai, stotelės ir tvarkaraščiai. Laikai pagal tvarkaraštį, ne buvimo vieta realiuoju laiku',
+  'Public transport stop': 'Viešojo transporto stotelė',
+  'Request stop': 'Stotelė pagal pareikalavimą',
+  'Timetable, not live': 'Pagal tvarkaraštį, ne realiuoju laiku',
+  'Departures': 'Išvykimai',
+  'None in the next 3 hours': 'Per artimiausias 3 valandas nėra',
+  'Timetable (saraksti.lv)': 'Tvarkaraštis (saraksti.lv)',
+  'Rīgas satiksme open data (CC0)': '„Rīgas satiksme“ atvirieji duomenys (CC0)',
 }

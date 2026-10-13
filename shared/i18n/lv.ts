@@ -1068,7 +1068,6 @@ export const lv: Record<string, string> = {
   'Hidden on the map': 'Paslēpts kartē',
   'No operator is publishing live positions for these right now.': 'Pašlaik neviens pārvadātājs nepublicē šo transportlīdzekļu atrašanās vietas.',
   'Kind of transport': 'Transporta veids',
-  'Taxis and ticketing apps are not here: none of them publishes vehicle positions. Rīga’s own buses and trams are missing for the same reason.': 'Taksometru un biļešu lietotņu šeit nav: neviena no tām nepublicē transportlīdzekļu atrašanās vietas. Tā paša iemesla dēļ trūkst Rīgas autobusu un tramvaju.',
   'No travel warning': 'Nav ceļošanas brīdinājuma',
   'Avoid non-essential travel to parts': 'Izvairīties no nebūtiskiem braucieniem uz daļu teritorijas',
   'Avoid all travel to parts': 'Izvairīties no visiem braucieniem uz daļu teritorijas',
@@ -1207,4 +1206,16 @@ export const lv: Record<string, string> = {
   'Your ID was given to this browser on its first visit and never changes, whatever name you pick. It is shown beside your chat messages.': 'Jūsu ID šim pārlūkam tika piešķirts pirmajā apmeklējumā un nemainās, lai kādu vārdu jūs izvēlētos. Tas ir redzams blakus jūsu čata ziņām.',
   'You cannot write here': 'Jūs šeit nevarat rakstīt',
   'The chat is closed': 'Čats ir slēgts',
+
+  // src/layers/rigaTransit.ts
+  'Taxis and ticketing apps are not here: none of them publishes vehicle positions. Nor does Rīgas satiksme: its routes, stops and timetables are in the map layer “Rīga routes and stops”.': 'Taksometru un biļešu lietotņu šeit nav: neviena no tām nepublicē transportlīdzekļu pozīcijas. To nedara arī Rīgas satiksme: tās maršruti, pieturas un saraksti ir kartes slānī “Rīgas maršruti un pieturas”.',
+  'Rīga routes and stops': 'Rīgas maršruti un pieturas',
+  'Routes, stops and timetables of Rīgas satiksme buses, trams and trolleybuses. Scheduled times, not live positions': 'Rīgas satiksmes autobusu, tramvaju un trolejbusu maršruti, pieturas un saraksti. Laiki pēc saraksta, nevis pozīcijas reāllaikā',
+  'Public transport stop': 'Sabiedriskā transporta pietura',
+  'Request stop': 'Pietura pēc pieprasījuma',
+  'Timetable, not live': 'Pēc saraksta, nevis reāllaikā',
+  'Departures': 'Atiešanas laiki',
+  'None in the next 3 hours': 'Tuvāko 3 stundu laikā nav',
+  'Timetable (saraksti.lv)': 'Saraksts (saraksti.lv)',
+  'Rīgas satiksme open data (CC0)': 'Rīgas satiksmes atvērtie dati (CC0)',
 }

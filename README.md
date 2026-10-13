@@ -125,6 +125,7 @@ Listed here as each layer lands, with the attribution its licence requires.
 | Armed conflict events          | [UCDP Candidate Events Dataset](https://ucdp.uu.se), the latest monthly release, about a month behind. Needs `UCDP_TOKEN`. Written from the API documentation and not yet run against the live service | Free with a token; cite UCDP and the release |
 | Public alerts                  | No Baltic state publishes a machine-readable alert feed and Latvia has no AMBER Alert system. The window lists the weather service's orange and red warnings, and headlines of the news feeds above picked by keyword: warnings to the public, and appeals to find missing people | As the news and weather rows |
 | Public transport, Tallinn and Vilnius | Vehicle position files of [Tallinna Transport](https://transport.tallinn.ee) and [stops.lt](https://www.stops.lt/vilnius/) | Tallinn: city open data, free use. Vilnius: no published terms; used lightly |
+| Public transport, Rīga         | Routes, stops and the timetable of [Rīgas satiksme](https://data.gov.lv/dati/lv/dataset/marsrutu-saraksti-rigas-satiksme-sabiedriskajam-transportam), baked from its monthly GTFS file. Scheduled times only: the operator publishes no vehicle positions, and its own planner reads them from an endpoint closed to other sites, which is left alone | CC0 1.0 |
 | Radiation                      | EURDEP network, via [BfS](https://odlinfo.bfs.de) open data                                    | Free to use with acknowledgement                |
 | River and coastal gauges       | [LVĢMC](https://videscentrs.lvgmc.lv) hydrology files                                          | No published terms; cached, read every 15 min   |
 | Country figures                | [World Bank](https://data.worldbank.org), [IMF World Economic Outlook](https://www.imf.org/external/datamapper), [Eurostat](https://ec.europa.eu/eurostat), [Wikidata](https://www.wikidata.org), NATO's [defence expenditure report](https://www.nato.int/en/news-and-events/articles/news/2026/07/07/defence-investment-update-record-spending-in-europe-and-canada), the [SIPRI Military Expenditure Database](https://doi.org/10.55163/CQGC9685), Transparency International's CPI and the Global Peace Index (IEP). Notes on the armed forces come from defence ministries, NATO and public broadcasters. Every figure links to its source in the window | World Bank CC BY 4.0; Wikidata CC0; SIPRI free to cite for non-commercial use; the rest cited with a link |
@@ -134,6 +135,8 @@ Baked data in `public/data/` is rebuilt by hand with the scripts in `scripts/`
 (`node scripts/bake-boundaries.mjs`, `node scripts/bake-osm.mjs`), never as part of the build.
 The navy list and the outline of Latvian waters in `shared/data/` come from
 `node scripts/bake-naval.mjs` in the same way.
+Rīga's routes, stops and timetable come from `npx tsx scripts/bake-riga-transit.ts --refresh`, to be
+run each month when Rīgas satiksme publishes a new file.
 The military sites and sea exercise areas come from `node scripts/bake-military.mjs`. The outlines
 of Latvia's restricted and danger airspace in `shared/data/lvAirspace.ts` come from
 `npx tsx scripts/bake-airspace.ts`, which is to be run again whenever a new AIP cycle takes effect
