@@ -51,6 +51,8 @@ describe('dead reckoning', () => {
     expect(positionAt(jet, jet.ts - 5000)).toEqual([24, 57])
     expect(positionAt(aircraft('c', { spd: 0.2, trk: 90 }), jet.ts + 10_000)).toEqual([24, 57])
     expect(positionAt(aircraft('d'), jet.ts + 10_000)).toEqual([24, 57])
+    // A bus is not carried on along its heading: the street turns before its next report.
+    expect(positionAt({ ...aircraft('e', { spd: 12, trk: 240 }), kind: 'transit' }, jet.ts + 10_000)).toEqual([24, 57])
   })
 })
 

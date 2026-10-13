@@ -9,6 +9,9 @@ const MAX_EXTRAPOLATION_S = 25
  * along its last reported course. This is what makes icons glide between polls.
  */
 export function positionAt(entity: Entity, now: number): [number, number] {
+  // A bus reports about once a minute and turns or stops in between: carried on along its
+  // last heading it leaves the street within seconds. It stays where it was last seen.
+  if (entity.kind === 'transit') return [entity.lon, entity.lat]
   if (entity.spd === undefined || entity.trk === undefined || entity.spd < 1) return [entity.lon, entity.lat]
   const seconds = Math.min(MAX_EXTRAPOLATION_S, Math.max(0, (now - entity.ts) / 1000))
   return advance(entity.lon, entity.lat, entity.trk, entity.spd * seconds)
