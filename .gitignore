@@ -20,3 +20,6 @@ scripts/.cache
 !.vscode/extensions.json
 .idea
 .DS_Store
+
+# Security-test accounts (secrets, never commit)
+tests/security/accounts.local.json
