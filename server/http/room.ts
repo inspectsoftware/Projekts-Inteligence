@@ -62,18 +62,21 @@ export interface Room {
  * site goes quiet, and the room empties with it.
  */
 export interface Owner {
-  /** The browsers that are the owner's: their visitor ids. */
+  /** The browsers that are the owner's: the secrets they keep. */
   ids: ReadonlySet<string>
   /** The name the owner writes under, in place of a drawn one. */
   name?: string
 }
 
 /**
- * Who the owner is, from CHAT_OWNER_IDS (visitor ids, comma-separated) and CHAT_OWNER_NAME. There is
- * no login: the id a browser made up for itself is the only thing that tells the owner's from anyone's.
+ * Who the owner is, from CHAT_OWNER_IDS (comma-separated) and CHAT_OWNER_NAME. There is no login:
+ * the secret a browser made up for itself is what tells the owner's from anyone's. Only that
+ * secret counts, 32 characters; the public id beside a message is for everyone to see and is not
+ * taken. Quote marks and capitals picked up in pasting are forgiven.
  */
 export function ownerFrom(env: NodeJS.ProcessEnv): Owner {
-  const ids = new Set((env.CHAT_OWNER_IDS ?? '').split(',').map((id) => id.trim()).filter(isVisitorId))
+  const listed = (env.CHAT_OWNER_IDS ?? '').split(',').map((id) => id.trim().replace(/^["'#]+|["']+$/g, '').toLowerCase())
+  const ids = new Set(listed.filter(isVisitorId))
   const name = env.CHAT_OWNER_NAME?.trim()
   // A drawn name always ends in two digits, so one that does not can never be drawn for someone else.
   return { ids, name: name && /^\w{2,20}$/.test(name) && !/\d\d$/.test(name) ? name : undefined }
@@ -145,9 +148,9 @@ export function createRoom(
       }
       // A full room loses the visitor silent the longest, never everyone at once.
       if (visitors.size >= MAX_VISITORS) evict(visitors.keys().next().value!)
-      const isOwner = owner.ids.has(id)
       // A fingerprint of the secret: the same for good, and no way back from it to the secret.
       const uid = createHash('sha256').update(id).digest('hex').slice(0, UID_CHARS)
+      const isOwner = owner.ids.has(id)
       visitor = { uid, seen: at, name: (isOwner && owner.name) || freshName(), owner: isOwner, postedAt: -Infinity, renamedAt: -Infinity }
       names.add(visitor.name.toLowerCase())
     }

@@ -77,6 +77,15 @@ describe('owner', () => {
     expect('message' in other && other.message.owner).toBeUndefined()
   })
 
+  it('knows the owner by the secret alone, however it was pasted, and never by the public id', () => {
+    const quoted = createRoom(() => 0, Math.random, ownerFrom({ CHAT_OWNER_IDS: `'${id(7).toUpperCase()}'` }))
+    expect(quoted.post(id(7), 'mine')).toMatchObject({ message: { owner: true } })
+    expect('message' in quoted.post(id(8), 'not mine') && quoted.since(0)[1].owner).toBeUndefined()
+
+    const uid = quoted.me(id(7)).id
+    expect(ownerFrom({ CHAT_OWNER_IDS: `${uid}, #${uid}` }).ids.size).toBe(0)
+  })
+
   it('has no owner unless told, and refuses a name that could be drawn for someone else', () => {
     expect(ownerFrom({}).ids.size).toBe(0)
     expect(ownerFrom({ CHAT_OWNER_NAME: 'SwiftFox07' }).name).toBeUndefined()
