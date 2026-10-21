@@ -5,7 +5,9 @@ import { createApp } from './app'
 // so start-up has to be quick: listen first, load everything else lazily.
 const port = Number(process.env.PORT) || 8787
 
-const server = serve({ fetch: createApp().fetch, port, hostname: '0.0.0.0' }, (info) => {
+// Offline until the host's security patch is in: every request gets the maintenance page and no
+// feed is fetched. Drop `offline: true` to bring the site back.
+const server = serve({ fetch: createApp({ offline: true }).fetch, port, hostname: '0.0.0.0' }, (info) => {
   console.log(`[pwh] listening on :${info.port} (node ${process.version})`)
 })
 

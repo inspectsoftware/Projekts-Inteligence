@@ -21,6 +21,20 @@ afterAll(() => {
   rmSync(clientDir, { recursive: true, force: true })
 })
 
+describe('offline', () => {
+  it('answers every page and API call with the maintenance page, and runs nothing behind it', async () => {
+    const app = createApp({ clientDir, offline: true })
+    for (const path of ['/', '/api/health', '/api/feeds', '/assets/app-abc123.js']) {
+      const res = await app.request(path)
+      expect(res.status, path).toBe(503)
+      expect(res.headers.get('retry-after')).toBe('3600')
+      expect(res.headers.get('cache-control')).toBe('no-store')
+      expect(res.headers.get('content-security-policy')).toBeTruthy()
+      expect(await res.text()).toContain('offline for maintenance')
+    }
+  })
+})
+
 describe('api', () => {
   it('reports health without caching', async () => {
     const res = await createApp({ clientDir: null }).request('/api/health')
