@@ -5,6 +5,7 @@ import { usePinged } from '../../runtime/presence'
 import { useAlerts } from '../../state/alerts'
 import { isLayerOn, useLayers } from '../../state/layers'
 import { useSelection } from '../../state/selection'
+import { useUi } from '../../state/ui'
 import { type WindowState, useWindows } from '../../state/windows'
 import { AlertStack } from '../AlertStack'
 import { Inspector } from '../Inspector'
@@ -27,9 +28,8 @@ import { RadioWindow } from './RadioWindow'
 import { SyncWindow } from './SyncWindow'
 import { TransportWindow } from './TransportWindow'
 import { TvWindow } from './TvWindow'
-import { ViewsWindow } from './ViewsWindow'
 
-/** A count or a short flag, shown in a window's header and on its dock button. */
+/** A count or a short flag, shown in a window's header and on its taskbar button. */
 export interface WindowBadge {
   text: string
   tone?: 'info' | 'warn' | 'danger'
@@ -39,14 +39,14 @@ export const BADGE_TEXT = { info: 'text-accent', warn: 'text-warn', danger: 'tex
 
 /**
  * One window. Adding a window to the product means writing its body component and listing
- * it here; the dock, the window layer and the command palette pick it up from there.
+ * it here; the taskbar, the window layer and the command palette pick it up from there.
  */
 export interface WindowDef {
   id: string
   title: string
-  /** Dock label, five letters at most. */
+  /** Taskbar label, five letters at most. */
   short: string
-  /** Path data for the dock icon: 16x16, stroked, not filled. */
+  /** Path data for the taskbar icon: 16x16, stroked, not filled. */
   icon: string
   defaultOpen: boolean
   /** Where it sits until the user moves it. */
@@ -56,13 +56,15 @@ export interface WindowDef {
   height: number
   resizable?: { min: Size; max: Size }
   hideInDock?: boolean
+  /** Only of use to whoever builds or debugs the app: shown on the developer rail, and only in developer mode. */
+  developer?: boolean
   /**
-   * For a window that belongs to a mode rather than to the dock. `subject` is what the mode is
+   * For a window that belongs to a mode rather than to the taskbar. `subject` is what the mode is
    * about, null while it is off: the window is shown for as long as there is one and comes to
    * the front whenever it changes. Closing the window leaves the mode.
    */
   mode?: { subscribe(onChange: () => void): () => void; subject(): unknown; leave(): void }
-  /** A hook. Runs even while the window is closed, so the dock can show what is waiting inside. */
+  /** A hook. Runs even while the window is closed, so the taskbar can show what is waiting inside. */
   useBadge?(): WindowBadge | null
   /** The body. It gets no props, and it scrolls inside the frame unless it lays itself out to fit. */
   component: ComponentType
@@ -89,7 +91,7 @@ function useConsoleBadge(): WindowBadge | null {
 }
 
 /**
- * Dock order. Nothing is open on arrival: the page starts as a clear map, and a layout comes back
+ * Taskbar order. Nothing is open on arrival: the page starts as a clear map, and a layout comes back
  * only if the reader saved one. Default slots are laid out for 1440x900.
  */
 export const WINDOWS: readonly WindowDef[] = [
@@ -99,36 +101,25 @@ export const WINDOWS: readonly WindowDef[] = [
     short: t('dock::Layer'),
     icon: 'M8 2l6 3-6 3-6-3zM2 8l6 3 6-3M2 11l6 3 6-3',
     defaultOpen: false,
-    placement: { corner: 'tl', dx: 56, dy: 52 },
+    placement: { corner: 'tl', dx: 12, dy: 52 },
     width: 240,
-    height: 420,
+    // Short enough for the View window to fit underneath above the HUD row, on a screen 900 high.
+    height: 380,
     resizable: { min: { w: 200, h: 160 }, max: { w: 420, h: 1200 } },
     component: LayerTree,
   },
   {
     id: 'display',
-    title: t('Display'),
-    short: t('Disp'),
+    title: t('View'),
+    short: t('View'),
     icon: 'M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8 2.5v11',
     defaultOpen: false,
-    placement: { corner: 'tl', dx: 56, dy: 480 },
+    placement: { corner: 'tl', dx: 12, dy: 440 },
     width: 240,
     // Room for the note on where the satellite base stops being sharp, the longest of the four, and for who the reader is.
     height: 360,
     resizable: { min: { w: 220, h: 160 }, max: { w: 420, h: 800 } },
     component: DisplayWindow,
-  },
-  {
-    id: 'views',
-    title: t('Views'),
-    short: t('dock::Views'),
-    icon: 'M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8zM8 6.5a1.5 1.5 0 100 3 1.5 1.5 0 000-3z',
-    defaultOpen: false,
-    placement: { corner: 'tl', dx: 304, dy: 608 },
-    width: 240,
-    height: 280,
-    resizable: { min: { w: 200, h: 140 }, max: { w: 420, h: 800 } },
-    component: ViewsWindow,
   },
   {
     id: 'situation',
@@ -162,7 +153,7 @@ export const WINDOWS: readonly WindowDef[] = [
     short: t('dock::Radar'),
     icon: 'M8 8l4-4M8 2.5A5.5 5.5 0 1013.5 8',
     defaultOpen: false,
-    placement: { corner: 'bc', dx: 0, dy: 56 },
+    placement: { corner: 'bc', dx: 0, dy: 100 },
     width: 352,
     height: 80,
     hideInDock: true,
@@ -179,7 +170,7 @@ export const WINDOWS: readonly WindowDef[] = [
     short: 'TV',
     icon: 'M2 4h12v8H2zM6 14h4',
     defaultOpen: false,
-    placement: { corner: 'tl', dx: 304, dy: 300 },
+    placement: { corner: 'tl', dx: 260, dy: 300 },
     width: 420,
     height: 320,
     // YouTube's terms ask for a player of at least 200 by 200. Any smaller than this, and the
@@ -194,7 +185,7 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M2 5h8v6H2zM10 7l4-2v6l-4-2',
     defaultOpen: false,
     // Clear of the radar strip underneath.
-    placement: { corner: 'br', dx: 360, dy: 126 },
+    placement: { corner: 'br', dx: 360, dy: 170 },
     width: 460,
     height: 360,
     resizable: { min: { w: 300, h: 220 }, max: { w: 1280, h: 900 } },
@@ -207,7 +198,7 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M3 4h10M3 8h10M3 12h6',
     defaultOpen: false,
     // Raised off the bottom edge: on wide screens the data credits fill that corner.
-    placement: { corner: 'br', dx: 12, dy: 136 },
+    placement: { corner: 'br', dx: 12, dy: 180 },
     width: 340,
     height: 300,
     resizable: { min: { w: 260, h: 200 }, max: { w: 640, h: 1000 } },
@@ -269,7 +260,9 @@ export const WINDOWS: readonly WindowDef[] = [
     short: t('dock::Sync'),
     icon: 'M8 4.5V8l2.5 1.5M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11z',
     defaultOpen: false,
-    placement: { corner: 'bl', dx: 304, dy: 56 },
+    developer: true,
+    // Right of the developer rail it is opened from.
+    placement: { corner: 'bl', dx: 60, dy: 100 },
     width: 240,
     height: 260,
     resizable: { min: { w: 200, h: 120 }, max: { w: 420, h: 1000 } },
@@ -281,7 +274,7 @@ export const WINDOWS: readonly WindowDef[] = [
     short: t('dock::Radio'),
     icon: 'M2.5 6h11v7.5h-11zM4.5 6l6-3.5M5.5 9.75a1.25 1.25 0 102.5 0 1.25 1.25 0 00-2.5 0M10.5 9h1.5M10.5 11h1.5',
     defaultOpen: false,
-    placement: { corner: 'tl', dx: 304, dy: 52 },
+    placement: { corner: 'tl', dx: 260, dy: 52 },
     width: 320,
     height: 400,
     resizable: { min: { w: 260, h: 220 }, max: { w: 560, h: 1000 } },
@@ -293,7 +286,7 @@ export const WINDOWS: readonly WindowDef[] = [
     short: t('dock::Chat'),
     icon: 'M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z',
     defaultOpen: false,
-    placement: { corner: 'br', dx: 364, dy: 136 },
+    placement: { corner: 'br', dx: 364, dy: 180 },
     width: 320,
     height: 380,
     resizable: { min: { w: 240, h: 220 }, max: { w: 560, h: 1000 } },
@@ -306,14 +299,15 @@ export const WINDOWS: readonly WindowDef[] = [
     short: t('dock::Log'),
     icon: 'M2 3.5h12v9H2zM4.5 6.5l2 1.5-2 1.5M8 10h3',
     defaultOpen: false,
-    placement: { corner: 'bl', dx: 556, dy: 56 },
+    developer: true,
+    placement: { corner: 'bl', dx: 308, dy: 100 },
     width: 420,
     height: 260,
     resizable: { min: { w: 260, h: 140 }, max: { w: 900, h: 1000 } },
     useBadge: useConsoleBadge,
     component: ConsoleWindow,
   },
-  // Last, though it has no place in the dock: until it is raised, a window is drawn over the ones
+  // Last, though it has no place in the taskbar: until it is raised, a window is drawn over the ones
   // listed before it, and this one opens on top of the Intel feed.
   {
     id: 'inspector',
@@ -322,7 +316,7 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M7 2.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9zM10.5 10.5L14 14',
     defaultOpen: false,
     // Under Situation, over the Intel feed's slot: off the map, and clear of the data credits.
-    placement: { corner: 'br', dx: 12, dy: 136 },
+    placement: { corner: 'br', dx: 12, dy: 180 },
     width: 288,
     height: 480,
     hideInDock: true,
@@ -352,7 +346,9 @@ export function useNarrow(): boolean {
   return useSyncExternalStore(subscribeScreen, () => !wideScreen().matches)
 }
 
+/** A developer window outside developer mode is left closed, wherever it was. */
 export function isWindowOpen(def: WindowDef, windows: Record<string, WindowState>): boolean {
+  if (def.developer && !useUi.getState().developer) return false
   return def.mode ? def.mode.subject() !== null : (windows[def.id]?.open ?? def.defaultOpen)
 }
 
@@ -370,7 +366,7 @@ export function shownWindows(): WindowDef[] {
 }
 
 function subscribeShown(onChange: () => void): () => void {
-  const stops = [subscribeScreen(onChange), useWindows.subscribe(onChange)]
+  const stops = [subscribeScreen(onChange), useWindows.subscribe(onChange), useUi.subscribe(onChange)]
   for (const def of WINDOWS) if (def.mode) stops.push(def.mode.subscribe(onChange))
   return () => {
     for (const stop of stops) stop()
@@ -388,7 +384,7 @@ export function closeWindow(def: WindowDef): void {
   else useWindows.getState().close(def.id)
 }
 
-/** Opens a window that is not on screen and closes one that is: what the dock and the command palette do. */
+/** Opens a window that is not on screen and closes one that is: what the taskbar and the command palette do. */
 export function toggleWindow(def: WindowDef): void {
   const { open, close, toggle } = useWindows.getState()
   if (wideScreen().matches) return toggle(def.id, def.defaultOpen)

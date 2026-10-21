@@ -76,7 +76,7 @@ async function ask(query: string): Promise<PlaceInfo | null> {
 }
 
 /** Whatever is still on show when the answer arrives is left alone: the reader has moved on. */
-function showWhen(asked: InspectorModel, lon: number, lat: number, answer: Promise<InspectorModel>): void {
+export function showWhen(asked: InspectorModel, lon: number, lat: number, answer: Promise<InspectorModel>): void {
   const { selectFeature } = useSelection.getState()
   selectFeature({ lon, lat, model: asked })
   void answer

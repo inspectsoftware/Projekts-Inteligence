@@ -39,6 +39,8 @@ export type TvChannel = Listing &
     | { kind: 'yt-video'; videoId: string; channelId: string }
     /** A YouTube channel that broadcasts now and then. `title` picks its broadcasts out of the channel feed; each such title names its day. */
     | { kind: 'yt-feed'; channelId: string; title: RegExp; slots?: readonly TvSlot[] }
+    /** A YouTube channel of recordings rather than broadcasts: its uploads, newest first, in one player. */
+    | { kind: 'yt-uploads'; channelId: string }
     /** The broadcaster's own embeddable player page. */
     | { kind: 'iframe'; src: string }
     | { kind: 'hls'; src: string }
@@ -87,7 +89,8 @@ export const TV_CHANNELS: readonly TvChannel[] = [
     schedule: msg('Parliament sittings, usually on Thursdays'),
     kind: 'yt-feed',
     channelId: 'UCdQ1YxaZG3i7ygGCdU8mPKQ',
-    title: /^Saeimas sēde/,
+    // Worded both ways round: "Saeimas sēde 2026. gada 1. oktobrī" and "2026. gada 15. oktobra Saeimas sēde".
+    title: /Saeimas sēde/,
     // Saeima lets its sittings be embedded from its YouTube account and asks for a link to saeima.lv.
     link: 'https://www.saeima.lv/lv/streams/video',
     credit: 'Saeima',
@@ -189,4 +192,64 @@ export const TV_CHANNELS: readonly TvChannel[] = [
   { id: 'dw-ru', name: 'DW на русском', country: 'INT', lang: 'ru', credit: 'Deutsche Welle', ...pinned('gP7872YRFDk', 'UCXoAjrdHFa2hEL3Ug8REC1w') },
   { id: 'euronews-ru', name: 'Euronews по-русски', country: 'INT', lang: 'ru', credit: 'Euronews', ...single('UCFzJjgVicCtFxJ5B0P_ei8A') },
   { id: 'bloomberg', name: 'Bloomberg TV', country: 'INT', lang: 'en', credit: 'Bloomberg', ...single('UCIALMKvObZNtJ6AmdCLP7Lg') },
+]
+
+/** A channel only the politics page lists, and the part of the page it is listed in. */
+export type PoliticsChannel = TvChannel & { group: 'chamber' | 'broadcaster' | 'party' }
+
+/** A party's own channel, played as its uploads. Its list of videos is the way out. */
+const party = (name: string, channelId: string): PoliticsChannel => ({
+  id: `party-${channelId}`,
+  name,
+  country: 'LV',
+  lang: 'lv',
+  kind: 'yt-uploads',
+  channelId,
+  link: `${YOUTUBE}/channel/${channelId}/videos`,
+  credit: name,
+  group: 'party',
+})
+
+/**
+ * The politics page lists Live TV's parliament and government channels and these besides: Rīga's
+ * city council, LTV's political talk show, and every list elected to the 15th Saeima (3 October
+ * 2026), in alphabetical order so that none is put first. Each channel was checked on 2026-10-21 to
+ * be the party's own, linked from its website or linking to it, and to allow embedding. A party
+ * with no channel of its own that could be confirmed is a link to its website.
+ */
+export const POLITICS_CHANNELS: readonly PoliticsChannel[] = [
+  {
+    id: 'riga-council',
+    name: 'Rīga City Council',
+    country: 'LV',
+    lang: 'lv',
+    schedule: msg('Council sittings, a few times a month'),
+    kind: 'yt-feed',
+    channelId: 'UCnpNiIZTRDchM5GKm6faVWw',
+    // The full council only, not its committees: "Rīgas domes 31.sēde (2026.10.14)".
+    title: /^Rīgas domes \d+\. ?sēde/,
+    link: `${YOUTUBE}/channel/UCnpNiIZTRDchM5GKm6faVWw/streams`,
+    credit: 'Rīgas valstspilsētas pašvaldība',
+    group: 'chamber',
+  },
+  {
+    id: 'kas-notiek-latvija',
+    name: 'Kas notiek Latvijā?',
+    country: 'LV',
+    lang: 'lv',
+    kind: 'yt-uploads',
+    channelId: 'UCtYJhxqbewMnrHE-18lAb9Q',
+    link: `${YOUTUBE}/channel/UCtYJhxqbewMnrHE-18lAb9Q/videos`,
+    credit: 'LTV / LSM',
+    group: 'broadcaster',
+  },
+  // Elected on a joint list with Suverēnā vara; no channel of its own was found.
+  { id: 'party-jaunlatviesi', name: 'Apvienība Jaunlatvieši', country: 'LV', lang: 'lv', kind: 'link', link: 'https://jaunlatviesi.lv/', credit: 'Apvienība Jaunlatvieši', group: 'party' },
+  party('Apvienotais Saraksts', 'UCYdpAtJ-PjtYCgO-7qVstaA'),
+  party('Jaunā Vienotība', 'UCiK5qoCil39pvHttkpw95RA'),
+  party('Latvija pirmajā vietā', 'UCxTOOrVGtBDglW9H8Or-KdQ'),
+  // Its website links no YouTube channel, and the one under its name could not be confirmed as its own.
+  { id: 'party-na', name: 'Nacionālā apvienība', country: 'LV', lang: 'lv', kind: 'link', link: 'https://www.nacionalaapvieniba.lv/', credit: 'Nacionālā apvienība', group: 'party' },
+  party('PROGRESĪVIE', 'UC22SWiFrfCPV8q68LsglM0g'),
+  party('Suverēnā vara', 'UClctaV6uWutR0VftEdq9BNQ'),
 ]

@@ -358,6 +358,7 @@ describe('rank', () => {
   })
 
   it('picks political stories as published, newest first, and nothing else', () => {
+    const rigaCity = source({ id: 'riga-lv', publisher: 'Rīga City (LV)', group: 'gov-lv', lang: 'lv', kind: 'official' })
     const picked = pickPolitics(
       [
         { item: story('Fuel prices up nearly 10% in a month'), source: lsm },
@@ -366,6 +367,9 @@ describe('rank', () => {
         { item: story('Elephant born at the zoo'), source: lsm },
         { item: story('Coalition talks collapsed', { at: NOW - 80 * HOUR }), source: lsm },
         { item: story('Press release on a visit', { at: NOW - 3 * HOUR }), source: source({ id: 'eu-council', publisher: 'Council of the EU', kind: 'official', country: 'INT' }) },
+        // A city's own news: its council is politics, its roadworks are not.
+        { item: story('Ratnieks uzdod izvērtēt kartelī iesaistīto uzņēmumu līgumus Rīgas domē', { at: NOW - 4 * HOUR }), source: rigaCity },
+        { item: story('Satiksmes ierobežojumi novembrī Mūkusalas ielā'), source: rigaCity },
       ],
       NOW,
     )
@@ -373,6 +377,7 @@ describe('rank', () => {
       ['Valitsus kinnitas eelarve', 'ERR', false],
       ['Saeima passes next year’s budget', 'LSM', false],
       ['Press release on a visit', 'Council of the EU', true],
+      ['Ratnieks uzdod izvērtēt kartelī iesaistīto uzņēmumu līgumus Rīgas domē', 'Rīga City (LV)', true],
     ])
   })
 

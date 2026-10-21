@@ -13,6 +13,11 @@ const COUNTRIES: readonly (readonly [TvCountry, string])[] = [
   ['INT', t('International')],
 ]
 
+/** Channels under a heading each. */
+export type ChannelGroups = readonly (readonly [heading: string, channels: readonly TvChannel[]])[]
+
+const BY_COUNTRY: ChannelGroups = COUNTRIES.map(([country, name]) => [name, TV_CHANNELS.filter((channel) => channel.country === country)])
+
 const TIME = new Intl.DateTimeFormat(locale, { timeZone: BALTIC_TIME, hour: '2-digit', minute: '2-digit', hour12: false })
 
 /** The dot and the colour of the tag for each state. A hollow dot is a channel that is not known to be on. */
@@ -22,6 +27,7 @@ const LOOK: Record<Air, { dot: string; tag: string }> = {
   today: { dot: 'bg-accent', tag: 'text-accent' },
   off: { dot: 'border border-line-strong', tag: 'text-fg-mute' },
   unknown: { dot: 'border border-line-strong', tag: 'text-fg-mute' },
+  uploads: { dot: 'bg-fg-mute', tag: 'text-fg-dim' },
   link: { dot: '', tag: 'text-fg-mute' },
 }
 
@@ -40,6 +46,8 @@ function describe(channel: TvChannel, air: Air, now: TvNow | undefined): { tag: 
       return { tag: t('Off air'), say: now?.videoId ? t('not on air; the latest broadcast is shown') : t('not on air') }
     case 'unknown':
       return { tag: t('Sched'), say: t('on a schedule; whether it is on air right now is not known') }
+    case 'uploads':
+      return { tag: t('Videos'), say: t('recorded videos, the newest first') }
     case 'link':
       return { tag: t('Site ↗'), say: t('opens the broadcaster’s own site in a new tab') }
   }
@@ -47,8 +55,21 @@ function describe(channel: TvChannel, air: Air, now: TvNow | undefined): { tag: 
 
 const ROW = 'flex w-full items-center gap-1.5 px-1.5 py-1 text-left text-[11px] transition-colors hover:bg-ink-700'
 
-/** The channels by country, each with what is known about it right now. A channel without a player is a link out. */
-export function ChannelRail({ lookups, selected }: { lookups: ReadonlyMap<string, TvNow>; selected: string | undefined }) {
+/**
+ * The channels, by country unless other `groups` are given, each with what is known about it right
+ * now. A channel without a player is a link out. `wide` is for a page, where there is room for whole names.
+ */
+export function ChannelRail({
+  lookups,
+  selected,
+  groups = BY_COUNTRY,
+  wide = false,
+}: {
+  lookups: ReadonlyMap<string, TvNow>
+  selected: string | undefined
+  groups?: ChannelGroups
+  wide?: boolean
+}) {
   const watch = useTv((s) => s.watch)
   // Often enough for a bulletin to turn from its start time into "on air" by itself.
   const clock = useNow(30_000)
@@ -90,13 +111,13 @@ export function ChannelRail({ lookups, selected }: { lookups: ReadonlyMap<string
   return (
     <nav
       aria-label={t('Channels')}
-      className="order-first min-h-0 w-[40%] max-w-44 shrink-0 overflow-y-auto border-r border-line p-2 max-md:portrait:order-none max-md:portrait:w-auto max-md:portrait:max-w-none max-md:portrait:flex-1 max-md:portrait:border-t max-md:portrait:border-r-0"
+      className={`order-first min-h-0 w-[40%] ${wide ? 'max-w-64' : 'max-w-44'} shrink-0 overflow-y-auto border-r border-line p-2 max-md:portrait:order-none max-md:portrait:w-auto max-md:portrait:max-w-none max-md:portrait:flex-1 max-md:portrait:border-t max-md:portrait:border-r-0`}
     >
-      {COUNTRIES.map(([country, name]) => (
-        <section key={country} className="mb-2 last:mb-0">
-          <SectionTitle>{name}</SectionTitle>
+      {groups.map(([heading, channels]) => (
+        <section key={heading} className="mb-2 last:mb-0">
+          <SectionTitle>{heading}</SectionTitle>
           <ul>
-            {TV_CHANNELS.filter((channel) => channel.country === country).map((channel) => (
+            {channels.map((channel) => (
               <li key={channel.id}>{row(channel)}</li>
             ))}
           </ul>

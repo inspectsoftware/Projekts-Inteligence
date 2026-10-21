@@ -51,19 +51,22 @@ export interface SnapOptions {
   grid: number
 }
 
-/** Fixed chrome that windows keep clear of: the top bar, the dock rail and the HUD row. */
-export const CHROME = { top: 40, dock: 44, hud: 44 }
+/**
+ * Fixed chrome that windows keep clear of: the top bar, the taskbar along the bottom, the HUD row
+ * above it, and the developer rail down the left edge while developer mode is on.
+ */
+export const CHROME = { top: 40, taskbar: 44, hud: 44, rail: 48 }
 export const MARGIN = 12
 
 const SNAP: SnapOptions = { threshold: 28, gap: 8, grid: 8 }
 
-/** The usable area: below the top bar, right of the dock and above the HUD, with a margin all round. */
-export function usableBounds(viewport: Size): Bounds {
+/** The usable area: below the top bar, above the HUD and the taskbar, right of the rail if there is one, with a margin all round. */
+export function usableBounds(viewport: Size, rail = false): Bounds {
   return {
-    left: CHROME.dock + MARGIN,
+    left: (rail ? CHROME.rail : 0) + MARGIN,
     top: CHROME.top + MARGIN,
     right: viewport.w - MARGIN,
-    bottom: viewport.h - CHROME.hud - MARGIN,
+    bottom: viewport.h - CHROME.taskbar - CHROME.hud - MARGIN,
   }
 }
 

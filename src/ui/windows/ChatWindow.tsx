@@ -69,7 +69,7 @@ export function ChatWindow() {
       <p className="flex shrink-0 items-baseline gap-2 border-b border-line px-3 py-1.5 text-[10px] tracking-[0.12em] text-fg-mute uppercase">
         <span>{name ? t('You are {name}', { name }) : t('Joining…')}</span>
         {name && (
-          <button type="button" onClick={() => void rename()} aria-label={t('Draw a new random name')} title={t('Draw a new random name. Your ID stays the same; set a name of your own in Display')} className="hover:text-accent">
+          <button type="button" onClick={() => void rename()} aria-label={t('Draw a new random name')} title={t('Draw a new random name. Your ID stays the same; set a name of your own in View')} className="hover:text-accent">
             ↻
           </button>
         )}

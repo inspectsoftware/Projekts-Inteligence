@@ -14,6 +14,8 @@ import { acquireFeed } from '../runtime/poller'
 import { useFeeds } from '../state/feeds'
 import { isLayerOn, useLayers } from '../state/layers'
 import { useSelection } from '../state/selection'
+import { showBuilding } from './city/building'
+import { pickCity } from './city/layer'
 import { positionAt } from './motion'
 import { PLACE_LABEL_LEVEL } from './style'
 
@@ -48,9 +50,13 @@ export function startScene(map: MapLibreMap): () => void {
       // Nothing live under the cursor: maybe a fixed feature drawn by the map itself.
       const feature = pickStatic(info.x, info.y)
       if (feature) return useSelection.getState().selectFeature(feature)
-      // Or the name of a place, which is looked up. Open map clears the selection as before.
+      // Or the name of a place, which is looked up.
       const label = pickLabel(info.x, info.y)
-      if (label) whatIsHere(map, label.lon, label.lat, label.level, label.name)
+      if (label) return whatIsHere(map, label.lon, label.lat, label.level, label.name)
+      // Or a building of Rīga's city model, which the map cannot query: its layer finds it itself.
+      // Open map clears the selection as before.
+      const building = pickCity(info.x, info.y)
+      if (building) showBuilding(building)
       else useSelection.getState().select(null)
     },
     onHover: (info) => {

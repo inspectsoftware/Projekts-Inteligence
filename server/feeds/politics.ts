@@ -11,15 +11,26 @@ const LIMIT = 300
 const BODY = { kind: 'official', weight: 1, ai: 'none' } as const
 
 /**
- * Governments and parliaments read for this page only; everything they publish is politics.
- * The newsrooms and ministries come from the news feed's own reading, so no host is asked twice.
- * Latvia's cabinet, president and Saeima publish no feed, so their word arrives through the newsrooms.
+ * Read for this page only, and everything they publish is politics: governments and parliaments,
+ * and LSM's politics section, whose publisher allows a headline shared with a link. The rest of the
+ * newsrooms and the ministries come from the news feed's own reading, so no host is asked twice.
+ * Latvia's cabinet and president publish no feed, so their word arrives through the newsrooms.
  */
 const BODIES: readonly NewsSource[] = [
+  // The Saeima's press releases. Its stories are filed on saeima.lv as well as www.saeima.lv.
+  { id: 'saeima-lv', url: 'https://www.saeima.lv/lv/feeds/news.rss', publisher: 'Saeima', group: 'gov-lv', lang: 'lv', country: 'LV', native: true, links: ['https://saeima.lv/'], ...BODY },
+  { id: 'lsm-en-politics', url: 'https://eng.lsm.lv/rss/?catid=315', publisher: 'LSM', group: 'lsm', lang: 'en', country: 'LV', kind: 'media', weight: 0.9, ai: 'none' },
   { id: 'gov-lt', url: 'https://lrv.lt/lt/naujienos/rss/', publisher: 'Government (LT)', group: 'gov-lt', lang: 'lt', country: 'LT', native: true, ...BODY },
   { id: 'riigikogu-en', url: 'https://www.riigikogu.ee/en/feed/', publisher: 'Riigikogu', group: 'gov-ee', lang: 'en', country: 'EE', ...BODY },
   { id: 'gov-ee-et', url: 'https://valitsus.ee/rss-feeds/rss.xml', publisher: 'Government (EE)', group: 'gov-ee', lang: 'et', country: 'EE', native: true, ...BODY },
 ]
+
+/** Read for this page only, but only partly politics: the keyword net picks from them. Rīga's news is as much about roadworks as about its council. */
+const MIXED: readonly NewsSource[] = [
+  { id: 'riga-lv', url: 'https://www.riga.lv/lv/rss/articles', publisher: 'Rīga City (LV)', group: 'gov-lv', lang: 'lv', country: 'LV', native: true, ...BODY },
+]
+
+const OWN = [...BODIES, ...MIXED]
 
 /** Feeds of the news list whose every item is politics too: governments and foreign ministries. */
 const POLITICAL_FEEDS = new Set(['gov-ee-en', 'mfa-lv-en', 'mfa-ee-en', 'eu-council'])
@@ -30,7 +41,7 @@ const POLITICAL_FEEDS = new Set(['gov-ee-en', 'mfa-lv-en', 'mfa-ee-en', 'eu-coun
  * that names only a politician. Use the publishers' own politics sections where they have a feed.
  */
 const POLITICS =
-  /parliament|government|minist|president|prezident|election|coalition|koal[iī]cij|koalitsioon|opposition|opoz[iī]cij|opositsioon|\bpart(?:y|ies)\b|partij|erakon|politi|poliiti|referendum|saeim|\bseim|riigikogu|valdīb|vyriausyb|valitsus|vēlēšan|rinkim|valimi|deputāt|likum|įstatym|seadus|budžet|biudžet|eelarve|\bbudget|premjer|peaminist|mayor|\bvot(?:e|es|ed|ing)\b|sanction|sankcij|sanktsioon/iu
+  /parliament|government|minist|president|prezident|election|coalition|koal[iī]cij|koalitsioon|opposition|opoz[iī]cij|opositsioon|\bpart(?:y|ies)\b|partij|erakon|politi|poliiti|referendum|saeim|rīgas dom|\bseim|riigikogu|valdīb|vyriausyb|valitsus|vēlēšan|rinkim|valimi|deputāt|likum|įstatym|seadus|budžet|biudžet|eelarve|\bbudget|premjer|peaminist|mayor|\bvot(?:e|es|ed|ing)\b|sanction|sankcij|sanktsioon/iu
 
 const lastRead = new Map<string, RawNews[]>()
 
@@ -65,12 +76,12 @@ export const politicsFeed: FeedDef = {
   id: 'politics',
   title: 'Politics',
   // The newsrooms' hosts too: after a restart this feed may have to read them itself, once.
-  origins: [...new Set([...BODIES.map((source) => new URL(source.url).origin), ...newsFeed.origins])],
+  origins: [...new Set([...OWN.map((source) => new URL(source.url).origin), ...newsFeed.origins])],
   ttlMs: 10 * MINUTE,
   staleMs: 12 * HOUR,
   timeoutMs: 25_000,
   persist: true,
-  attribution: [...newsFeed.attribution, ...BODIES.map((source) => ({ label: source.publisher, href: linksOf(source)[0] }))].filter(
+  attribution: [...newsFeed.attribution, ...OWN.map((source) => ({ label: source.publisher, href: linksOf(source)[0] }))].filter(
     (credit, index, all) => all.findIndex((other) => other.label === credit.label) === index,
   ),
   async load({ http, now, feed }) {
@@ -79,12 +90,12 @@ export const politicsFeed: FeedDef = {
     // A restart can leave the news list served from disk with nothing read in this process yet.
     if (newsEntries(now).length === 0) await readSources(http, now).catch(() => undefined)
     await Promise.allSettled(
-      BODIES.map(async (source) => {
+      OWN.map(async (source) => {
         const items = parseFeed(await http.text(source.url, { maxBytes: 1024 * 1024, timeoutMs: 12_000 }), source)
         if (items.length > 0) lastRead.set(source.id, items)
       }),
     )
-    const own = BODIES.flatMap((source) => (lastRead.get(source.id) ?? []).map((item) => ({ item, source })))
+    const own = OWN.flatMap((source) => (lastRead.get(source.id) ?? []).map((item) => ({ item, source })))
     const items = pickPolitics([...own, ...newsEntries(now)], now)
     if (items.length === 0) throw new Error('No political headlines could be read')
     return { shape: 'politics', items }

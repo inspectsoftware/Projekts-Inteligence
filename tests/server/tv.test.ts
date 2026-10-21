@@ -5,7 +5,7 @@ import { tvFeed } from '../../server/feeds/tv'
 import { airOf, broadcastOf, channelVideos, linkOf, playersOf, titleDate } from '../../shared/adapters/tv'
 import { buildCsp } from '../../shared/csp'
 import type { TvNow } from '../../shared/feeds'
-import { TV_CHANNELS, type TvChannel } from '../../shared/media/tv'
+import { POLITICS_CHANNELS, TV_CHANNELS, type TvChannel } from '../../shared/media/tv'
 
 const channel = (id: string) => TV_CHANNELS.find((candidate) => candidate.id === id)!
 const scheduled = (id: string) => channel(id) as Extract<TvChannel, { kind: 'yt-feed' }>
@@ -71,6 +71,7 @@ describe('channel feed', () => {
     expect(titleDate('06.10.2026. Valsts prezidenta E. Rinkēviča preses konference', today)).toBe('2026-10-06')
     expect(titleDate('6. oktobra "Dienas ziņas"', today)).toBe('2026-10-06')
     expect(titleDate('Saeimas sēde 2026. gada 1. oktobrī (ar darba kārtību)', today)).toBe('2026-10-01')
+    expect(titleDate('Rīgas domes 31.sēde (2026.10.14)', today)).toBe('2026-10-14')
     expect(titleDate('Valitsuse pressikonverents, 24. september 2026', today)).toBe('2026-09-24')
     // No year in the title: the new year has not had a 31 December yet.
     expect(titleDate('31. decembra "Panorāma"', '2027-01-01')).toBe('2026-12-31')
@@ -216,6 +217,10 @@ const ANSWERS: Record<string, () => Response> = {
   'channel_id=UCcG5Xi9yY89axvOTHszLCcA': text(CLIPS),
   'channel_id=UChG7C8090M0h6eCU8TM-vGQ': status(500),
   'channel_id=UCy2B86RwjKly8vab4GTg5Fw': text('<html>Before you continue to YouTube</html>'),
+  // The full council and one of its committees: only the council counts.
+  'channel_id=UCnpNiIZTRDchM5GKm6faVWw': text(
+    feed(['IhuzdEBKeP8', 'Rīgas domes Mājokļu un vides komitejas 48.sēde (2026.10.05.)'], ['qyMfQRs16kc', 'Rīgas domes 30.sēde (2026.09.30)']),
+  ),
   'watch%3Fv%3DxDWQ3LkccY8': text(JSON.stringify({ title: 'Watch Sky News', author_name: 'Sky News', thumbnail_url: 'https://i.ytimg.com/vi/xDWQ3LkccY8/hqdefault.jpg' })),
   // Embedding switched off, gone, and YouTube having a bad moment.
   'watch%3Fv%3DpykpO5kQJ98': status(401),
@@ -243,8 +248,8 @@ describe('tv feed', () => {
     const fetch = youtube(WELL)
     await load(fetch)
     const asked = fetch.mock.calls.map(([url]) => url)
-    expect(asked).toHaveLength(10)
-    expect(asked.filter((url) => url.startsWith('https://www.youtube.com/feeds/videos.xml?channel_id=UC'))).toHaveLength(6)
+    expect(asked).toHaveLength(11)
+    expect(asked.filter((url) => url.startsWith('https://www.youtube.com/feeds/videos.xml?channel_id=UC'))).toHaveLength(7)
     expect(asked.filter((url) => url.startsWith('https://www.youtube.com/oembed?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3D'))).toHaveLength(4)
   })
 
@@ -254,7 +259,7 @@ describe('tv feed', () => {
     const now = await load(fetch)
     // One hiccup at 17:55 must not leave the bulletin unknown until 18:10.
     expect(now.get('ltv-news')).toMatchObject({ videoId: 'MV3JB55XnqY', from: riga('18:00') })
-    expect(fetch).toHaveBeenCalledTimes(11)
+    expect(fetch).toHaveBeenCalledTimes(12)
   })
 
   it('keeps a pinned stream that answers, and downgrades one that is gone or may not be embedded', async () => {
@@ -281,6 +286,7 @@ describe('tv feed', () => {
     expect(now.get('ltv-news')).toMatchObject({ videoId: 'MV3JB55XnqY', from: riga('18:00') })
     expect(now.get('seimas')).toMatchObject({ videoId: 'ZkCAxPARKEU', today: true })
     expect(now.get('saeima')).toMatchObject({ videoId: 'ij05ZR4Q4mc', today: false })
+    expect(now.get('riga-council')).toMatchObject({ videoId: 'qyMfQRs16kc', today: false })
     // The feed answered and lists no sitting: an honest "not on air".
     expect(now.get('lv-cabinet')).toEqual({ id: 'lv-cabinet' })
     expect(airOf(channel('lv-cabinet'), now.get('lv-cabinet'), riga('18:10'))).toBe('off')
@@ -310,6 +316,23 @@ describe('channel list', () => {
     }
   })
 
+  it('lists the politics page’s own channels once each, with every party in alphabetical order', () => {
+    const all = [...TV_CHANNELS, ...POLITICS_CHANNELS]
+    expect(new Set(all.map((entry) => entry.id)).size).toBe(all.length)
+    for (const entry of POLITICS_CHANNELS) {
+      expect(entry.link, entry.id).toMatch(/^https:\/\//)
+      expect(entry.credit.length, entry.id).toBeGreaterThan(1)
+    }
+    const parties = POLITICS_CHANNELS.filter((entry) => entry.group === 'party').map((entry) => entry.name)
+    expect(parties).toEqual(parties.toSorted((a, b) => a.localeCompare(b, 'lv')))
+  })
+
+  it('plays a channel of recordings as its uploads, newest first', () => {
+    const uploads: TvChannel = { id: 'x', name: 'X', country: 'LV', lang: 'lv', link: 'https://www.youtube.com/@x/videos', credit: 'X', kind: 'yt-uploads', channelId: 'UCdQ1YxaZG3i7ygGCdU8mPKQ' }
+    expect(playersOf(uploads, undefined)).toEqual([{ kind: 'youtube', src: 'https://www.youtube-nocookie.com/embed/videoseries?list=UUdQ1YxaZG3i7ygGCdU8mPKQ&autoplay=1&mute=1&playsinline=1' }])
+    expect(airOf(uploads, undefined, riga('12:00'))).toBe('uploads')
+  })
+
   it('embeds nothing that needs a permission nobody has asked for', () => {
     for (const id of ['ltv1', 'ltv7', 'lr1', 'retv', 'etv', 'etv-plus', 'vikerraadio']) expect(channel(id).kind, id).toBe('link')
   })
@@ -334,7 +357,7 @@ describe('content security policy', () => {
   const NEEDS = { youtube: ['frame-src'], iframe: ['frame-src'], hls: ['connect-src', 'media-src'] }
 
   it('lets the browser load every player and poster a channel can ask for', () => {
-    const players = TV_CHANNELS.flatMap((entry) => playersOf(entry, entry.kind === 'yt-feed' ? { id: entry.id, videoId: 'MV3JB55XnqY' } : undefined))
+    const players = [...TV_CHANNELS, ...POLITICS_CHANNELS].flatMap((entry) => playersOf(entry, entry.kind === 'yt-feed' ? { id: entry.id, videoId: 'MV3JB55XnqY' } : undefined))
     expect(players.length).toBeGreaterThan(25)
     for (const player of players) {
       for (const directive of NEEDS[player.kind]) expect(allows(directive, player.src), `${directive} ${player.src}`).toBe(true)

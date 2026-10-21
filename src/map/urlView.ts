@@ -39,6 +39,11 @@ export function readUrlView(): UrlView | null {
 export function writeUrlView(view: UrlView): void {
   const next = formatUrlView(view)
   if (next === window.location.hash) return
-  // replaceState: panning the map should not fill the browser's back history.
-  window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${next}`)
+  // replaceState: panning the map should not fill the browser's back history. Browsers refuse it
+  // when called too often; the link is then a step behind, which must not break the camera move.
+  try {
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}${next}`)
+  } catch {
+    // The next move writes it again.
+  }
 }

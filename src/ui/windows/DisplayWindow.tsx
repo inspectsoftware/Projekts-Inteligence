@@ -5,7 +5,12 @@ import { THEMES, VISION_MODES, useRecent, useUi } from '../../state/ui'
 import { SectionTitle, Segmented } from '../kit'
 import { IdentitySettings } from './chat/IdentitySettings'
 
-/** What the map is drawn on, and the filter it is seen through. */
+const DEVELOPER = [
+  { id: 'off', label: t('Off'), hint: t('Only the windows a reader needs') },
+  { id: 'on', label: t('On'), hint: t('Also the feed updates and the console, on a rail down the left edge') },
+] as const
+
+/** What the map is drawn on, the filter it is seen through, and the rest of how the page looks. */
 export function DisplayWindow() {
   const base = useUi((s) => s.base)
   const vision = useUi((s) => s.vision)
@@ -13,6 +18,8 @@ export function DisplayWindow() {
   const setVision = useUi((s) => s.setVision)
   const theme = useUi((s) => s.theme)
   const setTheme = useUi((s) => s.setTheme)
+  const developer = useUi((s) => s.developer)
+  const setDeveloper = useUi((s) => s.setDeveloper)
   const back = useRecent((s) => s.back)
   const setBack = useRecent((s) => s.setBack)
   // The day the window was opened: the slider counts back from there.
@@ -55,6 +62,9 @@ export function DisplayWindow() {
       <div className="h-3" />
       <SectionTitle>{t('Identity')}</SectionTitle>
       <IdentitySettings />
+      <div className="h-3" />
+      <SectionTitle>{t('Developer mode')}</SectionTitle>
+      <Segmented label={t('Developer mode')} value={developer ? 'on' : 'off'} options={DEVELOPER} onChange={(value) => setDeveloper(value === 'on')} />
     </div>
   )
 }

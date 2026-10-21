@@ -57,7 +57,7 @@ const DAY_MS = 24 * 3600 * 1000
 export const RECENT_LAG_DAYS = 2
 /** Several days are laid over each other: a satellite comes by every few days, single scenes are sometimes missing from a day, and cloud hides much of the rest. Each day is two more layers of tiles, which the patient loader spreads out. */
 export const RECENT_STACK_DAYS = 5
-/** How far back the Display window lets the reader go. */
+/** How far back the View window lets the reader go. */
 export const RECENT_REACH_DAYS = 60
 
 /** The newest day shown when the reader has stepped `back` days into the past. */
@@ -211,7 +211,7 @@ export function clampZoom(zoom: number, mode: BaseMode): number {
   return Math.min(zoom, zoomCeiling(mode))
 }
 
-/** `detail` says where a base stops getting sharper; the Display window adds the zoom limit to it. */
+/** `detail` says where a base stops getting sharper; the View window adds the zoom limit to it. */
 export const BASE_MODES: readonly { id: BaseMode; label: string; hint: string; detail: string }[] = [
   { id: 'dark', label: t('Map'), hint: t('Vector tactical basemap'), detail: t('Sharp at any zoom.') },
   {

@@ -1,6 +1,6 @@
 import { broadcastOf, channelVideos } from '../../shared/adapters/tv'
 import type { TvNow } from '../../shared/feeds'
-import { TV_CHANNELS, type TvChannel } from '../../shared/media/tv'
+import { POLITICS_CHANNELS, TV_CHANNELS, type TvChannel } from '../../shared/media/tv'
 import { type Upstream, UpstreamError } from '../core/upstream'
 import type { FeedDef } from './types'
 
@@ -10,8 +10,8 @@ const YOUTUBE = 'https://www.youtube.com'
 /** A channel feed is some 20 kB, an answer about one video under 2 kB. Two tries of six seconds fit in one refresh. */
 const SMALL = { timeoutMs: 6000, maxBytes: 256 * 1024 }
 
-/** The channels YouTube has to be asked about. The rest play from an address that never changes. */
-const ASKED = TV_CHANNELS.filter((channel) => channel.kind === 'yt-feed' || channel.kind === 'yt-video')
+/** The channels YouTube has to be asked about, the politics page's too. The rest play from an address that never changes. */
+const ASKED = [...TV_CHANNELS, ...POLITICS_CHANNELS].filter((channel) => channel.kind === 'yt-feed' || channel.kind === 'yt-video')
 
 async function lookUp(channel: Extract<TvChannel, { kind: 'yt-feed' | 'yt-video' }>, http: Upstream, now: number): Promise<TvNow> {
   if (channel.kind === 'yt-feed') {
@@ -38,7 +38,7 @@ const noAnswer = (err: unknown) => err instanceof UpstreamError && (err.kind ===
 
 /**
  * What each television channel should load right now, as far as it has to be looked up: which
- * video is today's bulletin or sitting, and whether each pinned stream still exists. Ten small
+ * video is today's bulletin or sitting, and whether each pinned stream still exists. Eleven small
  * requests per refresh, all to YouTube's feed and oEmbed addresses for the channels on our own
  * list, and one more for each that got no answer.
  * ponytail: the pinned streams are checked on every refresh although they change every few weeks;

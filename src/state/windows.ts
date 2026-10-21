@@ -30,11 +30,13 @@ interface WindowsState extends Layout {
   setCollapsed(id: string, collapsed: boolean): void
   /** Keeps the layout as it is now for the next visit. Nothing is kept without it. */
   saveLayout(): void
-  /** Closes everything, and forgets the saved layout too. */
+  /** Closes everything, and forgets the saved layout and the remembered sizes too. */
   resetLayout(): void
 }
 
 const KEY = 'pwh-windows'
+/** Sizes are kept apart from the layout and without a save: a window resized once comes back at that size. */
+const SIZES = 'pwh-window-sizes'
 
 /** The layout saved on an earlier visit. A page opens with a clear map unless there is one. */
 export function savedLayout(): Layout {
@@ -48,11 +50,23 @@ export function savedLayout(): Layout {
   return { windows: {}, order: [] }
 }
 
+/** The saved layout, with every size the reader has given a window since laid over it. */
+function startingLayout(): Layout {
+  const layout = savedLayout()
+  try {
+    const sizes = JSON.parse(localStorage.getItem(SIZES) ?? 'null') as Record<string, Size> | null
+    for (const [id, size] of Object.entries(sizes ?? {})) layout.windows[id] = { ...layout.windows[id], size }
+  } catch {
+    // No storage, or something else's data under the key: the registry sizes stand.
+  }
+  return layout
+}
+
 export const useWindows = create<WindowsState>()((set, get) => {
   const patch = (id: string, change: WindowState) =>
     set((state) => ({ windows: { ...state.windows, [id]: { ...state.windows[id], ...change } } }))
   return {
-    ...savedLayout(),
+    ...startingLayout(),
     open: (id) => {
       patch(id, { open: true })
       get().focus(id)
@@ -64,7 +78,15 @@ export const useWindows = create<WindowsState>()((set, get) => {
       if (get().order.at(-1) !== id) set((state) => ({ order: [...state.order.filter((other) => other !== id), id] }))
     },
     place: (id, placement) => patch(id, { placement }),
-    resize: (id, size) => patch(id, { size }),
+    resize: (id, size) => {
+      patch(id, { size })
+      const sizes = Object.fromEntries(Object.entries(get().windows).flatMap(([other, state]) => (state.size ? [[other, state.size]] : [])))
+      try {
+        localStorage.setItem(SIZES, JSON.stringify(sizes))
+      } catch {
+        // Storage can be switched off; the size then lasts as long as the page.
+      }
+    },
     setCollapsed: (id, collapsed) => patch(id, { collapsed }),
     saveLayout: () => {
       const { windows, order } = get()
@@ -78,6 +100,7 @@ export const useWindows = create<WindowsState>()((set, get) => {
       set({ windows: {}, order: [] })
       try {
         localStorage.removeItem(KEY)
+        localStorage.removeItem(SIZES)
       } catch {
         // Nothing was kept, so there is nothing to forget.
       }

@@ -35,9 +35,10 @@ export function prefersReducedMotion(): boolean {
  * with no windows, and those opened later are deliberately not followed.
  */
 function chromePadding(map: Map): PaddingOptions {
-  // From 768px up the dock is a rail down the left edge; below that it is a strip under the top bar.
-  const rail = map.getContainer().clientWidth >= 768
-  return { top: rail ? 70 : 110, bottom: 70, left: rail ? 70 : 30, right: rail ? 70 : 30 }
+  // The taskbar and the HUD row above it take the bottom edge. From 768px up the map buttons
+  // stand on the right, and the developer rail may stand on the left.
+  const wide = map.getContainer().clientWidth >= 768
+  return { top: 70, bottom: 110, left: wide ? 70 : 30, right: wide ? 70 : 30 }
 }
 
 export function flyHome(map: Map, duration = 1800): void {

@@ -11,7 +11,7 @@ import { isAirborneMilitary } from './order'
  * the badge itself never polls. (Kept out of the window's own file, which may only export components.)
  */
 export function useMilitaryBadge(): WindowBadge | null {
-  // Boiled down to a string, so the dock is only redrawn when the answer changes.
+  // Boiled down to a string, so the taskbar is only redrawn when the answer changes.
   const summary = useSyncExternalStore(subscribeEntities, () => {
     const airborne = (getEntities('aircraft') as Aircraft[]).filter(isAirborneMilitary)
     return `${airborne.length} ${airborne.some((a) => insideLatvia(a.lon, a.lat)) ? 'warn' : 'info'}`

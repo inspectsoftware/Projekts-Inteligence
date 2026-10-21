@@ -391,6 +391,15 @@ export const lv: Record<string, string> = {
   'The graphics context was lost. Reload the page to try again.': 'Grafikas konteksts ir zudis. Pārlādējiet lapu, lai mēģinātu vēlreiz.',
   'Map unavailable': 'Karte nav pieejama',
 
+  // src/map/city/building.ts
+  'Building': 'Ēka',
+  'No address': 'Bez adreses',
+  'In use since': 'Ekspluatācijā kopš',
+  'Cadastral designation': 'Kadastra apzīmējums',
+  'Property': 'Īpašums',
+  'Property cadastral number': 'Īpašuma kadastra numurs',
+  'Neighbourhood': 'Apkaime',
+
   // src/state/country.ts
   'Brief': 'Apskats',
   'dock::Brief': 'Īsumā',
@@ -462,6 +471,7 @@ export const lv: Record<string, string> = {
   'Zoom out': 'Tālināt',
   'North up, flat': 'Ziemeļi augšā, bez slīpuma',
   '3D terrain and buildings': '3D reljefs un ēkas',
+  'Street level: walk around': 'Ielas līmenī: pastaigāties apkārt',
 
   // src/ui/media
   'Play {title}': 'Atskaņot: {title}',
@@ -512,6 +522,18 @@ export const lv: Record<string, string> = {
   'Uplink': 'Savienojums',
   'Uplink down': 'Nav savienojuma',
   'Linking': 'Savienojas',
+
+  // src/ui/WalkPanel.tsx
+  'WASD move · QE turn · RF up/down · Shift faster · drag to look · Esc leave': 'WASD iet · QE griezties · RF augšup/lejup · Shift ātrāk · velciet, lai paskatītos · Esc iziet',
+  'Turn left': 'Pagriezties pa kreisi',
+  'Forward': 'Uz priekšu',
+  'Turn right': 'Pagriezties pa labi',
+  'Rise': 'Pacelties',
+  'Step left': 'Solis pa kreisi',
+  'Back': 'Atpakaļ',
+  'Step right': 'Solis pa labi',
+  'Sink': 'Nolaisties',
+  'Leave': 'Iziet',
 
   // src/ui/windows/cctv
   'No picture': 'Nav attēla',
@@ -685,6 +707,8 @@ export const lv: Record<string, string> = {
   'on a schedule; whether it is on air right now is not known': 'raida pēc grafika; nav zināms, vai pašlaik ir ēterā',
   'Site ↗': 'Vietne ↗',
   'opens the broadcaster’s own site in a new tab': 'atver raidorganizācijas vietni jaunā cilnē',
+  'Videos': 'Video',
+  'recorded videos, the newest first': 'ierakstīti video, jaunākie vispirms',
   'Channels': 'Kanāli',
   'Sound is off: turn it on in the player': 'Skaņa ir izslēgta: ieslēdziet to atskaņotājā',
   'Not on air right now, or this broadcast may not be shown on other sites.':
@@ -1041,6 +1065,12 @@ export const lv: Record<string, string> = {
   'Every political headline from the publishers read, newest first, in the publisher’s own words. Nothing is rated, summarised or left out.': 'Visi politikas virsraksti no lasītajiem izdevējiem, jaunākie vispirms, izdevēja paša vārdiem. Nekas nav vērtēts, apkopots vai izlaists.',
   'Only what governments, parliaments and ministries published themselves': 'Tikai tas, ko pašas publicējušas valdības, parlamenti un ministrijas',
   'Official only': 'Tikai oficiālie',
+  'Video': 'Video',
+  'Parliament sittings, government press conferences, news bulletins and the parties’ own videos': 'Parlamentu sēdes, valdību preses konferences, ziņu raidījumi un partiju pašu video',
+  'Parliaments and governments': 'Parlamenti un valdības',
+  'Public broadcasters': 'Sabiedriskie mediji',
+  'Parties elected to the Saeima': 'Saeimā ievēlētās partijas',
+  'Council sittings, a few times a month': 'Domes sēdes, dažas reizes mēnesī',
   'Filter by word or publisher': 'Filtrēt pēc vārda vai izdevēja',
   '{n} headlines': '{n} virsraksti',
   'official': 'oficiāls',
@@ -1193,12 +1223,18 @@ export const lv: Record<string, string> = {
   'Station list': 'Staciju saraksts',
   'The sound comes straight from the broadcaster and stops when this window is closed.': 'Skaņa nāk tieši no raidorganizācijas un apklust, kad šo logu aizver.',
   'Identity': 'Identitāte',
+  'Developer mode': 'Izstrādātāja režīms',
+  'Developer tools': 'Izstrādātāja rīki',
+  'Off': 'Izsl.',
+  'On': 'Iesl.',
+  'Only the windows a reader needs': 'Tikai lasītājam vajadzīgie logi',
+  'Also the feed updates and the console, on a rail down the left edge': 'Arī datu atjauninājumi un konsole, joslā gar kreiso malu',
   'Your ID': 'Jūsu ID',
   'Your name': 'Jūsu vārds',
   'Save': 'Saglabāt',
   'Random': 'Nejaušs',
   'Draw a new random name': 'Izlozēt jaunu nejaušu vārdu',
-  'Draw a new random name. Your ID stays the same; set a name of your own in Display': 'Izlozēt jaunu nejaušu vārdu. Jūsu ID paliek tas pats; savu vārdu iestatiet logā „Attēlojums”',
+  'Draw a new random name. Your ID stays the same; set a name of your own in View': 'Izlozēt jaunu nejaušu vārdu. Jūsu ID paliek tas pats; savu vārdu iestatiet logā „Skats”',
   'Public ID: the same whatever name they go by': 'Publiskais ID: nemainīgs, lai kāds būtu vārds',
   'Use 3 to 20 letters, digits or underscores': 'Izmantojiet 3 līdz 20 latīņu burtus, ciparus vai pasvītras',
   'That name is taken': 'Šis vārds jau ir aizņemts',

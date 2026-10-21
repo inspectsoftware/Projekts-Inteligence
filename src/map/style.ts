@@ -1,4 +1,4 @@
-import type { ExpressionSpecification, LayerSpecification, Map as MapLibreMap, StyleSpecification } from 'maplibre-gl'
+import type { ExpressionSpecification, LayerSpecification, Map as MapLibreMap, SkySpecification, StyleSpecification } from 'maplibre-gl'
 import { TILE_ORIGINS } from '../../shared/origins'
 import { lang } from '../i18n'
 
@@ -18,7 +18,10 @@ export const FIRST_OVERLAY_LAYER = 'waterway'
  */
 export const FIRST_LAYER_OVER_PHOTOS = 'rail'
 
-/** Drawn shapes that a photo already shows for itself: hidden while a raster base is showing. */
+/**
+ * Drawn shapes that a photo already shows for itself: hidden while a raster base is showing.
+ * 'building-3d' is the 3D city (src/map/city/layer.ts), added once the style has loaded.
+ */
 export const DARK_ONLY_LAYERS = ['aeroway-area', 'building', 'building-3d', 'building-outline'] as const
 
 const DARK = {
@@ -287,30 +290,6 @@ function styleFor(C: Palette) {
       paint: { 'line-color': C.boundary, 'line-opacity': 0.5, 'line-width': 0.8, 'line-dasharray': [4, 3] },
     },
     {
-      id: 'building-3d',
-      type: 'fill-extrusion',
-      source: SOURCE,
-      'source-layer': 'building',
-      minzoom: 14,
-      filter: ['!=', ['get', 'hide_3d'], true],
-      paint: {
-        'fill-extrusion-color': [
-          'interpolate',
-          ['linear'],
-          ['coalesce', ['get', 'render_height'], 6],
-          0,
-          C.towerLow,
-          30,
-          C.towerMid,
-          120,
-          C.towerHigh,
-        ],
-        'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14, 0, 15, ['coalesce', ['get', 'render_height'], 6]],
-        'fill-extrusion-base': ['interpolate', ['linear'], ['zoom'], 14, 0, 15, ['coalesce', ['get', 'render_min_height'], 0]],
-        'fill-extrusion-opacity': 0.92,
-      },
-    },
-    {
       id: 'building-outline',
       type: 'line',
       source: SOURCE,
@@ -463,6 +442,31 @@ const EXTRAS: Record<MapTheme, [string, string, string][]> = {
 }
 
 /**
+ * The sky over the horizon, seen once the map is tilted far enough: night over the dark map, day
+ * over the light one. Its haze is the colour of the land, so the ground runs into it.
+ */
+const SKY: Record<MapTheme, SkySpecification> = {
+  dark: {
+    'sky-color': '#04070b',
+    'horizon-color': '#132231',
+    'fog-color': DARK.land,
+    'sky-horizon-blend': 0.6,
+    'horizon-fog-blend': 0.7,
+    'fog-ground-blend': 0.6,
+    'atmosphere-blend': 0,
+  },
+  light: {
+    'sky-color': '#a8c8e4',
+    'horizon-color': '#e6eef3',
+    'fog-color': LIGHT.land,
+    'sky-horizon-blend': 0.6,
+    'horizon-fog-blend': 0.7,
+    'fog-ground-blend': 0.6,
+    'atmosphere-blend': 0,
+  },
+}
+
+/**
  * Repaints the base map in a theme without replacing the style, so imagery, relief and every layer
  * added since stay where they are. `overImagery` leaves the street-level label colours alone:
  * the base mode has set those for reading over a photo.
@@ -476,6 +480,7 @@ export function applyMapTheme(map: MapLibreMap, theme: MapTheme, overImagery: bo
     if (!kept.has(`${id}|${key}`) && map.getLayer(id)) paint(id, key, byId.get(id)![key])
   }
   for (const [id, key, value] of EXTRAS[theme]) if (map.getLayer(id)) paint(id, key, value)
+  map.setSky(SKY[theme])
 }
 
 export function buildStyle(theme: MapTheme = 'dark'): StyleSpecification {
@@ -486,6 +491,7 @@ export function buildStyle(theme: MapTheme = 'dark'): StyleSpecification {
     // The TileJSON resolves to a dated tile path, so always reference it rather than the tiles.
     sources: { [SOURCE]: { type: 'vector', url: `${ofm}/planet` } },
     glyphs: `${ofm}/fonts/{fontstack}/{range}.pbf`,
+    sky: SKY[theme],
     layers: STYLES[theme].layers,
   }
 }

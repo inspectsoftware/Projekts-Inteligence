@@ -26,16 +26,19 @@ export function CamTile({ cam, onOpen }: { cam: Cam; onOpen(): void }) {
       {picture && picture !== broken ? (
         <img src={picture} alt="" loading="lazy" decoding="async" onError={() => setBroken(picture)} className="absolute inset-0 h-full w-full object-cover" />
       ) : (
-        <span className="absolute inset-0 grid place-items-center pb-6 text-[9.5px] tracking-[0.2em] text-fg-mute uppercase">
+        <span className="absolute inset-0 grid place-items-center pb-6 text-[clamp(9.5px,3.6cqi,12.5px)] tracking-[0.2em] text-fg-mute uppercase">
           {picture ? t('No picture') : t('Stream only')}
         </span>
       )}
-      <span className={`absolute top-1 left-1 bg-ink-950/75 px-1 text-[9px] tracking-[0.16em] uppercase ${live ? 'text-accent' : 'text-fg-dim'}`}>
+      {/* The lettering grows with the tile (the list item is its container), from today's size up to about half as large again. */}
+      <span
+        className={`absolute top-1 left-1 bg-ink-950/75 px-1 text-[clamp(9px,3.4cqi,12px)] tracking-[0.16em] uppercase ${live ? 'text-accent' : 'text-fg-dim'}`}
+      >
         {live ? t('Live') : cam.refreshS ? t('Every {pace}', { pace: pace(cam.refreshS) }) : t('Still')}
       </span>
       <span className="absolute inset-x-0 bottom-0 bg-ink-950/75 px-1.5 py-1">
-        <span className="block truncate text-[10px] tracking-[0.06em] text-fg group-hover:text-accent">{cam.name}</span>
-        <span className="block truncate text-[9px] tracking-[0.14em] text-fg-mute uppercase">
+        <span className="block truncate text-[clamp(10px,4cqi,14px)] tracking-[0.06em] text-fg group-hover:text-accent">{cam.name}</span>
+        <span className="block truncate text-[clamp(9px,3.4cqi,12px)] tracking-[0.14em] text-fg-mute uppercase">
           {/* A road camera's place is only its country again. Its publisher is named instead: Lithuania's terms ask for that wherever a photo shows. */}
           {cam.road ? cam.credit : `${t(cam.place)} · ${cam.country}`}
         </span>

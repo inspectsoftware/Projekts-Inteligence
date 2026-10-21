@@ -41,10 +41,13 @@ interface UiState {
   base: BaseMode
   relief: boolean
   theme: ThemeChoice
+  /** Shows the windows that are only of use to whoever builds or debugs the app, on a rail of their own. */
+  developer: boolean
   setVision(vision: VisionMode): void
   setBase(base: BaseMode): void
   setRelief(relief: boolean): void
   setTheme(theme: ThemeChoice): void
+  setDeveloper(developer: boolean): void
 }
 
 /** How many days into the past the recent imagery is turned back. Starts at the newest on every visit. */
@@ -61,10 +64,12 @@ export const useUi = create<UiState>()(
       base: 'dark',
       relief: false,
       theme: 'system',
+      developer: false,
       setVision: (vision) => set({ vision }),
       setBase: (base) => set({ base }),
       setRelief: (relief) => set({ relief }),
       setTheme: (theme) => set({ theme }),
+      setDeveloper: (developer) => set({ developer }),
     }),
     { name: 'pwh-ui', version: 1 },
   ),

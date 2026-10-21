@@ -102,14 +102,23 @@ function Cameras() {
       {shown.length === 0 ? (
         <p className="p-3 text-[11px] text-fg-mute">{t('No camera matches')}</p>
       ) : (
-        // A new page starts scrolled to its top.
-        <ul key={`${roads}|${at}`} className="grid min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] content-start gap-1 overflow-y-auto p-1">
-          {shown.slice(at * PAGE, (at + 1) * PAGE).map((cam) => (
-            <li key={cam.id}>
-              <CamTile cam={cam} onOpen={() => open(cam.id)} />
-            </li>
-          ))}
-        </ul>
+        // In a floating window the tiles grow with the window: each is at least 30% of the grid's
+        // width and 80% of its height, so a bigger window shows bigger pictures, three abreast,
+        // while one that is only made wider adds columns rather than tiles taller than it can show.
+        // The phone sheet has no height of its own to measure, so it keeps the fixed size.
+        <div className="flex min-h-0 flex-1 flex-col md:@container-size">
+          {/* A new page starts scrolled to its top. */}
+          <ul
+            key={`${roads}|${at}`}
+            className="grid min-h-0 flex-1 grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] content-start gap-1 overflow-y-auto p-1 md:grid-cols-[repeat(auto-fill,minmax(max(8rem,min(30%,80cqb)),1fr))]"
+          >
+            {shown.slice(at * PAGE, (at + 1) * PAGE).map((cam) => (
+              <li key={cam.id} className="@container">
+                <CamTile cam={cam} onOpen={() => open(cam.id)} />
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {pages > 1 && (

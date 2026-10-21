@@ -366,6 +366,15 @@ export const lt: Record<string, string> = {
   'The graphics context was lost. Reload the page to try again.': 'Prarastas grafikos kontekstas. Įkelkite puslapį iš naujo ir bandykite dar kartą.',
   'Map unavailable': 'Žemėlapis nepasiekiamas',
 
+  // src/map/city/building.ts
+  'Building': 'Pastatas',
+  'No address': 'Be adreso',
+  'In use since': 'Eksploatuojamas nuo',
+  'Cadastral designation': 'Kadastro žymuo',
+  'Property': 'Nekilnojamasis turtas',
+  'Property cadastral number': 'Turto kadastro numeris',
+  'Neighbourhood': 'Rajonas',
+
   // src/state/country.ts
   'Brief': 'Santrauka',
   'dock::Brief': 'Santr',
@@ -436,6 +445,7 @@ export const lt: Record<string, string> = {
   'Zoom out': 'Tolinti',
   'North up, flat': 'Šiaurė viršuje, be pokrypio',
   '3D terrain and buildings': '3D reljefas ir pastatai',
+  'Street level: walk around': 'Gatvės lygyje: pasivaikščioti',
 
   // src/ui/media/EmbedFrame.tsx
   'Play {title}': 'Leisti: {title}',
@@ -488,6 +498,18 @@ export const lt: Record<string, string> = {
   'Uplink': 'Ryšys',
   'Uplink down': 'Ryšio nėra',
   'Linking': 'Jungiamasi',
+
+  // src/ui/WalkPanel.tsx
+  'WASD move · QE turn · RF up/down · Shift faster · drag to look · Esc leave': 'WASD eiti · QE suktis · RF aukštyn/žemyn · Shift greičiau · tempkite, kad apsidairytumėte · Esc išeiti',
+  'Turn left': 'Pasisukti į kairę',
+  'Forward': 'Pirmyn',
+  'Turn right': 'Pasisukti į dešinę',
+  'Rise': 'Pakilti',
+  'Step left': 'Žingsnis į kairę',
+  'Back': 'Atgal',
+  'Step right': 'Žingsnis į dešinę',
+  'Sink': 'Nusileisti',
+  'Leave': 'Išeiti',
 
   // src/ui/windows/cctv/CamTile.tsx
   'No picture': 'Nėra vaizdo',
@@ -663,6 +685,8 @@ export const lt: Record<string, string> = {
   'on a schedule; whether it is on air right now is not known': 'pagal tvarkaraštį; ar šiuo metu eteryje, nežinoma',
   'Site ↗': 'Svetainė ↗',
   'opens the broadcaster’s own site in a new tab': 'atidaro paties transliuotojo svetainę naujoje kortelėje',
+  'Videos': 'Vaizdo',
+  'recorded videos, the newest first': 'įrašyti vaizdo įrašai, naujausi pirmiau',
   'Channels': 'Kanalai',
 
   // src/ui/windows/tv/Stage.tsx
@@ -1011,6 +1035,12 @@ export const lt: Record<string, string> = {
   'Every political headline from the publishers read, newest first, in the publisher’s own words. Nothing is rated, summarised or left out.': 'Visos politikos antraštės iš skaitomų leidėjų, naujausios pirmiausia, paties leidėjo žodžiais. Niekas nevertinama, neapibendrinama ir nepraleidžiama.',
   'Only what governments, parliaments and ministries published themselves': 'Tik tai, ką pačios paskelbė vyriausybės, parlamentai ir ministerijos',
   'Official only': 'Tik oficialūs',
+  'Video': 'Vaizdo įrašai',
+  'Parliament sittings, government press conferences, news bulletins and the parties’ own videos': 'Parlamento posėdžiai, vyriausybės spaudos konferencijos, žinių laidos ir pačių partijų vaizdo įrašai',
+  'Parliaments and governments': 'Parlamentai ir vyriausybės',
+  'Public broadcasters': 'Visuomeniniai transliuotojai',
+  'Parties elected to the Saeima': 'Į Saeimą išrinktos partijos',
+  'Council sittings, a few times a month': 'Tarybos posėdžiai, kelis kartus per mėnesį',
   'Filter by word or publisher': 'Filtruoti pagal žodį ar leidėją',
   '{n} headlines': '{n} antraštės',
   'official': 'oficialus',
@@ -1163,12 +1193,18 @@ export const lt: Record<string, string> = {
   'Station list': 'Stočių sąrašas',
   'The sound comes straight from the broadcaster and stops when this window is closed.': 'Garsas ateina tiesiai iš transliuotojo ir nutyla uždarius šį langą.',
   'Identity': 'Tapatybė',
+  'Developer mode': 'Kūrėjo režimas',
+  'Developer tools': 'Kūrėjo įrankiai',
+  'Off': 'Išj.',
+  'On': 'Įj.',
+  'Only the windows a reader needs': 'Tik skaitytojui reikalingi langai',
+  'Also the feed updates and the console, on a rail down the left edge': 'Taip pat duomenų atnaujinimai ir konsolė, juostoje kairiajame krašte',
   'Your ID': 'Jūsų ID',
   'Your name': 'Jūsų vardas',
   'Save': 'Išsaugoti',
   'Random': 'Atsitiktinis',
   'Draw a new random name': 'Ištraukti naują atsitiktinį vardą',
-  'Draw a new random name. Your ID stays the same; set a name of your own in Display': 'Ištraukti naują atsitiktinį vardą. Jūsų ID lieka tas pats; savo vardą nustatykite lange „Rodymas“',
+  'Draw a new random name. Your ID stays the same; set a name of your own in View': 'Ištraukti naują atsitiktinį vardą. Jūsų ID lieka tas pats; savo vardą nustatykite lange „Vaizdas“',
   'Public ID: the same whatever name they go by': 'Viešasis ID: tas pats, kad ir koks būtų vardas',
   'Use 3 to 20 letters, digits or underscores': 'Naudokite nuo 3 iki 20 lotyniškų raidžių, skaitmenų arba pabraukimo brūkšnių',
   'That name is taken': 'Šis vardas jau užimtas',

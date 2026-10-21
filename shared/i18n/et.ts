@@ -388,6 +388,15 @@ export const et: Record<string, string> = {
   'The graphics context was lost. Reload the page to try again.': 'Graafikakontekst läks kaotsi. Uuesti proovimiseks laadi leht uuesti.',
   'Map unavailable': 'Kaart ei ole saadaval',
 
+  // src/map/city/building.ts
+  'Building': 'Hoone',
+  'No address': 'Aadressita',
+  'In use since': 'Kasutusel alates',
+  'Cadastral designation': 'Katastritähis',
+  'Property': 'Kinnistu',
+  'Property cadastral number': 'Kinnistu katastrinumber',
+  'Neighbourhood': 'Asum',
+
   // src/state/country.ts
   'Brief': 'Ülevaade',
   'dock::Brief': 'Teave',
@@ -458,6 +467,7 @@ export const et: Record<string, string> = {
   'Zoom out': 'Vähenda',
   'North up, flat': 'Põhi üleval, pealtvaade',
   '3D terrain and buildings': '3D reljeef ja hooned',
+  'Street level: walk around': 'Tänavatasandil: jaluta ringi',
 
   // src/ui/media/EmbedFrame.tsx
   'Play {title}': 'Esita: {title}',
@@ -510,6 +520,18 @@ export const et: Record<string, string> = {
   'Uplink': 'Ühendus',
   'Uplink down': 'Ühendus puudub',
   'Linking': 'Ühendamine',
+
+  // src/ui/WalkPanel.tsx
+  'WASD move · QE turn · RF up/down · Shift faster · drag to look · Esc leave': 'WASD liigu · QE pööra · RF üles/alla · Shift kiiremini · lohista, et ringi vaadata · Esc välju',
+  'Turn left': 'Pööra vasakule',
+  'Forward': 'Edasi',
+  'Turn right': 'Pööra paremale',
+  'Rise': 'Tõuse üles',
+  'Step left': 'Samm vasakule',
+  'Back': 'Tagasi',
+  'Step right': 'Samm paremale',
+  'Sink': 'Lasku alla',
+  'Leave': 'Välju',
 
   // src/ui/windows/cctv/CamTile.tsx
   'No picture': 'Pilt puudub',
@@ -689,6 +711,8 @@ export const et: Record<string, string> = {
   'on a schedule; whether it is on air right now is not known': 'saatekava alusel; ei ole teada, kas praegu on eetris',
   'Site ↗': 'Sait ↗',
   'opens the broadcaster’s own site in a new tab': 'avab ringhäälinguorganisatsiooni enda saidi uuel vahekaardil',
+  'Videos': 'Videod',
+  'recorded videos, the newest first': 'salvestatud videod, uusimad eespool',
   'Channels': 'Kanalid',
 
   // src/ui/windows/tv/Stage.tsx
@@ -1042,6 +1066,12 @@ export const et: Record<string, string> = {
   'Every political headline from the publishers read, newest first, in the publisher’s own words. Nothing is rated, summarised or left out.': 'Kõik poliitikapealkirjad loetavatelt väljaandjatelt, uuemad ees, väljaandja enda sõnastuses. Midagi ei hinnata, ei võeta kokku ega jäeta välja.',
   'Only what governments, parliaments and ministries published themselves': 'Ainult see, mida valitsused, parlamendid ja ministeeriumid ise avaldasid',
   'Official only': 'Ainult ametlikud',
+  'Video': 'Video',
+  'Parliament sittings, government press conferences, news bulletins and the parties’ own videos': 'Parlamendi istungid, valitsuse pressikonverentsid, uudistesaated ja erakondade endi videod',
+  'Parliaments and governments': 'Parlamendid ja valitsused',
+  'Public broadcasters': 'Avalik-õiguslikud ringhäälingud',
+  'Parties elected to the Saeima': 'Saeimasse valitud erakonnad',
+  'Council sittings, a few times a month': 'Volikogu istungid, paar korda kuus',
   'Filter by word or publisher': 'Filtreeri sõna või väljaandja järgi',
   '{n} headlines': '{n} pealkirja',
   'official': 'ametlik',
@@ -1194,12 +1224,18 @@ export const et: Record<string, string> = {
   'Station list': 'Jaamade loend',
   'The sound comes straight from the broadcaster and stops when this window is closed.': 'Heli tuleb otse ringhäälingult ja lakkab, kui see aken suletakse.',
   'Identity': 'Identiteet',
+  'Developer mode': 'Arendaja režiim',
+  'Developer tools': 'Arendaja tööriistad',
+  'Off': 'Väljas',
+  'On': 'Sees',
+  'Only the windows a reader needs': 'Ainult lugejale vajalikud aknad',
+  'Also the feed updates and the console, on a rail down the left edge': 'Ka andmete uuendused ja konsool, vasaku serva ribal',
   'Your ID': 'Teie ID',
   'Your name': 'Teie nimi',
   'Save': 'Salvesta',
   'Random': 'Juhuslik',
   'Draw a new random name': 'Loosi uus juhuslik nimi',
-  'Draw a new random name. Your ID stays the same; set a name of your own in Display': 'Loosi uus juhuslik nimi. Teie ID jääb samaks; oma nime saate määrata aknas „Kuva“',
+  'Draw a new random name. Your ID stays the same; set a name of your own in View': 'Loosi uus juhuslik nimi. Teie ID jääb samaks; oma nime saate määrata aknas „Vaade“',
   'Public ID: the same whatever name they go by': 'Avalik ID: sama, olgu nimi milline tahes',
   'Use 3 to 20 letters, digits or underscores': 'Kasutage 3 kuni 20 ladina tähte, numbrit või allkriipsu',
   'That name is taken': 'See nimi on juba võetud',

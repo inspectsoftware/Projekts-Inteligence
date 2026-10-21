@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { t } from '../i18n'
 import { flyHome } from '../map/camera'
 import { useMap } from '../map/instance'
+import { useWalk } from '../map/walk'
 import { useUi } from '../state/ui'
 
 function MapButton({ title, onClick, pressed, children }: { title: string; onClick(): void; pressed?: boolean; children: ReactNode }) {
@@ -21,11 +22,12 @@ function MapButton({ title, onClick, pressed, children }: { title: string; onCli
   )
 }
 
-/** Zoom, north-up and home, for mouse users without a wheel. Phones pinch, and find home in the Views window. */
+/** Zoom, north-up and home, for mouse users without a wheel, and on a phone the one way home. */
 export function MapButtons() {
   const map = useMap()
   const relief = useUi((s) => s.relief)
   const setRelief = useUi((s) => s.setRelief)
+  const walk = useWalk()
   if (!map) return null
 
   const toggleRelief = () => {
@@ -36,7 +38,7 @@ export function MapButtons() {
 
   return (
     // data-snap: a dragged window is drawn to these edges as it is to another window's.
-    <div data-snap className="pointer-events-auto absolute top-13 right-3 z-10 grid gap-px border border-line bg-line max-md:hidden">
+    <div data-snap className="pointer-events-auto absolute top-13 right-3 z-10 grid gap-px border border-line bg-line">
       <MapButton title={t('Zoom in')} onClick={() => map.zoomIn()}>
         <path d="M8 3v10M3 8h10" />
       </MapButton>
@@ -48,6 +50,10 @@ export function MapButtons() {
       </MapButton>
       <MapButton title={t('3D terrain and buildings')} onClick={toggleRelief} pressed={relief}>
         <path d="M1.5 13l4.5-8 3 5 2-3 3.5 6z" />
+      </MapButton>
+      <MapButton title={t('Street level: walk around')} onClick={walk.walking ? walk.leave : walk.enter} pressed={walk.walking}>
+        <circle cx="9.5" cy="2.6" r="1.3" />
+        <path d="M8.8 5.2L7.6 9.4l-1.4 2.4L4.6 14M7.6 9.4l2 2 .8 2.6M8.6 5.6L6.2 7.8M8.8 5.6l1.8 2.2 1.9.6" />
       </MapButton>
       <MapButton title={t('Latvia overview')} onClick={() => flyHome(map)}>
         <path d="M2.5 8L8 3l5.5 5M4 7v6h8V7" />

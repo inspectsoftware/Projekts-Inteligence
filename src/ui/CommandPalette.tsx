@@ -15,6 +15,7 @@ import { getEntities } from '../runtime/entityStore'
 import { searchWorld } from '../runtime/place'
 import { isLayerOn, useLayers } from '../state/layers'
 import { usePalette } from '../state/palette'
+import { useUi } from '../state/ui'
 import { useWindows } from '../state/windows'
 import { WINDOWS, shownWindows, toggleWindow } from './windows/registry'
 import { watchChannel } from './windows/tv/store'
@@ -107,9 +108,11 @@ function buildIndex(places: readonly Place[]): SearchItem[] {
   }
 
   const shown = shownWindows()
+  const developer = useUi.getState().developer
   for (const def of WINDOWS) {
-    // Mode windows come and go with what they show; there is nothing to open by hand.
-    if (def.mode) continue
+    // Mode windows come and go with what they show; there is nothing to open by hand. Developer
+    // windows are found only in developer mode, as they are on the taskbar.
+    if (def.mode || (def.developer && !developer)) continue
     items.push({
       id: `window:${def.id}`,
       group: t('Window'),

@@ -7,6 +7,7 @@ import { BROWSER_ORIGINS, LITHUANIA_ENABLED, LITHUANIA_ORIGIN, RADAR_INDEX_URL, 
 import { formatLat, formatLon, formatMgrs, parseCoords, scaleBar } from '../../src/lib/coords'
 import { applyZoomCeiling } from '../../src/map/baseMode'
 import { BASE_MODES, MAX_ZOOM, ORTHO_LITHUANIA, RASTER_BASES, clampZoom, gibsDate, zoomCeiling } from '../../src/map/basemaps'
+import type { CityCatalogue } from '../../src/map/city/types'
 import {
   CLIP_SCHEME,
   MARGIN,
@@ -44,6 +45,7 @@ function urlsIn(value: unknown, found: string[] = []): string[] {
 describe('content security policy', () => {
   it('allows every origin the map loads from', () => {
     const now = new Date('2026-10-06T08:00:00Z')
+    const rigaModel: CityCatalogue = JSON.parse(readFileSync(new URL('../../public/data/riga-3d.json', import.meta.url), 'utf8'))
     // Two templates name a protocol of ours; what the browser really asks for is behind it.
     const behind: Record<string, string> = {
       [`${CLIP_SCHEME}://{z}/{x}/{y}`]: latviaTileUrl(14, 9289, 5023),
@@ -58,6 +60,8 @@ describe('content security policy', () => {
       RADAR_INDEX_URL,
       DEM_TILES,
       `${TILE_ORIGINS.rainViewerTiles}/v2/radar/abc123/256/6/36/19/2/1_1.png`,
+      // Every layer of Rīga's city model, so the catalogue cannot point anywhere the policy does not allow.
+      ...[...rigaModel.buildings, ...rigaModel.trees].map((layer) => layer.url),
     ]
     // Nor is anything allowed that the map does not load from.
     expect(new Set(urls.map((url) => new URL(url).origin))).toEqual(new Set(BROWSER_ORIGINS))

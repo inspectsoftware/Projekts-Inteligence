@@ -1,5 +1,5 @@
 import type { FeatureCollection, MultiPolygon, Polygon } from 'geojson'
-import { Map as MapLibreMap, addProtocol, setWorkerUrl } from 'maplibre-gl'
+import { Map as MapLibreMap, type MapMovementEvent, addProtocol, setWorkerUrl } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useEffect, useRef } from 'react'
@@ -12,6 +12,7 @@ import { finishBoot } from '../ui/boot'
 import { applyBaseMode, applyZoomCeiling, rasterId } from './baseMode'
 import { ORTHO_LITHUANIA, clampZoom, recentEnd, zoomCeiling } from './basemaps'
 import { INTRO_START, runIntro } from './camera'
+import { CITY_LAYER, addCity, setCityOpacity, setCityTheme } from './city/layer'
 import { setMap, setMapFailure, useMap, useMapFailure } from './instance'
 import { CLIP_SCHEME, TRIM_SCHEME, loadEstoniaTile, loadLatviaTile, setClipBorder } from './orthoClip'
 import { PATIENT_SCHEME, loadPatientTile } from './patientTiles'
@@ -21,6 +22,7 @@ import { addSpotlight } from './spotlight'
 import { applyMapTheme, buildStyle } from './style'
 import { WORLD_SCHEME, loadWorldOrthoTile } from './worldOrtho'
 import { readUrlView, writeUrlView } from './urlView'
+import { useWalk } from './walk'
 
 // MapLibre 6 is ESM-only: under a bundler its worker has to be given as a URL.
 setWorkerUrl(workerUrl)
@@ -46,18 +48,25 @@ export function MapView() {
   useEffect(() => {
     if (!map) return
     applyBaseMode(map, base, base === 'recent' ? recentEnd(new Date(), back) : new Date())
+    // Walking holds its own, deeper limit, and puts the base's back when it ends.
+    if (useWalk.getState().walking) return
     return applyZoomCeiling(map, zoomCeiling(base))
   }, [map, base, back])
 
   // After the one above, every time it runs: a new base hides the buildings and buries the shading.
   useEffect(() => {
-    if (map) applyRelief(map, relief, base !== 'dark')
+    if (!map) return
+    applyRelief(map, relief, base !== 'dark')
+    // Thinner over a photo, so the roofs it shows are still seen through the blocks.
+    setCityOpacity(base === 'dark' ? 1 : 0.7)
   }, [map, base, back, relief])
 
   // Last of the three: it colours what the two above have just put on the map. Over imagery the
   // map keeps its dark lettering whatever the theme, since that is what reads on a photo.
   useEffect(() => {
-    if (map) applyMapTheme(map, base === 'dark' ? theme : 'dark', base !== 'dark')
+    if (!map) return
+    applyMapTheme(map, base === 'dark' ? theme : 'dark', base !== 'dark')
+    setCityTheme(base === 'dark' ? theme : 'dark')
   }, [map, base, back, relief, theme])
 
   useEffect(() => {
@@ -76,7 +85,8 @@ export function MapView() {
         pitch: urlView?.pitch ?? 0,
         minZoom: 1.5,
         maxZoom: zoomCeiling(startBase),
-        maxPitch: 70,
+        // Far enough over to look along a street at the skyline.
+        maxPitch: 85,
         attributionControl: false,
         renderWorldCopies: false,
         canvasContextAttributes: { antialias: true },
@@ -137,12 +147,16 @@ export function MapView() {
           console.error('[map] border overlay failed to load:', err)
         }
         if (cancelled) return
+        // Before the map is published: the base and relief effects reach the city by its layer id.
+        addCity(created, 'building-outline')
         setMap(created)
         stopScene = startScene(created)
         finishBoot()
         if (!urlView) runIntro(created)
         created.on('contextmenu', (event) => whatIsHere(created, event.lngLat.lng, event.lngLat.lat))
-        created.on('moveend', () => {
+        created.on('moveend', (event: MapMovementEvent & { walk?: boolean }) => {
+          // Walking moves the camera every frame; the link is written when the walk ends.
+          if (event.walk) return
           const { lng, lat } = created.getCenter()
           // The shade that sets Latvia apart would only darken a map of somewhere else.
           if (created.getLayer('lv-mask')) created.setLayoutProperty('lv-mask', 'visibility', inBBox(lng, lat, AOI_BBOX) ? 'visible' : 'none')
@@ -158,6 +172,8 @@ export function MapView() {
       container.removeEventListener('webglcontextlost', onContextLost, true)
       stopScene?.()
       setMap(null)
+      // Removing the map does not remove its custom layers: the city's workers would outlive it.
+      if (created.getLayer(CITY_LAYER)) created.removeLayer(CITY_LAYER)
       created.remove()
     }
   }, [])

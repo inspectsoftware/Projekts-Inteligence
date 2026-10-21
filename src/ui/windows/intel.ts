@@ -42,7 +42,7 @@ function currentLevel(): EscalationLevel | null {
 }
 
 /**
- * The level on the Intel feed's dock button. It reads what the open window has fetched and starts
+ * The level on the Intel feed's taskbar button. It reads what the open window has fetched and starts
  * no polling of its own, so there is no badge while the window is closed.
  */
 export function useIntelBadge(): WindowBadge | null {

@@ -27,14 +27,16 @@ const MONTHS = ['janv|jaan', 'febr|veeb', 'mart|märt', 'apr', 'mai', 'jūn|juun
 const pad = (part: string | number) => String(part).padStart(2, '0')
 
 /**
- * The day a broadcast is for, as its title says it, as "2026-10-06". The channels spell it three
- * ways: "2026-10-06 Seimo…", "…sēde 6.10.2026." and "6. oktobra…" or "…1. oktoober 2026".
+ * The day a broadcast is for, as its title says it, as "2026-10-06". The channels spell it four
+ * ways: "2026-10-06 Seimo…", "…sēde (2026.10.06)", "…sēde 6.10.2026." and "6. oktobra…" or "…1. oktoober 2026".
  * Null when the title names no day. The feed itself only says when a video was listed, which
  * for a parliament is weeks before the sitting.
  */
 export function titleDate(title: string, today: string): string | null {
   const iso = /\b\d{4}-\d{2}-\d{2}\b/.exec(title)
   if (iso) return iso[0]
+  const reversed = /\b(\d{4})\.(\d{1,2})\.(\d{1,2})\b/.exec(title)
+  if (reversed) return `${reversed[1]}-${pad(reversed[2])}-${pad(reversed[3])}`
   const dotted = /\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b/.exec(title)
   if (dotted) return `${dotted[3]}-${pad(dotted[2])}-${pad(dotted[1])}`
   const year = /\b\d{4}\b/.exec(title)?.[0]
@@ -98,12 +100,13 @@ export function broadcastOf(channel: Extract<TvChannel, { kind: 'yt-feed' }>, vi
 /**
  * What can honestly be said about a channel: on air; a known start still ahead; a broadcast listed
  * for today, which the player shows as a countdown, live or as a recording; nothing today; nothing
- * known (no lookup, or it failed); or no player at all.
+ * known (no lookup, or it failed); recordings only; or no player at all.
  */
-export type Air = 'live' | 'next' | 'today' | 'off' | 'unknown' | 'link'
+export type Air = 'live' | 'next' | 'today' | 'off' | 'unknown' | 'uploads' | 'link'
 
 export function airOf(channel: TvChannel, now: TvNow | undefined, clock: number): Air {
   if (playersOf(channel, now).length === 0) return 'link'
+  if (channel.kind === 'yt-uploads') return 'uploads'
   if (!channel.schedule) return 'live'
   if (!now) return 'unknown'
   if (now.from !== undefined && now.to !== undefined) return clock < now.from ? 'next' : clock < now.to ? 'live' : 'off'
@@ -129,6 +132,9 @@ const video = (videoId: string): TvPlayer => ({
 /** Finds a channel's stream by itself, but only while the channel has exactly one live or upcoming. */
 const channelPlayer = (channelId: string): TvPlayer => ({ kind: 'youtube', src: `${PLAYER}/live_stream?channel=${channelId}&${START}` })
 
+/** Every channel has a playlist of its uploads, newest first, whose id is the channel's with UU for UC. */
+const uploadsPlayer = (channelId: string): TvPlayer => ({ kind: 'youtube', src: `${PLAYER}/videoseries?list=UU${channelId.slice(2)}&${START}` })
+
 /**
  * The players to try for a channel, best first: the video the feed resolved or the pinned one,
  * then the channel's own player address where that can work. When the list is empty, or none of
@@ -143,6 +149,8 @@ export function playersOf(channel: TvChannel, now: TvNow | undefined): TvPlayer[
       return [{ kind: channel.kind, src: channel.src }]
     case 'yt-channel':
       return [channelPlayer(channel.channelId)]
+    case 'yt-uploads':
+      return [uploadsPlayer(channel.channelId)]
     case 'yt-video': {
       // Unchecked, the pinned stream is still worth a try: its player reports a dead one itself.
       const videoId = now ? now.videoId : channel.videoId

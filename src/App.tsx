@@ -9,6 +9,7 @@ import { MapButtons } from './ui/MapButtons'
 import { PoliticsPage } from './ui/PoliticsPage'
 import { onPoliticsPage } from './ui/politics'
 import { TopBar } from './ui/TopBar'
+import { WalkPanel } from './ui/WalkPanel'
 import { WindowLayer } from './ui/windows/WindowLayer'
 
 export default function App() {
@@ -27,6 +28,7 @@ export default function App() {
       <Dock />
       <MapButtons />
       <Hud />
+      <WalkPanel />
       <WindowLayer />
       {/* After the windows, so the credits the licences ask for are never covered by one. */}
       <Attribution />

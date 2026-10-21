@@ -46,7 +46,6 @@ export function applyRelief(map: Map, on: boolean, imagery: boolean): void {
     if (map.getTerrain()) map.setTerrain(null)
     if (map.getLayer(SHADE)) map.removeLayer(SHADE)
   }
+  // The 3D city (src/map/city/layer.ts), which MapView also makes see-through over a photo.
   if (imagery) map.setLayoutProperty('building-3d', 'visibility', on ? 'visible' : 'none')
-  // Thinner over a photo, so the roofs it shows are still seen through the blocks.
-  map.setPaintProperty('building-3d', 'fill-extrusion-opacity', imagery ? 0.6 : 0.92)
 }

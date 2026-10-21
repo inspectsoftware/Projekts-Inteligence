@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { PoliticsItem } from '../../shared/feeds'
+import { POLITICS_CHANNELS, TV_CHANNELS } from '../../shared/media/tv'
 import { APP } from '../../shared/meta'
 import { locale, t } from '../i18n'
 import { formatAge } from '../lib/format'
@@ -9,6 +10,9 @@ import { useNow } from '../runtime/useNow'
 import { useFeeds } from '../state/feeds'
 import { finishBoot } from './boot'
 import { Segmented } from './kit'
+import { type ChannelGroups, ChannelRail } from './windows/tv/ChannelRail'
+import { Stage } from './windows/tv/Stage'
+import { useTv } from './windows/tv/store'
 
 type Country = 'all' | PoliticsItem['country']
 const COUNTRIES: readonly { id: Country; label: string; hint: string }[] = [
@@ -21,6 +25,42 @@ const COUNTRIES: readonly { id: Country; label: string; hint: string }[] = [
 
 const clock = new Intl.DateTimeFormat(locale, { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 
+const tv = (id: string) => TV_CHANNELS.find((channel) => channel.id === id)!
+const extra = (group: string) => POLITICS_CHANNELS.filter((channel) => channel.group === group)
+
+/** Live TV's parliament and government channels, and the ones only this page lists. */
+const VIDEO: ChannelGroups = [
+  [t('Parliaments and governments'), [...['saeima', 'lv-cabinet', 'lv-president'].map(tv), ...extra('chamber'), ...['seimas', 'riigikogu', 'ee-government'].map(tv)]],
+  [t('Public broadcasters'), [tv('ltv-news'), ...extra('broadcaster')]],
+  [t('Parties elected to the Saeima'), extra('party')],
+]
+
+/**
+ * Sittings, statements, bulletins and the parties' own videos, in the Live TV window's player. The
+ * channel is shared with that window. Nothing of a third party loads until a channel is asked for.
+ */
+function Video() {
+  const payload = useFeed('tv', 'tv')
+  const failed = useFeeds((s) => s.feeds.tv?.status === 'error')
+  const channelId = useTv((s) => s.channelId)
+  const lookups = useMemo(() => new Map(payload?.channels.map((now) => [now.id, now] as const)), [payload])
+  const channel = VIDEO.flatMap(([, channels]) => channels).find((candidate) => candidate.id === channelId)
+
+  return (
+    // As in the Live TV window: side by side, except on a phone held upright, where the picture sits on top.
+    <div className="flex h-96 shrink-0 border-b border-line max-md:portrait:h-[30rem] max-md:portrait:flex-col">
+      {channel ? (
+        <section aria-label={channel.name} className="flex min-w-0 flex-1 flex-col max-md:portrait:flex-none">
+          <Stage channel={channel} now={lookups.get(channel.id)} waiting={!payload && !failed} />
+        </section>
+      ) : (
+        <p className="grid flex-1 place-items-center p-3 text-[10px] tracking-[0.2em] text-fg-mute uppercase max-md:portrait:hidden">{t('Choose a channel')}</p>
+      )}
+      <ChannelRail lookups={lookups} selected={channel?.id} groups={VIDEO} wide />
+    </div>
+  )
+}
+
 /**
  * Baltic politics as it is published: every headline, newest first, with its publisher and a link.
  * Nothing is rated, summarised or hidden; the filters only narrow what is already there.
@@ -32,6 +72,7 @@ export function PoliticsPage() {
   const now = useNow(1000)
   const [country, setCountry] = useState<Country>('all')
   const [officialOnly, setOfficialOnly] = useState(false)
+  const [video, setVideo] = useState(false)
   const [query, setQuery] = useState('')
 
   // The map takes the opening screen down when it is ready; here there is no map to wait for.
@@ -51,8 +92,8 @@ export function PoliticsPage() {
         <a href="/" className="font-semibold tracking-[0.3em] whitespace-nowrap text-fg-strong hover:text-accent">
           {APP.codename}
         </a>
-        <h1 className="whitespace-nowrap text-fg">{t('Baltic politics')}</h1>
-        <a href="/" className="ml-auto border border-line px-2 py-0.5 text-[10px] text-fg-mute hover:border-line-strong hover:text-fg">
+        <h1 className="min-w-0 truncate text-fg">{t('Baltic politics')}</h1>
+        <a href="/" className="ml-auto shrink-0 border border-line px-2 py-0.5 text-[10px] whitespace-nowrap text-fg-mute hover:border-line-strong hover:text-fg">
           {t('Back to the map')}
         </a>
       </header>
@@ -75,6 +116,15 @@ export function PoliticsPage() {
             >
               {t('Official only')}
             </button>
+            <button
+              type="button"
+              aria-pressed={video}
+              title={t('Parliament sittings, government press conferences, news bulletins and the parties’ own videos')}
+              onClick={() => setVideo(!video)}
+              className={`border border-line px-2 py-1.5 text-[10px] tracking-[0.16em] uppercase hover:text-fg ${video ? 'bg-accent/15 text-accent' : 'bg-ink-850 text-fg-dim'}`}
+            >
+              {t('Video')}
+            </button>
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -91,6 +141,8 @@ export function PoliticsPage() {
             <span className="text-fg-mute">{t('{n} headlines', { n: rows.length })}</span>
           </p>
         </div>
+
+        {video && <Video />}
 
         {rows.length > 0 ? (
           <ul className="min-h-0 flex-1 overflow-y-auto">

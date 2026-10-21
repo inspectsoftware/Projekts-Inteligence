@@ -7,30 +7,31 @@ const bounds = usableBounds(viewport)
 const win = (x: number, y: number, w = 240, h = 200): Rect => ({ x, y, w, h })
 
 describe('window snapping', () => {
-  it('keeps the top bar, the dock and the HUD clear', () => {
-    expect(bounds).toEqual({ left: 56, top: 52, right: 1428, bottom: 844 })
+  it('keeps the top bar, the taskbar and the HUD row clear, and the developer rail while it is shown', () => {
+    expect(bounds).toEqual({ left: 12, top: 52, right: 1428, bottom: 800 })
+    expect(usableBounds(viewport, true)).toEqual({ ...bounds, left: 60 })
   })
 
   it('pulls a window to the edge of the usable area', () => {
-    expect(snap(win(70, 404), [], bounds)).toEqual({ x: 56, y: 404, guides: [{ axis: 'x', at: 56 }] })
-    expect(snap(win(1168, 659), [], bounds)).toEqual({
+    expect(snap(win(26, 404), [], bounds)).toEqual({ x: 12, y: 404, guides: [{ axis: 'x', at: 12 }] })
+    expect(snap(win(1168, 615), [], bounds)).toEqual({
       x: 1188,
-      y: 644,
+      y: 600,
       guides: [
         { axis: 'x', at: 1428 },
-        { axis: 'y', at: 844 },
+        { axis: 'y', at: 800 },
       ],
     })
   })
 
   it('parks a window beside another one, a gap apart', () => {
-    const layers = win(56, 52, 240, 520)
-    expect(snap(win(310, 60, 288, 300), [layers], bounds)).toMatchObject({ x: 304, y: 52 })
-    expect(snap(win(60, 590, 240, 100), [layers], bounds)).toEqual({
-      x: 56,
+    const layers = win(12, 52, 240, 520)
+    expect(snap(win(266, 60, 288, 300), [layers], bounds)).toMatchObject({ x: 260, y: 52 })
+    expect(snap(win(16, 590, 240, 100), [layers], bounds)).toEqual({
+      x: 12,
       y: 580,
       guides: [
-        { axis: 'x', at: 56 },
+        { axis: 'x', at: 12 },
         { axis: 'y', at: 580 },
       ],
     })
@@ -44,22 +45,22 @@ describe('window snapping', () => {
   })
 
   it('takes the nearest magnet when several are in reach', () => {
-    expect(snap(win(310, 300), [win(56, 52), win(320, 600)], bounds).x).toBe(304)
-    expect(snap(win(316, 300), [win(56, 52), win(320, 600)], bounds).x).toBe(320)
+    expect(snap(win(264, 300), [win(12, 52), win(270, 600)], bounds).x).toBe(260)
+    expect(snap(win(268, 300), [win(12, 52), win(270, 600)], bounds).x).toBe(270)
   })
 
   it('falls back to the grid when no magnet is in reach', () => {
-    expect(snap(win(605, 303), [], bounds)).toEqual({ x: 608, y: 300, guides: [] })
-    expect(snap(win(96, 404), [], bounds, { threshold: 10 }).x).toBe(96)
+    expect(snap(win(605, 303), [], bounds)).toEqual({ x: 604, y: 300, guides: [] })
+    expect(snap(win(52, 404), [], bounds, { threshold: 10 }).x).toBe(52)
   })
 
   it('never leaves a window outside the usable area', () => {
-    expect(snap(win(-400, 2000), [], bounds)).toEqual({ x: 56, y: 644, guides: [] })
+    expect(snap(win(-400, 2000), [], bounds)).toEqual({ x: 12, y: 600, guides: [] })
     // The slot past a window that already touches the right edge is out of bounds, so it is not offered.
     expect(snap(win(1200, 300), [win(1188, 52)], bounds).x).toBe(1188)
-    expect(clamp(win(-500, 5000), bounds)).toEqual({ x: 56, y: 644 })
+    expect(clamp(win(-500, 5000), bounds)).toEqual({ x: 12, y: 600 })
     // Too big to fit: the corner the header is in stays reachable.
-    expect(clamp(win(900, 700, 2000, 1000), bounds)).toEqual({ x: 56, y: 52 })
+    expect(clamp(win(900, 700, 2000, 1000), bounds)).toEqual({ x: 12, y: 52 })
   })
 })
 
@@ -111,6 +112,27 @@ describe('window layout', () => {
     resetLayout()
     expect(useWindows.getState().windows).toEqual({})
     expect(savedLayout()).toEqual({ windows: {}, order: [] })
+    vi.unstubAllGlobals()
+  })
+
+  it('brings a resized window back at its size on the next visit, saved or not, until reset', async () => {
+    const kept = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => kept.get(key) ?? null,
+      setItem: (key: string, value: string) => void kept.set(key, value),
+      removeItem: (key: string) => void kept.delete(key),
+    })
+    const nextVisit = async () => {
+      vi.resetModules()
+      return (await import('../../src/state/windows')).useWindows.getState()
+    }
+    useWindows.getState().resize('tv', { w: 600, h: 400 })
+    useWindows.getState().close('tv')
+    expect((await nextVisit()).windows).toEqual({ tv: { size: { w: 600, h: 400 } } })
+
+    const second = await nextVisit()
+    second.resetLayout()
+    expect((await nextVisit()).windows).toEqual({})
     vi.unstubAllGlobals()
   })
 })

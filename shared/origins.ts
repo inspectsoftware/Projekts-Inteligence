@@ -25,6 +25,9 @@ export const TILE_ORIGINS = {
   gibs: 'https://gibs.earthdata.nasa.gov',
   /** Ground elevation for the 3D relief. */
   mapterhorn: 'https://tiles.mapterhorn.com',
+  /** Rīga's city model in 3D: buildings and trees, as the city publishes them (public/data/riga-3d.json lists the layers). */
+  rigaModel: 'https://services-eu1.arcgis.com',
+  rigaModelTiles: 'https://tiles-eu1.arcgis.com',
   /** RainViewer: the list of radar scans, and the radar tiles themselves. */
   rainViewerApi: 'https://api.rainviewer.com',
   rainViewerTiles: 'https://tilecache.rainviewer.com',
@@ -36,7 +39,7 @@ export const RADAR_INDEX_URL = `${TILE_ORIGINS.rainViewerApi}/public/weather-map
  * Lithuania's orthophoto service asks, in its own metadata, to be told by email
  * (pagalba@geoportal.lt) before it is used in another system. Nobody has written yet, so the
  * layer is built but switched off. Set this to true once they have been written to: the tiles,
- * the credit, the Display text and the origin's place in the policy all follow from it.
+ * the credit, the View window's text and the origin's place in the policy all follow from it.
  */
 export const LITHUANIA_ENABLED: boolean = false
 

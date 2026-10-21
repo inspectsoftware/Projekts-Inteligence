@@ -13,7 +13,7 @@ export function WindowLayer() {
   const sheet = useNarrow()
 
   // A mode window comes to the front, opened out, whenever it has something new to show: the way
-  // a window opened from the dock does. Not on every change, since the selection also changes on hover.
+  // a window opened from the taskbar does. Not on every change, since the selection also changes on hover.
   useEffect(() => {
     const stops = WINDOWS.flatMap((def) => {
       const mode = def.mode
