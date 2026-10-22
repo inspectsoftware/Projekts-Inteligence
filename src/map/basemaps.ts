@@ -123,7 +123,9 @@ const IMAGERY: RasterBase = {
       id: 'ee',
       tiles: () => `${TRIM_SCHEME}://{z}/{x}/{y}`,
       minzoom: ORTHO_MINZOOM,
-      maxzoom: 18,
+      // The service lists level 18, but central Tallinn comes back as empty tiles there, which left
+      // the 10 m mosaic showing through; level 17 stretched is far sharper.
+      maxzoom: 17,
       bounds: [21.5, 57.45, 28.3, 59.9],
       coversStreets: true,
       attribution: {
