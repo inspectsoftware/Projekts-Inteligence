@@ -16,7 +16,8 @@ export function RadarControl() {
   const latest = index === frames.length - 1
 
   return (
-    <div className="flex items-center gap-3 px-3 py-1.5 text-[10.5px] tracking-[0.12em] text-fg-dim uppercase">
+    // Centred in the window however tall it is made; the slider takes whatever width there is.
+    <div className="flex flex-1 items-center gap-3 px-3 py-1.5 text-[10.5px] tracking-[0.12em] text-fg-dim uppercase">
       {frames.length === 0 ? (
         <span className={error ? 'text-danger' : ''}>{error ? t('Unavailable') : t('Loading')}</span>
       ) : (

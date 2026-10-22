@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { savedLayout, useWindows } from '../../src/state/windows'
-import { type Rect, clamp, resolve, snap, toPlacement, usableBounds } from '../../src/ui/windows/geometry'
+import { type Rect, clamp, resizeRect, resolve, snap, toPlacement, usableBounds } from '../../src/ui/windows/geometry'
 
 const viewport = { w: 1440, h: 900 }
 const bounds = usableBounds(viewport)
@@ -63,6 +63,30 @@ describe('window snapping', () => {
   })
 })
 
+describe('window resizing', () => {
+  const limits = { min: { w: 200, h: 120 }, max: { w: 600, h: 500 } }
+  const start = win(400, 300, 300, 200)
+  const within = () => bounds
+
+  it('moves the dragged corner and keeps the opposite one where it was', () => {
+    expect(resizeRect(start, 'br', 40, 30, limits, within)).toEqual({ x: 400, y: 300, w: 340, h: 230 })
+    expect(resizeRect(start, 'tl', -40, -30, limits, within)).toEqual({ x: 360, y: 270, w: 340, h: 230 })
+    expect(resizeRect(start, 'tr', 40, -30, limits, within)).toEqual({ x: 400, y: 270, w: 340, h: 230 })
+    expect(resizeRect(start, 'bl', -40, 30, limits, within)).toEqual({ x: 360, y: 300, w: 340, h: 230 })
+  })
+
+  it('stops at the smallest and largest size, the far corner still in place', () => {
+    expect(resizeRect(start, 'tl', 500, 500, limits, within)).toEqual({ x: 500, y: 380, w: 200, h: 120 })
+    expect(resizeRect(start, 'br', 900, 900, limits, within)).toMatchObject({ w: 600, h: 500 })
+  })
+
+  it('never takes an edge past the usable area', () => {
+    // Up and left only as far as the top bar and the margin; down only to the HUD row.
+    expect(resizeRect(start, 'tl', -2000, -2000, { ...limits, max: { w: 2000, h: 2000 } }, within)).toEqual({ x: 12, y: 52, w: 688, h: 448 })
+    expect(resizeRect(start, 'br', 0, 2000, { ...limits, max: { w: 2000, h: 2000 } }, within)).toMatchObject({ y: 300, h: 500 })
+  })
+})
+
 describe('window placement', () => {
   it('round-trips through the nearest corner', () => {
     const cases = [
@@ -114,7 +138,7 @@ describe('window layout', () => {
     vi.unstubAllGlobals()
   })
 
-  it('brings a resized window back at its size on the next visit, saved or not, until reset', async () => {
+  it('brings a resized window back at its size and place on the next visit, saved or not, until reset', async () => {
     const kept = new Map<string, string>()
     vi.stubGlobal('localStorage', {
       getItem: (key: string) => kept.get(key) ?? null,
@@ -125,9 +149,14 @@ describe('window layout', () => {
       vi.resetModules()
       return (await import('../../src/state/windows')).useWindows.getState()
     }
-    useWindows.getState().resize('tv', { w: 600, h: 400 })
+    const placement = { corner: 'tl', dx: 200, dy: 260 } as const
+    useWindows.getState().resize('tv', { w: 600, h: 400 }, placement)
     useWindows.getState().close('tv')
-    expect((await nextVisit()).windows).toEqual({ tv: { size: { w: 600, h: 400 } } })
+    expect((await nextVisit()).windows).toEqual({ tv: { size: { w: 600, h: 400 }, placement } })
+
+    // What an earlier build kept is a bare size, and still read.
+    kept.set('pwh-window-sizes', JSON.stringify({ tv: { w: 500, h: 300 } }))
+    expect((await nextVisit()).windows).toEqual({ tv: { size: { w: 500, h: 300 } } })
 
     const second = await nextVisit()
     second.resetLayout()

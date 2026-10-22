@@ -51,10 +51,11 @@ export interface WindowDef {
   defaultOpen: boolean
   /** Where it sits until the user moves it. */
   placement: Placement
+  /** The size it starts at. */
   width: number
-  /** What a resizable window starts at. The others are as tall as their content, up to this. */
   height: number
-  resizable?: { min: Size; max: Size }
+  /** How small and how large it may be dragged, from any corner. The minimum shows the whole body without clipping it. */
+  resizable: { min: Size; max: Size }
   hideInDock?: boolean
   /** Only of use to whoever builds or debugs the app: on the taskbar, and on screen, only in developer mode. */
   developer?: boolean
@@ -115,10 +116,11 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8 2.5v11',
     defaultOpen: false,
     placement: { corner: 'tl', dx: 12, dy: 440 },
-    width: 240,
+    // Wide enough for every base on one row, with room for a scrollbar beside them.
+    width: 340,
     // Room for the note on where the satellite base stops being sharp, the longest of the four, and for who the reader is.
     height: 360,
-    resizable: { min: { w: 220, h: 160 }, max: { w: 420, h: 800 } },
+    resizable: { min: { w: 340, h: 160 }, max: { w: 520, h: 800 } },
     component: DisplayWindow,
   },
   {
@@ -155,7 +157,9 @@ export const WINDOWS: readonly WindowDef[] = [
     defaultOpen: false,
     placement: { corner: 'bc', dx: 0, dy: 100 },
     width: 352,
-    height: 80,
+    // The one row of the timeline.
+    height: 64,
+    resizable: { min: { w: 280, h: 64 }, max: { w: 960, h: 160 } },
     hideInDock: true,
     mode: {
       subscribe: useLayers.subscribe,

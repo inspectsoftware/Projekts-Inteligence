@@ -6,12 +6,14 @@ import { Panel } from '../kit'
 import {
   type Bounds,
   CHROME,
+  type Corner,
   type Guide,
   MARGIN,
   type Placement,
   type Rect,
   type Size,
   clamp,
+  resizeRect,
   resolve,
   snap,
   toPlacement,
@@ -56,11 +58,16 @@ function boundsOver(x: number, w: number): Bounds {
   return { ...bounds, bottom: Math.min(bounds.bottom, credits.offsetTop - MARGIN) }
 }
 
-/** The size nearest to the one asked for that a window standing at `from` may take. */
-function sizeWithin(from: Rect, w: number, h: number, { min, max }: NonNullable<WindowDef['resizable']>): Size {
-  const width = Math.max(min.w, Math.min(w, max.w, usableBounds(viewport()).right - from.x))
-  return { w: width, h: Math.max(min.h, Math.min(h, max.h, boundsOver(from.x, width).bottom - from.y)) }
-}
+/**
+ * A grip in each corner, a little outside the frame so the header's buttons stay clear. The one at
+ * the bottom right is drawn, as it always was; the others show themselves under the pointer.
+ */
+const GRIPS: readonly (readonly [Corner, string])[] = [
+  ['tl', '-top-1.5 -left-1.5 cursor-nwse-resize border-t-2 border-l-2 border-transparent'],
+  ['tr', '-top-1.5 -right-1.5 cursor-nesw-resize border-t-2 border-r-2 border-transparent'],
+  ['bl', '-bottom-1.5 -left-1.5 cursor-nesw-resize border-b-2 border-l-2 border-transparent'],
+  ['br', 'right-0.5 bottom-0.5 cursor-nwse-resize border-r-2 border-b-2 border-line-strong'],
+]
 
 /** Draws the magnets in reach as hairlines over the layer. With `flash` they fade out by themselves: the lock-on. */
 function showGuides(layer: HTMLElement, guides: readonly Guide[], flash: boolean): void {
@@ -126,8 +133,8 @@ function track(
 }
 
 /**
- * The frame every window sits in: a header to drag it by, collapse and close, an optional resize
- * grip, and the body from the registry. On a narrow screen (`sheet`) it is pinned above the HUD
+ * The frame every window sits in: a header to drag it by, collapse and close, a resize grip in
+ * each corner, and the body from the registry. On a narrow screen (`sheet`) it is pinned above the HUD
  * instead and cannot be moved.
  */
 export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
@@ -227,26 +234,26 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
     }
   }
 
-  const commitSize = (from: Rect, next: Size) => {
-    const { resize, place } = useWindows.getState()
-    resize(def.id, next)
-    // Placed again from its top-left: docked right or bottom, it would otherwise jump to keep its old far edge.
-    place(def.id, toPlacement({ ...from, ...next }, viewport()))
-  }
+  /** The rect a corner dragged this far from `start` gives. */
+  const resized = (start: Rect, corner: Corner, dx: number, dy: number) => resizeRect(start, corner, dx, dy, def.resizable, boundsOver)
 
-  const startResize = (event: ReactPointerEvent<HTMLElement>) => {
-    const limits = def.resizable
-    if (!limits || !event.isPrimary || event.button !== 0) return
+  // Placed again from where it now stands: docked right or bottom, it would otherwise jump to keep its old far edge.
+  const commitSize = (rect: Rect) => useWindows.getState().resize(def.id, { w: rect.w, h: rect.h }, toPlacement(rect, viewport()))
+
+  const startResize = (corner: Corner) => (event: ReactPointerEvent<HTMLElement>) => {
+    if (!event.isPrimary || event.button !== 0) return
     const el = ref.current!
     const start = rectOf(el)
-    const sizeTo = (dx: number, dy: number): Size => {
-      const next = sizeWithin(start, start.w + dx, start.h + dy, limits)
-      el.style.width = `${next.w}px`
-      el.style.height = `${next.h}px`
-      return next
+    const paint = (dx: number, dy: number): Rect => {
+      const rect = resized(start, corner, dx, dy)
+      el.style.left = `${rect.x}px`
+      el.style.top = `${rect.y}px`
+      el.style.width = `${rect.w}px`
+      el.style.height = `${rect.h}px`
+      return rect
     }
     // Painted once more on release: the last frame may never have run, and React only writes a size that changed.
-    abort.current = track(event, el, 'resize', sizeTo, (dx, dy) => commitSize(start, sizeTo(dx, dy)))
+    abort.current = track(event, el, 'resize', paint, (dx, dy) => commitSize(paint(dx, dy)))
   }
 
   const nudge = (event: KeyboardEvent<HTMLElement>) => {
@@ -259,7 +266,7 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
     const [dx, dy] = [step[0] * by, step[1] * by]
     if (event.altKey) {
       // With Alt held the arrows move the bottom right corner instead: the grip, for the keyboard.
-      if (def.resizable && !collapsed) commitSize(rect, sizeWithin(rect, rect.w + dx, rect.h + dy, def.resizable))
+      if (!collapsed) commitSize(resized(rect, 'br', dx, dy))
       return
     }
     const to = { ...rect, x: rect.x + dx, y: rect.y + dy }
@@ -290,20 +297,14 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
               zIndex: z + 1,
               width: size.w,
               maxWidth: MAX_WIDTH,
-              height: def.resizable && !collapsed ? size.h : undefined,
-              maxHeight: def.resizable ? MAX_HEIGHT : `min(${def.height}px, ${MAX_HEIGHT})`,
+              height: collapsed ? undefined : size.h,
+              maxHeight: MAX_HEIGHT,
             }
       }
     >
       <header
         role="toolbar"
-        aria-label={
-          sheet
-            ? def.title
-            : def.resizable
-              ? t('{title}: arrow keys move this window, with Alt they resize it', { title: def.title })
-              : t('{title}: arrow keys move this window', { title: def.title })
-        }
+        aria-label={sheet ? def.title : t('{title}: arrow keys move this window, with Alt they resize it', { title: def.title })}
         tabIndex={sheet ? undefined : 0}
         onPointerDown={startDrag}
         onKeyDown={nudge}
@@ -345,13 +346,17 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
       <div hidden={collapsed} className="flex min-h-0 flex-1 flex-col overflow-y-auto border-t border-line">
         <Body />
       </div>
-      {def.resizable && !sheet && !collapsed && (
-        <i
-          aria-hidden="true"
-          onPointerDown={startResize}
-          className="absolute right-0.5 bottom-0.5 h-3 w-3 cursor-nwse-resize touch-none border-r-2 border-b-2 border-line-strong select-none hover:border-accent"
-        />
-      )}
+      {!sheet &&
+        !collapsed &&
+        GRIPS.map(([corner, place]) => (
+          <i
+            key={corner}
+            aria-hidden="true"
+            data-grip={corner}
+            onPointerDown={startResize(corner)}
+            className={`absolute h-3 w-3 touch-none select-none hover:border-accent ${place}`}
+          />
+        ))}
     </Panel>
   )
 }

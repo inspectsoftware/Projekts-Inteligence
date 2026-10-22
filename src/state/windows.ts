@@ -5,7 +5,6 @@ export interface WindowState {
   open?: boolean
   collapsed?: boolean
   placement?: Placement
-  /** Only resizable windows have one. */
   size?: Size
 }
 
@@ -26,7 +25,8 @@ interface WindowsState extends Layout {
   /** Brings a window to the front. */
   focus(id: string): void
   place(id: string, placement: Placement): void
-  resize(id: string, size: Size): void
+  /** A new size, and where the window stands with it: a top or left corner moves it as it resizes. */
+  resize(id: string, size: Size, placement: Placement): void
   setCollapsed(id: string, collapsed: boolean): void
   /** Keeps the layout as it is now for the next visit. Nothing is kept without it. */
   saveLayout(): void
@@ -35,8 +35,12 @@ interface WindowsState extends Layout {
 }
 
 const KEY = 'pwh-windows'
-/** Sizes are kept apart from the layout and without a save: a window resized once comes back at that size. */
+/**
+ * Sizes are kept apart from the layout and without a save: a window resized once comes back at
+ * that size, and where it stood with it.
+ */
 const SIZES = 'pwh-window-sizes'
+type Kept = Pick<WindowState, 'size' | 'placement'>
 
 /** The layout saved on an earlier visit. A page opens with a clear map unless there is one. */
 export function savedLayout(): Layout {
@@ -54,8 +58,9 @@ export function savedLayout(): Layout {
 function startingLayout(): Layout {
   const layout = savedLayout()
   try {
-    const sizes = JSON.parse(localStorage.getItem(SIZES) ?? 'null') as Record<string, Size> | null
-    for (const [id, size] of Object.entries(sizes ?? {})) layout.windows[id] = { ...layout.windows[id], size }
+    const kept = JSON.parse(localStorage.getItem(SIZES) ?? 'null') as Record<string, Kept | Size> | null
+    // What was kept before positions were kept with sizes is a bare size.
+    for (const [id, entry] of Object.entries(kept ?? {})) layout.windows[id] = { ...layout.windows[id], ...('w' in entry ? { size: entry } : entry) }
   } catch {
     // No storage, or something else's data under the key: the registry sizes stand.
   }
@@ -78,11 +83,13 @@ export const useWindows = create<WindowsState>()((set, get) => {
       if (get().order.at(-1) !== id) set((state) => ({ order: [...state.order.filter((other) => other !== id), id] }))
     },
     place: (id, placement) => patch(id, { placement }),
-    resize: (id, size) => {
-      patch(id, { size })
-      const sizes = Object.fromEntries(Object.entries(get().windows).flatMap(([other, state]) => (state.size ? [[other, state.size]] : [])))
+    resize: (id, size, placement) => {
+      patch(id, { size, placement })
+      const kept = Object.fromEntries(
+        Object.entries(get().windows).flatMap(([other, state]): [string, Kept][] => (state.size ? [[other, { size: state.size, placement: state.placement }]] : [])),
+      )
       try {
-        localStorage.setItem(SIZES, JSON.stringify(sizes))
+        localStorage.setItem(SIZES, JSON.stringify(kept))
       } catch {
         // Storage can be switched off; the size then lasts as long as the page.
       }

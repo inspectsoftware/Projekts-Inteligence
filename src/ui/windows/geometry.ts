@@ -149,3 +149,29 @@ export function snap(
   if (y.guide !== null) guides.push({ axis: 'y', at: y.guide })
   return { x: x.at, y: y.at, guides }
 }
+
+/**
+ * Where a window comes to rest while one of its corners is dragged by (dx, dy): that corner follows
+ * the pointer and the opposite one stays put. The size keeps within `min` and `max` and the moving
+ * edges within the bounds, which `boundsAt` gives for the columns a window covers. Where the bounds
+ * leave less than `min`, `min` wins, as the window can do no better.
+ */
+export function resizeRect(
+  start: Rect,
+  corner: Corner,
+  dx: number,
+  dy: number,
+  { min, max }: { min: Size; max: Size },
+  boundsAt: (x: number, w: number) => Bounds,
+): Rect {
+  const [v, h] = corner
+  const right = start.x + start.w
+  const bottom = start.y + start.h
+  const across = boundsAt(start.x, start.w)
+  const w = Math.max(min.w, Math.min(h === 'l' ? start.w - dx : start.w + dx, max.w, h === 'l' ? right - across.left : across.right - start.x))
+  const x = h === 'l' ? right - w : start.x
+  // How low a window may reach depends on the columns it ends up over.
+  const down = boundsAt(x, w)
+  const tall = Math.max(min.h, Math.min(v === 't' ? start.h - dy : start.h + dy, max.h, v === 't' ? bottom - down.top : down.bottom - start.y))
+  return { x, y: v === 't' ? bottom - tall : start.y, w, h: tall }
+}
