@@ -25,9 +25,16 @@ export const TILE_ORIGINS = {
   gibs: 'https://gibs.earthdata.nasa.gov',
   /** Ground elevation for the 3D relief. */
   mapterhorn: 'https://tiles.mapterhorn.com',
-  /** Rīga's city model in 3D: buildings and trees, as the city publishes them (public/data/riga-3d.json lists the layers). */
+  /** Rīga's city model in 3D: buildings and trees, as the city publishes them (public/data/city-3d.json lists the layers). */
   rigaModel: 'https://services-eu1.arcgis.com',
   rigaModelTiles: 'https://tiles-eu1.arcgis.com',
+  /** Estonia's buildings in 3D from Maa- ja Ruumiamet, and Hamburg's and Berlin's from Esri Deutschland's copies. */
+  arcgisTiles: 'https://tiles.arcgis.com',
+  /** Zürich's buildings in 3D, the city's own model as Esri's 3D demo account publishes it. */
+  zurichModel: 'https://services6.arcgis.com',
+  /** Overture Maps' buildings near the camera worldwide: the tiles, and the catalogue that names the latest release. */
+  overtureTiles: 'https://tiles.overturemaps.org',
+  overtureStac: 'https://stac.overturemaps.org',
   /** RainViewer: the list of radar scans, and the radar tiles themselves. */
   rainViewerApi: 'https://api.rainviewer.com',
   rainViewerTiles: 'https://tilecache.rainviewer.com',

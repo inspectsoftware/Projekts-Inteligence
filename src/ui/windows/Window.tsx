@@ -1,7 +1,6 @@
 import { type KeyboardEvent, type PointerEvent as ReactPointerEvent, useLayoutEffect, useRef } from 'react'
 import { t } from '../../i18n'
 import { prefersReducedMotion } from '../../map/camera'
-import { useUi } from '../../state/ui'
 import { useWindows } from '../../state/windows'
 import { Panel } from '../kit'
 import {
@@ -24,7 +23,7 @@ import { BADGE_TEXT, type WindowDef, closeWindow, useWindowBadge } from './regis
 const SPRING: KeyframeAnimationOptions = { duration: 260, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }
 
 /** No window is ever bigger than the usable area. */
-const maxWidth = (rail: boolean) => `calc(100% - ${(rail ? CHROME.rail : 0) + 2 * MARGIN}px)`
+const MAX_WIDTH = `calc(100% - ${2 * MARGIN}px)`
 const MAX_HEIGHT = `calc(100% - ${CHROME.top + CHROME.taskbar + CHROME.hud + 2 * MARGIN}px)`
 
 const ARROWS: Record<string, readonly [number, number] | undefined> = {
@@ -41,9 +40,6 @@ const HEADER_BUTTON = 'grid h-6 w-6 shrink-0 place-items-center text-sm leading-
 
 const viewport = (): Size => ({ w: window.innerWidth, h: window.innerHeight })
 
-/** The usable area as the chrome stands now: the developer rail takes a strip off the left while it is shown. */
-const usable = (): Bounds => usableBounds(viewport(), useUi.getState().developer)
-
 /** Where layout has the element, whatever transform a drag or the settle animation has on it. */
 const rectOf = (el: HTMLElement): Rect => ({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight })
 
@@ -53,7 +49,7 @@ const rectOf = (el: HTMLElement): Rect => ({ x: el.offsetLeft, y: el.offsetTop, 
  * columns rests on their top edge: under them its corner could be neither clicked nor resized.
  */
 function boundsOver(x: number, w: number): Bounds {
-  const bounds = usable()
+  const bounds = usableBounds(viewport())
   const credits = document.querySelector<HTMLElement>('[data-snap="credits"]')
   // No offsetParent while hidden, as the credits are on a screen too small for them.
   if (!credits?.offsetParent || x + w <= credits.offsetLeft) return bounds
@@ -62,7 +58,7 @@ function boundsOver(x: number, w: number): Bounds {
 
 /** The size nearest to the one asked for that a window standing at `from` may take. */
 function sizeWithin(from: Rect, w: number, h: number, { min, max }: NonNullable<WindowDef['resizable']>): Size {
-  const width = Math.max(min.w, Math.min(w, max.w, usable().right - from.x))
+  const width = Math.max(min.w, Math.min(w, max.w, usableBounds(viewport()).right - from.x))
   return { w: width, h: Math.max(min.h, Math.min(h, max.h, boundsOver(from.x, width).bottom - from.y)) }
 }
 
@@ -141,7 +137,6 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
   const stored = useWindows((s) => s.windows[def.id])
   const z = useWindows((s) => s.order.indexOf(def.id))
   const focus = useWindows((s) => s.focus)
-  const rail = useUi((s) => s.developer)
   const badge = useWindowBadge(def)
 
   const placement = stored?.placement ?? def.placement
@@ -149,8 +144,8 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
   const collapsed = !sheet && (stored?.collapsed ?? false)
   const Body = def.component
 
-  // The corner placement is turned into a position here, and again whenever the viewport, the
-  // window's own size or the rail changes, so it stays docked where it was put and inside the bounds.
+  // The corner placement is turned into a position here, and again whenever the viewport or
+  // the window's own size changes, so it stays docked where it was put and inside the bounds.
   useLayoutEffect(() => {
     const el = ref.current!
     if (sheet) {
@@ -162,7 +157,7 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
       // A drag or a resize owns the element until it lets go.
       if (el.dataset.busy) return
       const box = { w: el.offsetWidth, h: el.offsetHeight }
-      const at = clamp({ ...resolve(placement, box, viewport()), ...box }, usable())
+      const at = clamp({ ...resolve(placement, box, viewport()), ...box }, usableBounds(viewport()))
       el.style.left = `${at.x}px`
       el.style.top = `${at.y}px`
     }
@@ -174,7 +169,7 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
       observer.disconnect()
       window.removeEventListener('resize', layout)
     }
-  }, [placement, sheet, rail])
+  }, [placement, sheet])
 
   // Esc closes the Inspector even in mid-drag, and a window that is gone never sees the release.
   useLayoutEffect(() => {
@@ -190,7 +185,7 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
     const el = ref.current!
     const layer = el.parentElement!
     const start = rectOf(el)
-    const bounds = usable()
+    const bounds = usableBounds(viewport())
     // The other windows, and fixed chrome that asks to be snapped to, as they stand when the drag starts.
     const others = [...document.querySelectorAll<HTMLElement>('[data-window], [data-snap]')]
       .filter((other) => other !== el)
@@ -294,7 +289,7 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
           : {
               zIndex: z + 1,
               width: size.w,
-              maxWidth: maxWidth(rail),
+              maxWidth: MAX_WIDTH,
               height: def.resizable && !collapsed ? size.h : undefined,
               maxHeight: def.resizable ? MAX_HEIGHT : `min(${def.height}px, ${MAX_HEIGHT})`,
             }

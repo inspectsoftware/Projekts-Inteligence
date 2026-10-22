@@ -1,9 +1,12 @@
 /**
  * Fetches and builds the city's geometry off the main thread: a vector tile's buildings
- * extruded, a node of Rīga's city model decoded, or a node's trees. Only finished arrays come
- * back, handed over rather than copied.
+ * extruded, a node of Rīga's city model decoded, or a node's trees; and, for Sat 3D, the air
+ * photo of one tile. Only finished arrays and pictures come back, handed over rather than copied.
  */
+import { groundUnder } from './dem'
 import { decodeModelNode, decodeTrees, extrudeTile } from './mesh'
+import { overtureTile } from './overture'
+import { photoTile } from './photoTiles'
 import type { ChunkMesh, CityJob, CityResult } from './types'
 
 const scope = self as unknown as DedicatedWorkerGlobalScope
@@ -15,12 +18,17 @@ async function fetchOk(url: string, signal: AbortSignal): Promise<Response> {
   return res
 }
 
-async function build(job: Exclude<CityJob, { kind: 'cancel' }>, signal: AbortSignal): Promise<ChunkMesh> {
+async function build(job: Exclude<CityJob, { kind: 'cancel' | 'photo' }>, signal: AbortSignal): Promise<ChunkMesh> {
   switch (job.kind) {
     case 'extruded':
       return extrudeTile(await (await fetchOk(job.url, signal)).arrayBuffer(), job.z, job.x, job.y)
-    case 'model':
-      return decodeModelNode(await (await fetchOk(job.url, signal)).arrayBuffer(), job.obb, job.crs)
+    case 'model': {
+      // The terrain under the node is read alongside it, so each building can stand on the street.
+      const [data, ground] = await Promise.all([fetchOk(job.url, signal).then((res) => res.arrayBuffer()), groundUnder(job.obb, job.crs)])
+      return decodeModelNode(data, job.obb, job.crs, ground)
+    }
+    case 'overture':
+      return overtureTile(job.z, job.x, job.y, signal)
     case 'trees': {
       const [features, heights] = await Promise.all([
         fetchOk(job.featuresUrl, signal).then((res) => res.json()),
@@ -52,6 +60,12 @@ scope.onmessage = async ({ data: job }: MessageEvent<CityJob>) => {
   const abort = new AbortController()
   running.set(job.id, abort)
   try {
+    if (job.kind === 'photo') {
+      const photo = await photoTile(job.z, job.x, job.y, abort.signal)
+      if (abort.signal.aborted) photo?.close()
+      else scope.postMessage({ id: job.id, photo } satisfies CityResult, photo ? [photo] : [])
+      return
+    }
     const mesh = await build(job, abort.signal)
     if (abort.signal.aborted) return
     scope.postMessage({ id: job.id, mesh } satisfies CityResult, buffersOf(mesh))

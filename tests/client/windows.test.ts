@@ -7,9 +7,8 @@ const bounds = usableBounds(viewport)
 const win = (x: number, y: number, w = 240, h = 200): Rect => ({ x, y, w, h })
 
 describe('window snapping', () => {
-  it('keeps the top bar, the taskbar and the HUD row clear, and the developer rail while it is shown', () => {
+  it('keeps the top bar, the taskbar and the HUD row clear', () => {
     expect(bounds).toEqual({ left: 12, top: 52, right: 1428, bottom: 800 })
-    expect(usableBounds(viewport, true)).toEqual({ ...bounds, left: 60 })
   })
 
   it('pulls a window to the edge of the usable area', () => {

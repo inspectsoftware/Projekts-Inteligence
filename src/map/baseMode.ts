@@ -8,8 +8,21 @@ export function rasterId(id: string): string {
   return `base-${id}`
 }
 
+/** The tile addresses of the imagery each map shows now, so the same imagery is not laid again. */
+const shown = new WeakMap<Map, string>()
+
 /** Swaps the raster imagery under the roads and labels, or removes it for the dark base. */
 export function applyBaseMode(map: Map, mode: BaseMode, now = new Date()): void {
+  const raster = mode !== 'dark'
+  for (const id of DARK_ONLY_LAYERS) map.setLayoutProperty(id, 'visibility', raster ? 'none' : 'visible')
+  for (const [id, dark, imagery] of IMAGERY_TEXT_COLOR) map.setPaintProperty(id, 'text-color', raster ? imagery : dark)
+
+  // Sat and Sat 3D show the very same photos: going from one to the other keeps the tiles already in.
+  const next = mode === 'dark' ? null : RASTER_BASES[mode]
+  const wanted = next ? next.sources.map((source) => source.tiles(now)).join('|') : ''
+  if (next && shown.get(map) === wanted && next.sources.every((source) => map.getLayer(rasterId(source.id)))) return
+  shown.set(map, wanted)
+
   for (const { sources } of Object.values(RASTER_BASES)) {
     for (const source of sources) {
       const id = rasterId(source.id)
@@ -17,10 +30,6 @@ export function applyBaseMode(map: Map, mode: BaseMode, now = new Date()): void 
       if (map.getSource(id)) map.removeSource(id)
     }
   }
-
-  const raster = mode !== 'dark'
-  for (const id of DARK_ONLY_LAYERS) map.setLayoutProperty(id, 'visibility', raster ? 'none' : 'visible')
-  for (const [id, dark, imagery] of IMAGERY_TEXT_COLOR) map.setPaintProperty(id, 'text-color', raster ? imagery : dark)
   if (mode === 'dark') return
 
   const base = RASTER_BASES[mode]

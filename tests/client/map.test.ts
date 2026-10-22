@@ -45,7 +45,7 @@ function urlsIn(value: unknown, found: string[] = []): string[] {
 describe('content security policy', () => {
   it('allows every origin the map loads from', () => {
     const now = new Date('2026-10-06T08:00:00Z')
-    const rigaModel: CityCatalogue = JSON.parse(readFileSync(new URL('../../public/data/riga-3d.json', import.meta.url), 'utf8'))
+    const cityModels: CityCatalogue = JSON.parse(readFileSync(new URL('../../public/data/city-3d.json', import.meta.url), 'utf8'))
     // Two templates name a protocol of ours; what the browser really asks for is behind it.
     const behind: Record<string, string> = {
       [`${CLIP_SCHEME}://{z}/{x}/{y}`]: latviaTileUrl(14, 9289, 5023),
@@ -60,8 +60,11 @@ describe('content security policy', () => {
       RADAR_INDEX_URL,
       DEM_TILES,
       `${TILE_ORIGINS.rainViewerTiles}/v2/radar/abc123/256/6/36/19/2/1_1.png`,
-      // Every layer of Rīga's city model, so the catalogue cannot point anywhere the policy does not allow.
-      ...[...rigaModel.buildings, ...rigaModel.trees].map((layer) => layer.url),
+      // Every layer of the city models, so the catalogue cannot point anywhere the policy does not allow.
+      ...[...cityModels.buildings, ...cityModels.trees].map((layer) => layer.url),
+      // Overture's buildings: a release's tiles, and the catalogue of releases.
+      'https://tiles.overturemaps.org/2026-10-21.0/buildings.pmtiles',
+      'https://stac.overturemaps.org/catalog.json',
     ]
     // Nor is anything allowed that the map does not load from.
     expect(new Set(urls.map((url) => new URL(url).origin))).toEqual(new Set(BROWSER_ORIGINS))
@@ -100,7 +103,8 @@ describe('basemaps', () => {
   })
 
   it('lays only the air photos over the drawn streets', () => {
-    const over = Object.values(RASTER_BASES).flatMap((base) => base.sources.filter((source) => source.coversStreets).map((source) => source.id))
+    // Sat 3D shows the very same photos as Sat, so each is counted once.
+    const over = [...new Set(Object.values(RASTER_BASES))].flatMap((base) => base.sources.filter((source) => source.coversStreets).map((source) => source.id))
     expect(over).toEqual([...WORLD_ORTHOS.map((ortho) => ortho.id), 'ee', 'lv', ...(LITHUANIA_ENABLED ? ['lt'] : [])])
     // Level, column and row land where each service expects them.
     expect(worldOrthoUrl('ortho://jp/15/7/9')).toBe('https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/15/7/9.jpg')
@@ -110,7 +114,7 @@ describe('basemaps', () => {
   })
 
   it('stops each base two levels past its sharpest tiles, and never past the map limit', () => {
-    expect(BASE_MODES.map((mode) => zoomCeiling(mode.id))).toEqual([MAX_ZOOM, MAX_ZOOM, 13, 10, 9])
+    expect(BASE_MODES.map((mode) => zoomCeiling(mode.id))).toEqual([MAX_ZOOM, MAX_ZOOM, MAX_ZOOM, 13, 10, 9])
     expect(MAX_ZOOM).toBe(19)
   })
 

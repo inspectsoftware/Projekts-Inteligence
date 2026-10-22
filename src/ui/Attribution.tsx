@@ -16,6 +16,11 @@ export function Attribution() {
         © OpenStreetMap
       </a>
       {' · '}
+      {/* The 3D buildings near the camera come from Overture, under the same licence as the map data. */}
+      <a href="https://docs.overturemaps.org/attribution/" target="_blank" rel="noreferrer noopener" className={link}>
+        © Overture Maps
+      </a>
+      {' · '}
       <a href={CREDITS} target="_blank" rel="noreferrer noopener" className={link}>
         {t('Credits')}
       </a>

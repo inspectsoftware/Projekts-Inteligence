@@ -1,9 +1,13 @@
 import { readFileSync } from 'node:fs'
 import { VectorTile, classifyRings } from '@mapbox/vector-tile'
 import { PbfReader } from 'pbf'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { TILE_ORIGINS } from '../../shared/origins'
+import { valueIn } from '../../src/map/city/building'
+import { DEM_SIZE, DEM_ZOOM, sampleGround, terrariumHeights, tilesAround } from '../../src/map/city/dem'
 import { attributeStrings, decodeModelNode, decodeTrees, extrudeTile, mercatorX, mercatorY, metreScale, parseColour } from '../../src/map/city/mesh'
-import type { NodeBox } from '../../src/map/city/types'
+import { bakedLeaves, boxCentre, boxRadius, moveMetres } from '../../src/map/city/sources'
+import type { BakedLeaf, CityCatalogue, CityLayer, NodeBox } from '../../src/map/city/types'
 
 /** A fixture's bytes in a buffer of their own: Node pools small files into one shared buffer. */
 function fixture(name: string): ArrayBuffer {
@@ -219,6 +223,59 @@ describe('city model node', () => {
     expect(height).toBeCloseTo(2 * vecpilseta.halfSize[2], 1)
   })
 
+  it('sinks a basement below the street, and leaves a building above the terrain on its own lowest point', () => {
+    const data = fixture('city.vecpilseta.bin')
+    const plain = decodeModelNode(data, vecpilseta, 4326)
+    const vertices = new DataView(data).getUint32(0, true)
+    const lowest = vecpilseta.center[2] + Math.min(...new Float32Array(data, 8, vertices * 3).filter((_, i) => i % 3 === 2))
+    const heights = (node: { positions: Float32Array }) => node.positions.filter((_, i) => i % 3 === 2)
+    const asked: [number, number][] = []
+    // The street 1.5 m above the building's lowest point: that much of it is basement.
+    const sunk = decodeModelNode(data, vecpilseta, 4326, (lon, lat) => {
+      asked.push([lon, lat])
+      return lowest + 1.5
+    })
+    expect(Math.min(...heights(sunk))).toBeCloseTo(-1.5, 4)
+    expect(sunk.buildings[6]).toBeCloseTo(plain.buildings[6] - 1.5, 4)
+    expect([...sunk.buildings.subarray(0, 6)]).toEqual([...plain.buildings.subarray(0, 6)])
+    // Asked once, for the middle of the building, which is about the middle of its node.
+    expect(asked).toHaveLength(1)
+    expect(Math.abs(asked[0][0] - vecpilseta.center[0])).toBeLessThan(0.001)
+    expect(Math.abs(asked[0][1] - vecpilseta.center[1])).toBeLessThan(0.001)
+    // Terrain below it, as on a terrace, or none known there: it stands where it did. So it does
+    // where the terrain lies metres above most of a node's buildings, as roofs or another datum would.
+    for (const terrain of [lowest - 5, NaN, lowest + 3]) expect(decodeModelNode(data, vecpilseta, 4326, () => terrain)).toEqual(plain)
+  })
+
+  it('places a leaf from the baked index where its node pages place it', () => {
+    const layer: CityLayer = { name: 'Test', region: 'Test', url: 'https://example.org/layers/0', crs: 4326, bbox: [0, 0, 0, 0] }
+    for (const [name, obb, crs, vertices] of [
+      ['city.vecpilseta.bin', vecpilseta, 4326, 1104],
+      ['city.voleri.bin', voleri, 3857, 444],
+    ] as const) {
+      // As scripts/bake-city-3d.mjs writes a row.
+      const { lng, lat } = boxCentre(obb, crs)
+      const row: BakedLeaf = [7, +lng.toFixed(6), +lat.toFixed(6), +obb.center[2].toFixed(1), Math.ceil(boxRadius(obb, crs)), vertices]
+      const [leaf] = bakedLeaves({ ...layer, crs }, [row])
+      expect(leaf).toMatchObject({ key: 'm:https://example.org/layers/0#7', resource: 7, size: vertices, centre: { lng: row[1], lat: row[2] }, radius: row[4] })
+      expect(boxRadius(leaf.obb, crs)).toBeCloseTo(row[4], 6)
+      // The same geometry, within the 10 cm the rounding allows.
+      const pages = decodeModelNode(fixture(name), obb, crs)
+      const baked = decodeModelNode(fixture(name), leaf.obb, crs)
+      const at = (node: typeof pages, v: number): [number, number] => [node.origin[0] + node.positions[3 * v] * node.scale, node.origin[1] - node.positions[3 * v + 1] * node.scale]
+      for (const v of [0, vertices - 1]) expect(metresApart(at(pages, v), at(baked, v))).toBeLessThan(0.1)
+    }
+  })
+
+  it('reaches as far from its centre as a box lying on its side does', () => {
+    // Turned a quarter about east: its second axis points up, its third north, 40 m each way.
+    const side: NodeBox = { center: [24.1, 56.95, 10], halfSize: [30, 5, 40], quaternion: [Math.SQRT1_2, 0, 0, Math.SQRT1_2] }
+    expect(boxRadius(side, 4326)).toBeGreaterThanOrEqual(Math.hypot(30, 40))
+    // In Web Mercator metres, which are longer than ground metres there.
+    const lat = boxCentre(voleri, 3857).lat
+    expect(boxRadius({ ...side, center: voleri.center }, 3857)).toBeCloseTo(Math.hypot(30, 5, 40) * Math.cos((lat * Math.PI) / 180), 6)
+  })
+
   it('refuses a buffer shorter than its counts say', () => {
     const buffer = fixture('city.voleri.bin')
     expect(() => decodeModelNode(buffer.slice(0, buffer.byteLength - 1), voleri, 3857)).toThrow(/cannot hold/)
@@ -321,5 +378,156 @@ describe('city model string attributes', () => {
     expect(attributeStrings(new TextEncoder().encode('{"error":{"code":404}}').buffer as ArrayBuffer)).toBeNull()
     expect(attributeStrings(strings(['Laipu iela   7']).slice(0, 20))).toBeNull()
     expect(attributeStrings(new ArrayBuffer(4))).toBeNull()
+  })
+
+  it('reads a clicked building’s year as Float64, even a leaf’s only one, and text otherwise', () => {
+    const years = (values: number[]) => {
+      const buffer = new ArrayBuffer(8 + 8 * values.length)
+      new DataView(buffer).setUint32(0, values.length, true)
+      new Float64Array(buffer, 8).set(values)
+      return buffer
+    }
+    expect(valueIn(years([1990]), 0)).toBe('1990')
+    expect(valueIn(years([1890, 2004]), 1)).toBe('2004')
+    expect(valueIn(years([1990]), 1)).toBeUndefined()
+    expect(valueIn(strings(['Laipu iela   7']), 0)).toBe('Laipu iela   7')
+    // As long as eight bytes a value, but the total length of the text where the padding would be.
+    expect(valueIn(strings(['abc', 'def']), 1)).toBe('def')
+    expect(valueIn(new ArrayBuffer(4), 0)).toBeUndefined()
+  })
+})
+
+describe('terrain under the city models', () => {
+  it('reads terrarium colours as metres, in either order of red and blue', () => {
+    expect([...terrariumHeights([128, 0, 0, 255, 128, 12, 128, 255, 127, 255, 0, 255])]).toEqual([0, 12.5, -1])
+    expect([...terrariumHeights([0, 0, 128, 255, 128, 12, 128, 255, 0, 255, 127, 255], true)]).toEqual([0, 12.5, -1])
+  })
+
+  it('finds the tiles round a point, and the height between the pixel centres around it', () => {
+    // Raekoja plats in Tallinn, in a tile whose ground rises a metre a pixel eastwards and ten southwards.
+    const { zoom, keys } = tilesAround(24.7453, 59.4372, 1)
+    expect(zoom).toBe(DEM_ZOOM)
+    const [key] = keys
+    const [, x, y] = key.split('/').map(Number)
+    const tiles = new Map([[key, new Float32Array(DEM_SIZE * DEM_SIZE).map((_, i) => (i % DEM_SIZE) + 10 * Math.floor(i / DEM_SIZE))]])
+    // Pixels from the tile's north-west corner, as longitude and latitude.
+    const at = (px: number, py: number): [number, number] => {
+      const n = 2 ** DEM_ZOOM
+      return [((x + px / DEM_SIZE) / n) * 360 - 180, (Math.atan(Math.sinh(Math.PI * (1 - (2 * (y + py / DEM_SIZE)) / n))) * 180) / Math.PI]
+    }
+    expect(sampleGround(tiles, DEM_ZOOM, ...at(100.5, 200.5))).toBeCloseTo(2100, 3)
+    expect(sampleGround(tiles, DEM_ZOOM, ...at(100.75, 200.5))).toBeCloseTo(2100.25, 3)
+    expect(sampleGround(tiles, DEM_ZOOM, ...at(100.5, 201))).toBeCloseTo(2105, 3)
+    // The edge pixels stand for the half pixel beyond them; another tile is unknown, as is this one at another level.
+    expect(sampleGround(tiles, DEM_ZOOM, ...at(0.2, 0.2))).toBeCloseTo(0, 3)
+    expect(sampleGround(tiles, DEM_ZOOM, ...at(DEM_SIZE - 0.2, DEM_SIZE - 0.2))).toBeCloseTo(11 * (DEM_SIZE - 1), 3)
+    expect(sampleGround(tiles, DEM_ZOOM, ...at(-1, 10))).toBeNaN()
+    expect(sampleGround(tiles, DEM_ZOOM - 1, ...at(100.5, 200.5))).toBeNaN()
+  })
+
+  it('reads a big node off at most two by two tiles, at the deepest level that allows', () => {
+    const centre = { lng: 24.7453, lat: 59.4372 }
+    const tileOf = ({ lng, lat }: { lng: number; lat: number }, zoom: number) => {
+      const n = 2 ** zoom
+      return [Math.floor(((lng + 180) / 360) * n), Math.floor(((1 - Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360)) / Math.PI) / 2) * n)]
+    }
+    const rim = (radius: number, zoom: number) => [[radius, 0], [-radius, 0], [0, radius], [0, -radius]].map(([east, north]) => tileOf(moveMetres(centre, east, north), zoom))
+    let last = DEM_ZOOM
+    // A tile is about 5 km across here at the deepest level.
+    for (const radius of [1, 2000, 6000, 20_000, 60_000]) {
+      const { zoom, keys } = tilesAround(centre.lng, centre.lat, radius)
+      expect(zoom).toBeLessThanOrEqual(last)
+      last = zoom
+      expect(keys.length).toBeLessThanOrEqual(4)
+      for (const [x, y] of rim(0.95 * radius, zoom)) expect(keys).toContain(`${zoom}/${x}/${y}`)
+      if (zoom === DEM_ZOOM) continue
+      const deeper = rim(1.05 * radius, zoom + 1)
+      const span = (axis: number) => Math.max(...deeper.map((t) => t[axis])) - Math.min(...deeper.map((t) => t[axis]))
+      expect(Math.max(span(0), span(1))).toBeGreaterThan(1)
+    }
+    expect(tilesAround(centre.lng, centre.lat, 2000).zoom).toBe(DEM_ZOOM)
+    expect(last).toBeLessThan(DEM_ZOOM - 2)
+  })
+})
+
+describe('terrain tiles read for a model node', () => {
+  /** A fresh dem.ts, in a worker whose canvas reads back what was written to it, plus `noise`. */
+  function freshDem(noise = 0) {
+    vi.resetModules()
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class {
+        written = new Uint8ClampedArray(0)
+        getContext() {
+          return {
+            createImageData: (width: number, height: number) => ({ data: new Uint8ClampedArray(width * height * 4) }),
+            putImageData: ({ data }: { data: Uint8ClampedArray }) => (this.written = data.slice()),
+            getImageData: () => ({ data: this.written.map((value) => value + noise) }),
+          }
+        }
+      },
+    )
+    return import('../../src/map/city/dem')
+  }
+
+  /** Tile requests left unanswered; answering one says there is no tile, as for open sea. */
+  function fetchLater(): { url: string; answer: () => void }[] {
+    const open: { url: string; answer: () => void }[] = []
+    vi.stubGlobal('fetch', (url: string) => new Promise((done) => open.push({ url, answer: () => done(new Response(null, { status: 404 })) })))
+    return open
+  }
+
+  const tick = () => new Promise((done) => setTimeout(done, 0))
+  const node = (lng: number, lat: number, half: number): NodeBox => ({ center: [lng, lat, 30], halfSize: [half, half, 10], quaternion: [0, 0, 0, 1] })
+
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('reads a few tiles at a time for every node together, each once', async () => {
+    const dem = await freshDem()
+    const open = fetchLater()
+    const nodes = [node(25.5, 58.7, 15_000), node(26.2, 59.1, 2500), node(24.1, 57.0, 2500)]
+    const wanted = nodes.flatMap((obb) => dem.tilesAround(obb.center[0], obb.center[1], boxRadius(obb, 4326)).keys)
+    expect(wanted.length).toBeGreaterThan(4)
+    const grounds = Promise.all(nodes.map((obb) => dem.groundUnder(obb, 4326)))
+    const asked: string[] = []
+    for (let answered = 0; answered < wanted.length; answered++) {
+      await tick()
+      expect(open.length).toBe(Math.min(4, wanted.length - answered))
+      const { url, answer } = open.shift()!
+      asked.push(url)
+      answer()
+    }
+    expect(asked.sort()).toEqual(wanted.map((key) => `${TILE_ORIGINS.mapterhorn}/${key}.webp`).sort())
+    for (const ground of await grounds) expect(ground!(25.5, 58.7)).toBeNaN()
+    // The last node's tiles are still kept, the first node's rural ones coarser than the deepest level.
+    expect(await dem.groundUnder(nodes[2], 4326)).toBeTypeOf('function')
+    expect(open).toHaveLength(0)
+    expect(asked.filter((url) => !url.startsWith(`${TILE_ORIGINS.mapterhorn}/${DEM_ZOOM}/`)).length).toBeGreaterThan(0)
+  })
+
+  it('leaves the buildings on their lowest points where the canvas alters what it reads back and nothing else can read it', async () => {
+    const dem = await freshDem(1)
+    const open = fetchLater()
+    expect(typeof VideoFrame).toBe('undefined')
+    expect(await dem.groundUnder(node(24.1, 57.0, 100), 4326)).toBeNull()
+    expect(open).toHaveLength(0)
+  })
+})
+
+describe('city catalogue', () => {
+  const catalogue: CityCatalogue = JSON.parse(readFileSync(new URL('../../public/data/city-3d.json', import.meta.url), 'utf8'))
+
+  it('bakes the leaves of every big layer, each within its layer', () => {
+    const indexed = catalogue.buildings.filter((layer) => layer.leaves)
+    expect(indexed.map((layer) => layer.name)).toContain('Eesti')
+    for (const layer of indexed) {
+      const rows: BakedLeaf[] = JSON.parse(readFileSync(new URL(`../../public${layer.leaves}`, import.meta.url), 'utf8'))
+      expect(rows.length, layer.name).toBeGreaterThan(100)
+      const [west, south, east, north] = layer.bbox
+      const odd = rows.filter(
+        (leaf) => leaf.length !== 6 || !leaf.every(Number.isFinite) || leaf[1] < west || leaf[1] > east || leaf[2] < south || leaf[2] > north || leaf[4] <= 0 || leaf[5] <= 0,
+      )
+      expect(odd, layer.name).toEqual([])
+    }
   })
 })

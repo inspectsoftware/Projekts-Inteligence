@@ -48,8 +48,7 @@ function DockButton({ def, open, front }: { def: WindowDef; open: boolean; front
 /**
  * The launcher, a taskbar along the bottom edge: one button per window, marked while that window
  * is on screen, and the layout's own buttons at the right end. On a narrow screen it scrolls
- * sideways. In developer mode the developer windows get a rail down the left edge, or on a narrow
- * screen the start of the taskbar.
+ * sideways. The developer windows have buttons only in developer mode.
  */
 export function Dock() {
   const shown = useShownWindows()
@@ -67,51 +66,39 @@ export function Dock() {
   // Never raised windows count as furthest back, as they are drawn.
   const front = shown.toSorted((a, b) => order.indexOf(a.id) - order.indexOf(b.id)).at(-1)
   const button = (def: WindowDef) => <DockButton key={def.id} def={def} open={shown.includes(def)} front={def === front} />
-  const listed = WINDOWS.filter((def) => !def.hideInDock && !def.developer)
-  const tools = developer ? WINDOWS.filter((def) => def.developer) : []
+  const listed = WINDOWS.filter((def) => !def.hideInDock && (!def.developer || developer))
 
   return (
-    <>
-      {tools.length > 0 && (
-        <nav
-          aria-label={t('Developer tools')}
-          className="pointer-events-auto absolute top-10 bottom-11 left-0 z-20 flex w-12 flex-col overflow-y-auto [scrollbar-width:none] border-r border-line bg-ink-900/90 font-mono backdrop-blur-md max-md:hidden"
+    <nav
+      aria-label={t('Windows')}
+      className="pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-11 border-t border-line bg-ink-900/90 font-mono backdrop-blur-md"
+    >
+      <div className="flex min-w-0 flex-1 justify-center-safe overflow-x-auto [scrollbar-width:none]">
+        {listed.map(button)}
+        <a href={POLITICS_HREF} title={t('Baltic politics, as published')} className={`${BUTTON} ml-1 border-l border-line text-fg-dim hover:bg-ink-700 hover:text-fg`}>
+          <DockIcon path="M2 13.5h12M3.5 13.5v-6M6.5 13.5v-6M9.5 13.5v-6M12.5 13.5v-6M2 7.5l6-5 6 5z">{t('dock::Polit')}</DockIcon>
+        </a>
+      </div>
+      <div className="flex shrink-0 border-l border-line">
+        <button
+          type="button"
+          title={t('Save this window layout for the next visit. Without it the page opens with no windows')}
+          aria-label={t('Save window layout')}
+          onClick={save}
+          className={`${BUTTON} hover:bg-ink-700 ${saved ? 'text-ok' : 'text-fg-mute hover:text-fg'}`}
         >
-          {tools.map(button)}
-        </nav>
-      )}
-      <nav
-        aria-label={t('Windows')}
-        className="pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-11 border-t border-line bg-ink-900/90 font-mono backdrop-blur-md"
-      >
-        <div className="flex min-w-0 flex-1 justify-center-safe overflow-x-auto [scrollbar-width:none]">
-          {tools.length > 0 && <div className="flex border-r border-line md:hidden">{tools.map(button)}</div>}
-          {listed.map(button)}
-          <a href={POLITICS_HREF} title={t('Baltic politics, as published')} className={`${BUTTON} ml-1 border-l border-line text-fg-dim hover:bg-ink-700 hover:text-fg`}>
-            <DockIcon path="M2 13.5h12M3.5 13.5v-6M6.5 13.5v-6M9.5 13.5v-6M12.5 13.5v-6M2 7.5l6-5 6 5z">{t('dock::Polit')}</DockIcon>
-          </a>
-        </div>
-        <div className="flex shrink-0 border-l border-line">
-          <button
-            type="button"
-            title={t('Save this window layout for the next visit. Without it the page opens with no windows')}
-            aria-label={t('Save window layout')}
-            onClick={save}
-            className={`${BUTTON} hover:bg-ink-700 ${saved ? 'text-ok' : 'text-fg-mute hover:text-fg'}`}
-          >
-            <DockIcon path="M3 2.5h8l2 2v9H3zM5.5 2.5v4h5v-4M5.5 13.5v-4h5v4">{saved ? t('Saved') : t('dock::Save')}</DockIcon>
-          </button>
-          <button
-            type="button"
-            title={t('Close every window and forget the saved layout')}
-            aria-label={t('Reset window layout')}
-            onClick={resetLayout}
-            className={`${BUTTON} text-fg-mute hover:bg-ink-700 hover:text-fg`}
-          >
-            <DockIcon path="M13 8a5 5 0 11-1.5-3.5M13 2.5V5h-2.5">{t('Reset')}</DockIcon>
-          </button>
-        </div>
-      </nav>
-    </>
+          <DockIcon path="M3 2.5h8l2 2v9H3zM5.5 2.5v4h5v-4M5.5 13.5v-4h5v4">{saved ? t('Saved') : t('dock::Save')}</DockIcon>
+        </button>
+        <button
+          type="button"
+          title={t('Close every window and forget the saved layout')}
+          aria-label={t('Reset window layout')}
+          onClick={resetLayout}
+          className={`${BUTTON} text-fg-mute hover:bg-ink-700 hover:text-fg`}
+        >
+          <DockIcon path="M13 8a5 5 0 11-1.5-3.5M13 2.5V5h-2.5">{t('Reset')}</DockIcon>
+        </button>
+      </div>
+    </nav>
   )
 }

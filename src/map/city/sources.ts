@@ -1,5 +1,5 @@
 import type { Map as MapLibreMap } from 'maplibre-gl'
-import type { CityCatalogue, CityLayer, ModelCrs, NodeBox } from './types'
+import type { BakedLeaf, CityCatalogue, CityLayer, ModelCrs, NodeBox } from './types'
 
 /** The level of the vector tiles the extruded buildings come from: the deepest OpenFreeMap has. */
 export const TILE_ZOOM = 14
@@ -118,7 +118,7 @@ export interface Leaf {
   /** Vertices for a building node, trees for a tree node. */
   size: number
   centre: LngLat
-  /** Half the node's diagonal on the ground, metres. */
+  /** How far the node reaches from its centre, metres: the sphere round its box. */
   radius: number
 }
 
@@ -136,8 +136,76 @@ export function boxCentre(obb: NodeBox, crs: ModelCrs): LngLat {
 }
 
 /**
- * The catalogue of Rīga's city model and the leaves of each of its layers, each read once and
- * only when the camera first comes near. A layer whose pages fail is asked again after a minute.
+ * The radius of the sphere round the box, metres. Not half the diagonal of its first two axes: a
+ * box often lies on its side, with its height along the second. Web Mercator metres are longer
+ * than ground metres away from the equator.
+ */
+export function boxRadius(obb: NodeBox, crs: ModelCrs): number {
+  return Math.hypot(...obb.halfSize) * (crs === 3857 ? Math.cos(boxCentre(obb, crs).lat * DEGREE) : 1)
+}
+
+/**
+ * A layer's leaves from its baked index. The index keeps only the centre of each node's box and
+ * how far the node reaches: only the centre places the geometry, so an upright box whose corners
+ * reach that far stands in for the rest.
+ */
+export function bakedLeaves(layer: CityLayer, rows: BakedLeaf[]): Leaf[] {
+  return rows.map(([resource, lng, lat, z, radius, size]) => {
+    // The centre in the layer's own CRS, which the node's vertex offsets start from.
+    const center: [number, number, number] =
+      layer.crs === 4326 ? [lng, lat, z] : [(lng / 180) * WEB_MERCATOR_HALF, (Math.log(Math.tan(Math.PI / 4 + (lat * DEGREE) / 2)) / Math.PI) * WEB_MERCATOR_HALF, z]
+    const half = (radius / Math.SQRT2) * (layer.crs === 3857 ? 1 / Math.cos(lat * DEGREE) : 1)
+    return {
+      key: `m:${layer.url}#${resource}`,
+      layer,
+      resource,
+      obb: { center, halfSize: [half, half, 0], quaternion: [0, 0, 0, 1] },
+      size,
+      centre: { lng, lat },
+      radius,
+    }
+  })
+}
+
+/** A layer's leaves from its node pages, read one after another. */
+async function pageLeaves(layer: CityLayer, kind: 'buildings' | 'trees'): Promise<Leaf[]> {
+  const nodes: I3sNode[] = []
+  // Pages hold 64 nodes; a shorter one is the last.
+  for (let page = 0; ; page++) {
+    const res = await fetch(`${layer.url}/nodepages/${page}`)
+    // Past the last page tiles.arcgis.com answers 404, and the city's own services 200 with an
+    // error in place of nodes. Every layer has a root node, so either answer for the first page is
+    // a failure, tried again later.
+    if (res.status === 404 && page > 0) break
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const { nodes: some } = (await res.json()) as { nodes?: I3sNode[] }
+    if (!Array.isArray(some)) {
+      if (page === 0) throw new Error('no nodes')
+      break
+    }
+    nodes.push(...some)
+    if (some.length < 64) break
+  }
+  const leaves: Leaf[] = []
+  for (const node of nodes) {
+    if (!node.mesh || node.children?.length) continue
+    const { resource, vertexCount = 0, featureCount = 0 } = node.mesh.geometry
+    leaves.push({
+      key: `${kind === 'buildings' ? 'm' : 't'}:${layer.url}#${resource}`,
+      layer,
+      resource,
+      obb: node.obb,
+      size: kind === 'buildings' ? vertexCount : featureCount,
+      centre: boxCentre(node.obb, layer.crs),
+      radius: boxRadius(node.obb, layer.crs),
+    })
+  }
+  return leaves
+}
+
+/**
+ * The catalogue of the city models and the leaves of each of their layers, each read once and
+ * only when the camera first comes near. A layer whose leaves fail is asked again after a minute.
  */
 export class CityModel {
   catalogue: CityCatalogue | null = null
@@ -154,7 +222,7 @@ export class CityModel {
   load(): void {
     if (this.asked) return
     this.asked = true
-    fetch('/data/riga-3d.json')
+    fetch('/data/city-3d.json')
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
       .then((catalogue: CityCatalogue) => {
         this.catalogue = catalogue
@@ -174,51 +242,26 @@ export class CityModel {
       if (!boxNear(layer.bbox, at, reach)) continue
       const leaves = this.leaves.get(layer.url)
       if (leaves) near.push(...leaves)
-      else this.readPages(layer, kind)
+      else this.readLeaves(layer, kind)
     }
     return near
   }
 
-  private readPages(layer: CityLayer, kind: 'buildings' | 'trees'): void {
+  private readLeaves(layer: CityLayer, kind: 'buildings' | 'trees'): void {
     const since = this.pending.get(layer.url)
     if (since !== undefined && Date.now() - since < 60_000) return
     this.pending.set(layer.url, Date.now())
     void (async () => {
-      const nodes: I3sNode[] = []
-      // Pages hold 64 nodes; a shorter one is the last.
-      for (let page = 0; ; page++) {
-        const res = await fetch(`${layer.url}/nodepages/${page}`)
+      let leaves: Leaf[]
+      if (layer.leaves) {
+        const res = await fetch(layer.leaves)
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        // Past the last page the service still answers 200, with an error in place of nodes. Every
-        // layer has a root node, so the same answer for the first page is a failure, tried again later.
-        const { nodes: some } = (await res.json()) as { nodes?: I3sNode[] }
-        if (!Array.isArray(some)) {
-          if (page === 0) throw new Error('no nodes')
-          break
-        }
-        nodes.push(...some)
-        if (some.length < 64) break
-      }
-      const leaves: Leaf[] = []
-      for (const node of nodes) {
-        if (!node.mesh || node.children?.length) continue
-        const { resource, vertexCount = 0, featureCount = 0 } = node.mesh.geometry
-        const centre = boxCentre(node.obb, layer.crs)
-        leaves.push({
-          key: `${kind === 'buildings' ? 'm' : 't'}:${layer.url}#${resource}`,
-          layer,
-          resource,
-          obb: node.obb,
-          size: kind === 'buildings' ? vertexCount : featureCount,
-          centre,
-          // Web Mercator metres are longer than ground metres away from the equator.
-          radius: Math.hypot(node.obb.halfSize[0], node.obb.halfSize[1]) * (layer.crs === 3857 ? Math.cos(centre.lat * DEGREE) : 1),
-        })
-      }
+        leaves = bakedLeaves(layer, await res.json())
+      } else leaves = await pageLeaves(layer, kind)
       this.leaves.set(layer.url, leaves)
       this.pending.delete(layer.url)
       this.onChange()
-    })().catch((err) => console.warn(`[city] ${layer.name}: node pages unavailable:`, err))
+    })().catch((err) => console.warn(`[city] ${layer.name}: leaves unavailable:`, err))
   }
 }
 

@@ -1,5 +1,5 @@
 /**
- * The 3D city: what the worker hands the renderer, and what the catalogue of Rīga's city model
+ * The 3D city: what the worker hands the renderer, and what the catalogue of the city models
  * holds. Geometry is always given in metres east, north and up from a local origin, so that
  * float32 keeps millimetres; the renderer places each piece on the map with one matrix.
  */
@@ -35,8 +35,9 @@ export interface ExtrudedTile extends Placement {
 }
 
 /**
- * The buildings of one leaf of Rīga's city model (I3S 3DObject). Unindexed triangles. Each
- * building stands on z = 0: the lowest point of its own walls is moved to the ground.
+ * The buildings of one leaf of a city model (I3S 3DObject). Unindexed triangles. Each building
+ * stands on z = 0: the terrain under it where that is known and higher than its lowest point,
+ * else its lowest point. So a basement reaches below 0, and the street stays at 0.
  */
 export interface ModelNode extends Placement {
   kind: 'model'
@@ -62,9 +63,12 @@ export type CityJob =
   | { kind: 'extruded'; id: string; url: string; z: number; x: number; y: number }
   | { kind: 'model'; id: string; url: string; obb: NodeBox; crs: ModelCrs }
   | { kind: 'trees'; id: string; featuresUrl: string; heightsUrl: string | null; crs: ModelCrs }
+  | { kind: 'overture'; id: string; z: number; x: number; y: number }
+  | { kind: 'photo'; id: string; z: number; x: number; y: number }
   | { kind: 'cancel'; id: string }
 
-export type CityResult = { id: string; mesh: ChunkMesh } | { id: string; error: string }
+/** A photo's answer is a picture, or null where no service has one. */
+export type CityResult = { id: string; mesh: ChunkMesh } | { id: string; photo: ImageBitmap | null } | { id: string; error: string }
 
 /** 4326: vertex offsets in degrees (x, y) and metres (z). 3857: offsets in Web Mercator metres. */
 export type ModelCrs = 4326 | 3857
@@ -76,10 +80,12 @@ export interface NodeBox {
   quaternion: [number, number, number, number]
 }
 
-/** One scene layer of the city model, as baked into public/data/riga-3d.json. */
+/** One scene layer of a city model, as baked into public/data/city-3d.json. */
 export interface CityLayer {
-  /** The neighbourhood, as the city names it. */
+  /** The neighbourhood, as Rīga names it; beyond Rīga, the country or city the layer covers. */
   name: string
+  /** Beyond Rīga only: the country or city, so a click does not call it a neighbourhood. */
+  region?: string
   /** .../SceneServer/layers/0, without a trailing slash. */
   url: string
   crs: ModelCrs
@@ -87,9 +93,20 @@ export interface CityLayer {
   bbox: [number, number, number, number]
   /** Tree layers only: the attribute key holding each tree's height (f_2 and the like), if the layer has one. */
   heightKey?: string
-  /** Building layers only: the attribute key of each field a click shows, where the layer has it. */
+  /**
+   * Building layers only: the attribute key of each field a click shows, where the layer has it.
+   * Several keys, space-separated, make one value: Zürich keeps the street and the house number apart.
+   */
   fields?: Partial<Record<BuildingField, string>>
+  /** A layer of too many node pages to read in the browser: its leaves, baked (public/data/city-leaves/). */
+  leaves?: string
 }
+
+/**
+ * One row of a baked leaf index: the node's resource number, the centre of its box (longitude,
+ * latitude, height in metres), how far it reaches on the ground in metres, and its vertex count.
+ */
+export type BakedLeaf = [number, number, number, number, number, number]
 
 /** What the cadastre says of a building, as the city's model names it. */
 export type BuildingField = 'address' | 'mainusetype' | 'exploitstartdate' | 'cadastrename' | 'propertyname' | 'propertycadastrenumber'

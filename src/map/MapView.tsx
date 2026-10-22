@@ -12,7 +12,7 @@ import { finishBoot } from '../ui/boot'
 import { applyBaseMode, applyZoomCeiling, rasterId } from './baseMode'
 import { ORTHO_LITHUANIA, clampZoom, recentEnd, zoomCeiling } from './basemaps'
 import { INTRO_START, runIntro } from './camera'
-import { CITY_LAYER, addCity, setCityOpacity, setCityTheme } from './city/layer'
+import { CITY_LAYER, addCity, setCityOpacity, setCityPhoto, setCityTheme } from './city/layer'
 import { setMap, setMapFailure, useMap, useMapFailure } from './instance'
 import { CLIP_SCHEME, TRIM_SCHEME, loadEstoniaTile, loadLatviaTile, setClipBorder } from './orthoClip'
 import { PATIENT_SCHEME, loadPatientTile } from './patientTiles'
@@ -56,9 +56,14 @@ export function MapView() {
   // After the one above, every time it runs: a new base hides the buildings and buries the shading.
   useEffect(() => {
     if (!map) return
-    applyRelief(map, relief, base !== 'dark')
-    // Thinner over a photo, so the roofs it shows are still seen through the blocks.
-    setCityOpacity(base === 'dark' ? 1 : 0.7)
+    applyRelief(map, relief)
+    // The 3D city stands on the dark map and on Sat 3D; over the other photos only with the relief,
+    // since a photo's roofs lie flat. There it is see-through, so the roofs it shows still come
+    // through; Sat 3D draws those roofs on the buildings themselves.
+    const city = base === 'dark' || base === 'satellite3d'
+    map.setLayoutProperty(CITY_LAYER, 'visibility', city || relief ? 'visible' : 'none')
+    setCityOpacity(city ? 1 : 0.7)
+    setCityPhoto(base === 'satellite3d')
   }, [map, base, back, relief])
 
   // Last of the three: it colours what the two above have just put on the map. Over imagery the

@@ -5,7 +5,7 @@ import { CLIP_SCHEME, TRIM_SCHEME } from './orthoClip'
 import { PATIENT_SCHEME } from './patientTiles'
 import { WORLD_ORTHO_SOURCES } from './worldOrtho'
 
-export type BaseMode = 'dark' | 'imagery' | 'recent' | 'daily' | 'night'
+export type BaseMode = 'dark' | 'imagery' | 'satellite3d' | 'recent' | 'daily' | 'night'
 
 /** The camera never goes deeper: the sharpest imagery there is runs out at about 0.25 m per pixel. */
 export const MAX_ZOOM = 19
@@ -103,51 +103,55 @@ export const ORTHO_LITHUANIA: RasterSource = {
   attribution: { label: 'ORT10LT © Nacionalinė žemės tarnyba, © geoportal.lt © SSVA', href: 'https://www.geoportal.lt' },
 }
 
+/** The air photos over the satellite mosaic: the Sat base, and under the 3D city of Sat 3D. */
+const IMAGERY: RasterBase = {
+  // The order matters. Estonia's photo runs a few kilometres into Latvia, where Latvia's own
+  // covers it; Lithuania's is cut cleanly at its own border, so it can lie on top.
+  sources: [
+    {
+      id: 'eox',
+      tiles: () => `${TILE_ORIGINS.eox}/wmts/1.0.0/s2cloudless-2025_3857/default/g/{z}/{y}/{x}.jpg`,
+      maxzoom: 15,
+      attribution: {
+        label: 'Sentinel-2 cloudless 2025 by EOX (Contains modified Copernicus Sentinel data 2025), CC BY-NC-SA 4.0',
+        href: 'https://s2maps.eu',
+      },
+    },
+    // Under the Baltic photos, which are cut to their borders with more care.
+    ...WORLD_ORTHO_SOURCES,
+    {
+      id: 'ee',
+      tiles: () => `${TRIM_SCHEME}://{z}/{x}/{y}`,
+      minzoom: ORTHO_MINZOOM,
+      maxzoom: 18,
+      bounds: [21.5, 57.45, 28.3, 59.9],
+      coversStreets: true,
+      attribution: {
+        label: 'Maa- ja Ruumiameti ortofoto 2026',
+        href: 'https://geoportaal.maaamet.ee/est/teenused/wms-wfs-wcs-teenused/maa-ameti-kaarditeenuste-kasutustingimused-p24.html',
+      },
+    },
+    {
+      id: 'lv',
+      tiles: () => `${CLIP_SCHEME}://{z}/{x}/{y}`,
+      minzoom: ORTHO_MINZOOM,
+      maxzoom: 19,
+      bounds: [...LATVIA_BBOX],
+      coversStreets: true,
+      attribution: {
+        label: 'Ortofoto © Latvijas Ģeotelpiskās informācijas aģentūra (LĢIA), serviss: LVM GEO',
+        href: 'https://www.lvmgeo.lv/dati/tabmenu-two/brivpieejas-wms-wfs-servisi',
+      },
+    },
+    ...(LITHUANIA_ENABLED ? [ORTHO_LITHUANIA] : []),
+  ],
+  brightnessMax: 0.7,
+  saturation: -0.25,
+}
+
 export const RASTER_BASES: Record<Exclude<BaseMode, 'dark'>, RasterBase> = {
-  imagery: {
-    // The order matters. Estonia's photo runs a few kilometres into Latvia, where Latvia's own
-    // covers it; Lithuania's is cut cleanly at its own border, so it can lie on top.
-    sources: [
-      {
-        id: 'eox',
-        tiles: () => `${TILE_ORIGINS.eox}/wmts/1.0.0/s2cloudless-2025_3857/default/g/{z}/{y}/{x}.jpg`,
-        maxzoom: 15,
-        attribution: {
-          label: 'Sentinel-2 cloudless 2025 by EOX (Contains modified Copernicus Sentinel data 2025), CC BY-NC-SA 4.0',
-          href: 'https://s2maps.eu',
-        },
-      },
-      // Under the Baltic photos, which are cut to their borders with more care.
-      ...WORLD_ORTHO_SOURCES,
-      {
-        id: 'ee',
-        tiles: () => `${TRIM_SCHEME}://{z}/{x}/{y}`,
-        minzoom: ORTHO_MINZOOM,
-        maxzoom: 18,
-        bounds: [21.5, 57.45, 28.3, 59.9],
-        coversStreets: true,
-        attribution: {
-          label: 'Maa- ja Ruumiameti ortofoto 2026',
-          href: 'https://geoportaal.maaamet.ee/est/teenused/wms-wfs-wcs-teenused/maa-ameti-kaarditeenuste-kasutustingimused-p24.html',
-        },
-      },
-      {
-        id: 'lv',
-        tiles: () => `${CLIP_SCHEME}://{z}/{x}/{y}`,
-        minzoom: ORTHO_MINZOOM,
-        maxzoom: 19,
-        bounds: [...LATVIA_BBOX],
-        coversStreets: true,
-        attribution: {
-          label: 'Ortofoto © Latvijas Ģeotelpiskās informācijas aģentūra (LĢIA), serviss: LVM GEO',
-          href: 'https://www.lvmgeo.lv/dati/tabmenu-two/brivpieejas-wms-wfs-servisi',
-        },
-      },
-      ...(LITHUANIA_ENABLED ? [ORTHO_LITHUANIA] : []),
-    ],
-    brightnessMax: 0.7,
-    saturation: -0.25,
-  },
+  imagery: IMAGERY,
+  satellite3d: IMAGERY,
   recent: {
     // The yearly mosaic underneath, so a week of cloud leaves no hole.
     sources: [
@@ -221,6 +225,12 @@ export const BASE_MODES: readonly { id: BaseMode; label: string; hint: string; d
     detail: LITHUANIA_ENABLED
       ? t('Air photos of the Baltic states and ten more countries, down to 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.')
       : t('Air photos of Latvia, Estonia and ten more countries, down to 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.'),
+  },
+  {
+    id: 'satellite3d',
+    label: t('Sat 3D'),
+    hint: t('Air photos with the buildings standing in 3D, their roofs taken from the photos'),
+    detail: t('Official 3D city models where there are any, elsewhere buildings from map data. Roofs as sharp as the air photos.'),
   },
   {
     id: 'recent',

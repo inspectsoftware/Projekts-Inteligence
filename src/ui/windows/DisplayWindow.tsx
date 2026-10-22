@@ -7,7 +7,7 @@ import { IdentitySettings } from './chat/IdentitySettings'
 
 const DEVELOPER = [
   { id: 'off', label: t('Off'), hint: t('Only the windows a reader needs') },
-  { id: 'on', label: t('On'), hint: t('Also the feed updates and the console, on a rail down the left edge') },
+  { id: 'on', label: t('On'), hint: t('Also the feed updates and the console, on the taskbar with the rest') },
 ] as const
 
 /** What the map is drawn on, the filter it is seen through, and the rest of how the page looks. */

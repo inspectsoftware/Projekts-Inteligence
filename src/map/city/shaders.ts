@@ -69,12 +69,47 @@ uniform float u_tagMix;
 uniform float u_glass;
 uniform float u_glow;
 uniform vec4 u_clip;
+// Sat 3D: the air photos, one layer per zoom level, finest first (see photo.ts), and where this
+// piece sits in each level's window.
+uniform highp sampler2DArray u_photoTex;
+uniform vec4 u_photo[4];
+uniform float u_photoTiles;
+uniform float u_photoSize;
+uniform float u_photoOn;
 in vec4 v_color;
 ${SHADING}
+
+// One level's photo at a point given in its finest level's tiles from the piece's origin.
+// Transparent outside the level's window and in slots still waiting for their photo.
+vec4 photoAt(vec2 tiles, int level) {
+  vec2 at = tiles * exp2(-float(level));
+  vec4 place = u_photo[level];
+  vec2 inside = at - place.zw;
+  if (inside.x < 0.0 || inside.y < 0.0 || inside.x >= u_photoSize || inside.y >= u_photoSize) return vec4(0.0);
+  return textureLod(u_photoTex, vec3(place.xy + at / u_photoSize, float(level)), 0.0);
+}
+
+// From the coarsest level to the finest worth showing here, each laid over the last where it has a photo.
+vec4 photo(vec2 tiles, int finest) {
+  vec4 color = photoAt(tiles, 3);
+  for (int level = 2; level >= 0; level--) {
+    if (level < finest) break;
+    vec4 next = photoAt(tiles, level);
+    color = vec4(mix(color.rgb, next.rgb, next.a), max(color.a, next.a));
+  }
+  return color;
+}
+
+// As the satellite base is shown under it: a quarter less saturated, and no brighter than 0.7.
+vec3 tone(vec3 c) {
+  return mix(c, vec3((c.r + c.g + c.b) / 3.0), 0.25) * 0.7;
+}
 
 void main() {
   // A building across a tile edge comes in both tiles: each draws only the part on its own square.
   if (v_pos.x < u_clip.x || v_pos.y < u_clip.y || v_pos.x > u_clip.z || v_pos.y > u_clip.w) discard;
+  // A model building's basement reaches below the street, which on the flat map hides nothing.
+  if (v_pos.z < -0.05) discard;
   vec3 n = faceNormal();
   // A building's own colour where one is mapped, toned into the palette; else the palette by height.
   float height = v_color.a > 0.5 ? 60.0 : v_color.r * 255.0;
@@ -83,6 +118,24 @@ void main() {
   if (n.z > 0.35) base = mix(base, u_roof, 0.55);
 
   vec3 color = lit(base, n);
+  if (u_photoOn > 0.5) {
+    vec2 tiles = vec2(v_pos.x, -v_pos.y) * u_photoTiles;
+    // The finest level whose pixels are no smaller than the screen's here.
+    float texels = u_photoTiles * 256.0 * max(length(dFdx(v_pos.xy)), length(dFdy(v_pos.xy)));
+    int finest = int(clamp(ceil(log2(max(texels, 1e-4))), 0.0, 3.0));
+    // An air photo leans tall buildings away from where it was taken, so their roofs in it miss
+    // their roofs here: the photo fades out above about ten storeys.
+    float roof = smoothstep(0.35, 0.6, n.z) * (1.0 - smoothstep(35.0, 90.0, v_pos.z));
+    if (roof > 0.0) {
+      vec4 shot = photo(tiles, finest);
+      // The photo has its own sun and shade, so it is lit only gently.
+      color = mix(color, tone(shot.rgb) * (0.85 + 0.3 * max(dot(n, u_sun), 0.0)), roof * shot.a);
+    } else {
+      // Walls take a little of the colour around them, blurred, so a street sits in its photo.
+      vec4 near = photo(tiles, min(finest + 2, 3));
+      color = mix(color, lit(tone(near.rgb), n), 0.25 * near.a);
+    }
+  }
   // Darker where walls meet the ground: it reads as the street's own shade and seats each block.
   color *= mix(0.72, 1.0, smoothstep(0.0, 5.0, v_pos.z));
 

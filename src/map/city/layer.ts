@@ -1,5 +1,6 @@
 import { type CustomLayerInterface, type CustomRenderMethodInput, type Map as MapLibreMap, type MapSourceDataEvent, MercatorCoordinate, type VectorTileSource } from 'maplibre-gl'
 import type { MapTheme } from '../style'
+import { PHOTO_LEVELS, PhotoCache } from './photo'
 import { BUILDING_FRAGMENT, BUILDING_VERTEX, TREE_FRAGMENT, TREE_VERTEX } from './shaders'
 import { CityModel, type Leaf, TILE_ZOOM, cameraDistanceMetres, cameraGround, offsetMetres, visibleTiles } from './sources'
 import type { ChunkMesh, CityJob, CityResult, ModelNode } from './types'
@@ -8,11 +9,13 @@ import CityWorker from './worker?worker'
 /**
  * The 3D city, drawn by the map itself so it shares the depth of everything else in 3D.
  *
- * Inside Rīga, near the camera, every building is the city's own laser-scanned model, with its
- * real roofs, and the city's trees stand beside them. Everywhere else, and further out, buildings
- * are extruded from the vector tiles as before, but per building: where a building of the city
- * model is drawn, the extruded block that stood in for it is left out, and until the model has
- * arrived the block holds its place.
+ * Where a city or country publishes its own laser-scanned model (Rīga, all of Estonia, Hamburg,
+ * Berlin, Zürich; see public/data/city-3d.json), every building near the camera is that model,
+ * with its real roofs, and in Rīga the city's trees stand beside them. Elsewhere near the camera
+ * the buildings are Overture's, with the roof shapes and colours mapped for them; further out,
+ * they are extruded from the vector tiles. All of it per building: where a building of a model is
+ * drawn, the extruded block that stood in for it is left out, and until the model has arrived the
+ * block holds its place. In Sat 3D the roofs are the air photo (photo.ts).
  *
  * Keeps the id of the layer it replaces, so base and relief changes reach it as they did.
  */
@@ -22,6 +25,12 @@ export const CITY_LAYER = 'building-3d'
 const MIN_ZOOM = TILE_ZOOM
 /** From here the city model takes over near the camera. */
 const MODEL_ZOOM = 15
+/**
+ * From here, near the camera, the blocks come from Overture's buildings instead, which carry the
+ * mapped roof shapes, colours and building parts; the tiles' own blocks stand in until they arrive.
+ */
+const OVERTURE_ZOOM = 15
+const OVERTURE_REACH = 2500
 const TREE_ZOOM = 15.5
 
 const coarse = typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
@@ -34,7 +43,7 @@ const SPARE_TILES = 60
 const SPARE_MODEL = MODEL_BUDGET
 const SPARE_TREES = TREE_BUDGET
 /** Requests at once, per kind: the blocks are placeholders, so they never hold up the model. */
-const IN_FLIGHT: Record<ChunkMesh['kind'], number> = { extruded: 3, model: 4, trees: 2 }
+const IN_FLIGHT: Record<Exclude<CityJob['kind'], 'cancel' | 'photo'>, number> = { extruded: 3, overture: 3, model: 4, trees: 2 }
 
 /** How far around where the camera looks the city model is drawn: wider when seen from higher up. */
 function modelReach(zoom: number): number {
@@ -56,7 +65,7 @@ interface Look {
   fog: string
 }
 
-const LOOKS: Record<MapTheme, Look> = {
+const LOOKS: Record<MapTheme | 'photo', Look> = {
   dark: {
     low: '#1b2633',
     high: '#34495c',
@@ -82,6 +91,20 @@ const LOOKS: Record<MapTheme, Look> = {
     leaf: '#88ad80',
     bark: '#7f6b57',
     fog: '#eef1ec',
+  },
+  // Sat 3D: roofs come from the air photo; walls are a plain plaster tone, tinted by the photo round them.
+  photo: {
+    low: '#8b867d',
+    high: '#a49e94',
+    roof: '#6e6962',
+    tagMix: 0.35,
+    glass: 0.86,
+    glow: 0,
+    ambient: 0.66,
+    diffuse: 0.5,
+    leaf: '#2c4632',
+    bark: '#3d352c',
+    fog: '#39434a',
   },
 }
 
@@ -129,7 +152,7 @@ type Kind = ChunkMesh['kind']
 interface Chunk {
   key: string
   kind: Kind
-  job: Exclude<CityJob, { kind: 'cancel' }>
+  job: Exclude<CityJob, { kind: 'cancel' | 'photo' }>
   priority: number
   /** How much of a budget it takes: vertices for the model, trees for trees, 1 for a tile. */
   size: number
@@ -292,8 +315,11 @@ class CityLayer implements CustomLayerInterface {
   private coverage = new Coverage()
   private drawnModelKeys = ''
   private tileUrl: string | null = null
+  private theme: MapTheme = 'dark'
   private look: Look = LOOKS.dark
   private opacity = 1
+  /** The air photos on the roofs, while Sat 3D is the base. */
+  private photo: PhotoCache | null = null
   private terrainVersion = 0
   private updateTimer = 0
   private lastUpdate = 0
@@ -317,6 +343,11 @@ class CityLayer implements CustomLayerInterface {
       'u_glass',
       'u_glow',
       'u_clip',
+      'u_photoTex',
+      'u_photo',
+      'u_photoTiles',
+      'u_photoSize',
+      'u_photoOn',
     ])
     this.treeProgram = compile(gl, TREE_VERTEX, TREE_FRAGMENT, ['a_shape', 'a_tree', 'a_ground'], [...SHARED_UNIFORMS, 'u_leaf', 'u_bark'])
     this.unitTree = gl.createBuffer()
@@ -353,6 +384,8 @@ class CityLayer implements CustomLayerInterface {
     for (const worker of this.workers) worker.terminate()
     for (const chunk of this.chunks.values()) this.release(chunk)
     this.chunks.clear()
+    this.photo?.dispose(gl, () => {})
+    this.photo = null
     for (const program of [this.buildingProgram, this.treeProgram]) if (program) gl.deleteProgram(program.program)
     gl.deleteBuffer(this.unitTree)
     this.map = null
@@ -360,8 +393,24 @@ class CityLayer implements CustomLayerInterface {
   }
 
   setLook(theme: MapTheme): void {
-    this.look = LOOKS[theme]
+    this.theme = theme
+    this.look = this.photo ? LOOKS.photo : LOOKS[theme]
     this.map?.triggerRepaint()
+  }
+
+  /** Lays the air photos on the roofs, or takes them off again and frees what they held. */
+  setPhoto(on: boolean): void {
+    const gl = this.gl
+    if (!gl || on === !!this.photo) return
+    if (on) {
+      this.photo = new PhotoCache(coarse)
+      this.photo.create(gl)
+    } else {
+      this.photo!.dispose(gl, (id) => this.cancel(id))
+      this.photo = null
+    }
+    this.setLook(this.theme)
+    this.schedule()
   }
 
   setOpacity(opacity: number): void {
@@ -421,7 +470,8 @@ class CityLayer implements CustomLayerInterface {
       const ground = terrain && chunk.grounds ? chunk.grounds[building] : 0
       for (let v = 0; v < vertices.length; v += 9) {
         const t = hitTriangle(box.from, box.along, vertices, v, ground)
-        if (t !== null && (!best || t < best.t)) best = { ...box, t }
+        // Below the street nothing is drawn (the shader leaves basements out), so nothing is hit either.
+        if (t !== null && box.from[2] + t * box.along[2] - ground >= -0.05 && (!best || t < best.t)) best = { ...box, t }
       }
     }
     if (!best) return null
@@ -456,10 +506,20 @@ class CityLayer implements CustomLayerInterface {
       const reach = this.fogRange()[1]
       if (tileUrl) {
         for (const tile of visibleTiles(map, reach, TILE_LIMIT)) {
+          if (zoom >= OVERTURE_ZOOM && tile.distance <= OVERTURE_REACH) {
+            const detailed = this.chunk(`o:${tile.key}`, { kind: 'overture', id: `o:${tile.key}`, z: TILE_ZOOM, x: tile.x, y: tile.y }, tile.distance, 1)
+            wanted.push(detailed)
+            if (detailed.state === 'ready') continue
+          }
           const url = tileUrl.replace('{z}', String(TILE_ZOOM)).replace('{x}', String(tile.x)).replace('{y}', String(tile.y))
-          wanted.push(this.chunk(`e:${tile.key}`, { kind: 'extruded', id: `e:${tile.key}`, url, z: TILE_ZOOM, x: tile.x, y: tile.y }, tile.distance, 1))
+          const blocks = this.chunk(`e:${tile.key}`, { kind: 'extruded', id: `e:${tile.key}`, url, z: TILE_ZOOM, x: tile.x, y: tile.y }, tile.distance, 1)
+          wanted.push(blocks)
+          // Zoomed out past Overture's reach, its tile still stands until the blocks have come.
+          const detailed = this.chunks.get(`o:${tile.key}`)
+          if (blocks.state !== 'ready' && detailed?.state === 'ready' && !wanted.includes(detailed)) wanted.push(detailed)
         }
       }
+      this.updatePhoto()
       if (zoom >= MODEL_ZOOM) {
         this.model.load()
         const look = map.getCenter()
@@ -502,18 +562,18 @@ class CityLayer implements CustomLayerInterface {
     // Asked for but not wanted any more: called off, so the nearer pieces go first.
     for (const chunk of this.chunks.values()) {
       if (chunk.state === 'ready' || wantedKeys.has(chunk.key)) continue
-      if (chunk.state === 'loading') this.workerFor(chunk).postMessage({ kind: 'cancel', id: chunk.key } satisfies CityJob)
+      if (chunk.state === 'loading') this.cancel(chunk.key)
       this.chunks.delete(chunk.key)
     }
     // Nearest first, a few at a time.
     const free = { ...IN_FLIGHT }
-    for (const chunk of this.chunks.values()) if (chunk.state === 'loading') free[chunk.kind]--
+    for (const chunk of this.chunks.values()) if (chunk.state === 'loading') free[chunk.job.kind]--
     for (const chunk of [...wanted].sort((a, b) => a.priority - b.priority)) {
-      if (free[chunk.kind] <= 0) continue
+      if (free[chunk.job.kind] <= 0) continue
       if (chunk.state !== 'queued' && !(chunk.state === 'failed' && now - chunk.failedAt > 60_000)) continue
       chunk.state = 'loading'
-      this.workerFor(chunk).postMessage(chunk.job)
-      free[chunk.kind]--
+      this.workerForKey(chunk.key).postMessage(chunk.job)
+      free[chunk.job.kind]--
     }
 
     this.drawn = wanted.filter((chunk) => chunk.state === 'ready')
@@ -528,12 +588,13 @@ class CityLayer implements CustomLayerInterface {
   }
 
   /** The chunk for a key, made on first asking. A new one waits for its turn in `update`. */
-  private chunk(key: string, job: Exclude<CityJob, { kind: 'cancel' }>, priority: number, size: number): Chunk {
+  private chunk(key: string, job: Exclude<CityJob, { kind: 'cancel' | 'photo' }>, priority: number, size: number): Chunk {
     let chunk = this.chunks.get(key)
     if (!chunk) {
       chunk = {
         key,
-        kind: job.kind,
+        // Overture's buildings come as one more extruded tile.
+        kind: job.kind === 'overture' ? 'extruded' : job.kind,
         job,
         priority,
         size,
@@ -558,11 +619,20 @@ class CityLayer implements CustomLayerInterface {
     return chunk
   }
 
-  private workerFor(chunk: Chunk): Worker {
+  /** Moves the photo windows and asks for the next photos. */
+  private updatePhoto(): void {
+    if (this.map) this.photo?.update(this.map, (job) => this.workerForKey(job.id).postMessage(job), (id) => this.cancel(id))
+  }
+
+  private workerForKey(key: string): Worker {
     // One piece always goes to the same worker, so a cancel reaches the job it means.
     let hash = 0
-    for (let i = 0; i < chunk.key.length; i++) hash = (hash * 31 + chunk.key.charCodeAt(i)) | 0
+    for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) | 0
     return this.workers[Math.abs(hash) % this.workers.length]
+  }
+
+  private cancel(id: string): void {
+    this.workerForKey(id).postMessage({ kind: 'cancel', id } satisfies CityJob)
   }
 
   /** Lets go of what was not drawn for longest, past what is kept in reserve. */
@@ -590,13 +660,27 @@ class CityLayer implements CustomLayerInterface {
   }
 
   private receive(result: CityResult): void {
+    if (result.id.startsWith('p:')) {
+      if ('photo' in result) {
+        if (this.photo) this.photo.receive(result.id, result.photo, false)
+        else result.photo?.close()
+        // The next photo goes out at once rather than with the next look round, so they come in a steady stream.
+        const map = this.map
+        if (map && map.getZoom() >= MIN_ZOOM && map.getLayoutProperty(CITY_LAYER, 'visibility') !== 'none') this.updatePhoto()
+      } else if ('error' in result) {
+        this.photo?.receive(result.id, null, true)
+        this.schedule()
+      }
+      this.map?.triggerRepaint()
+      return
+    }
     const chunk = this.chunks.get(result.id)
     if (!chunk || chunk.state !== 'loading') return
     if ('error' in result) {
       console.warn(`[city] ${result.id}: ${result.error}`)
       chunk.state = 'failed'
       chunk.failedAt = Date.now()
-    } else {
+    } else if ('mesh' in result) {
       this.upload(chunk, result.mesh)
       chunk.state = 'ready'
     }
@@ -757,6 +841,9 @@ class CityLayer implements CustomLayerInterface {
     if (!map) return
     // Shown again after being hidden, or zoomed across a threshold without the camera moving.
     if (performance.now() - this.lastUpdate > 500) this.schedule()
+    // Photos are put in place even with nothing to draw yet, so a jump's old photos are gone first.
+    const photo = this.photo
+    if (photo?.upload(gl)) map.triggerRepaint()
     if (!this.drawn.length) return
     const zoom = map.getZoom()
     const main = args.defaultProjectionData.mainMatrix
@@ -783,6 +870,13 @@ class CityLayer implements CustomLayerInterface {
       const buildings = this.buildingProgram!
       shared(buildings)
       const u = buildings.uniforms
+      gl.uniform1f(u.u_photoOn, photo?.texture ? 1 : 0)
+      if (photo?.texture) {
+        gl.activeTexture(gl.TEXTURE0)
+        gl.bindTexture(gl.TEXTURE_2D_ARRAY, photo.texture)
+        gl.uniform1i(u.u_photoTex, 0)
+        gl.uniform1f(u.u_photoSize, photo.size)
+      }
       gl.uniform3fv(u.u_low, rgb(look.low))
       gl.uniform3fv(u.u_high, rgb(look.high))
       gl.uniform3fv(u.u_roof, rgb(look.roof))
@@ -802,6 +896,10 @@ class CityLayer implements CustomLayerInterface {
         const side = 1 / (2 ** TILE_ZOOM * chunk.scale)
         if (chunk.kind === 'extruded') gl.uniform4f(u.u_clip, 0, -side, side, 0)
         else gl.uniform4f(u.u_clip, -1e9, -1e9, 1e9, 1e9)
+        if (photo?.texture) {
+          gl.uniform4fv(u.u_photo, photo.placement(chunk.origin))
+          gl.uniform1f(u.u_photoTiles, chunk.scale * 2 ** PHOTO_LEVELS[0])
+        }
         if (chunk.kind === 'extruded') this.hideCovered(chunk)
         gl.bindVertexArray(chunk.vao)
         this.lift(chunk, buildings.attributes.a_ground, 0)
@@ -948,6 +1046,11 @@ export function setCityTheme(theme: MapTheme): void {
 /** Over a photo the buildings are see-through, so the roofs it shows still come through. */
 export function setCityOpacity(opacity: number): void {
   layer?.setOpacity(opacity)
+}
+
+/** Sat 3D: the air photo on the roofs. */
+export function setCityPhoto(on: boolean): void {
+  layer?.setPhoto(on)
 }
 
 /** The building of Rīga's city model at a point of the map's canvas, in CSS pixels; null where none is drawn. */

@@ -56,7 +56,7 @@ export interface WindowDef {
   height: number
   resizable?: { min: Size; max: Size }
   hideInDock?: boolean
-  /** Only of use to whoever builds or debugs the app: shown on the developer rail, and only in developer mode. */
+  /** Only of use to whoever builds or debugs the app: on the taskbar, and on screen, only in developer mode. */
   developer?: boolean
   /**
    * For a window that belongs to a mode rather than to the taskbar. `subject` is what the mode is
@@ -261,8 +261,7 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M8 4.5V8l2.5 1.5M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11z',
     defaultOpen: false,
     developer: true,
-    // Right of the developer rail it is opened from.
-    placement: { corner: 'bl', dx: 60, dy: 100 },
+    placement: { corner: 'bl', dx: 12, dy: 100 },
     width: 240,
     height: 260,
     resizable: { min: { w: 200, h: 120 }, max: { w: 420, h: 1000 } },
@@ -300,7 +299,7 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M2 3.5h12v9H2zM4.5 6.5l2 1.5-2 1.5M8 10h3',
     defaultOpen: false,
     developer: true,
-    placement: { corner: 'bl', dx: 308, dy: 100 },
+    placement: { corner: 'bl', dx: 260, dy: 100 },
     width: 420,
     height: 260,
     resizable: { min: { w: 260, h: 140 }, max: { w: 900, h: 1000 } },

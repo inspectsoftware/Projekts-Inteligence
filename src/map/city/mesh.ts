@@ -215,14 +215,18 @@ export function extrudeTile(data: ArrayBuffer | Uint8Array, z: number, x: number
   }
 }
 
+/** How far above most buildings' lowest points the terrain may lie and still be taken for the ground, metres. */
+const TERRAIN_AGREES = 2
+
 /**
- * One node of Rīga's city model: I3S geometry buffer 0, uncompressed. After a count of vertices
- * and of features come whole arrays one after another: positions, normals, texture coordinates
- * and colours per vertex, then an id and a range of triangles per feature. Only the positions and
- * the ranges are wanted: the normals are worked out again when drawn, and the colours are all
- * the same grey.
+ * One node of a city model: I3S geometry buffer 0, uncompressed. After a count of vertices and of
+ * features come whole arrays one after another: positions, normals, texture coordinates and
+ * colours per vertex, then an id and a range of triangles per feature. Only the positions and the
+ * ranges are wanted: the normals are worked out again when drawn, and the colours are all the
+ * same grey. `ground` gives the terrain's height at a longitude and latitude, NaN where unknown;
+ * without it each building stands on its own lowest point.
  */
-export function decodeModelNode(data: ArrayBuffer, obb: NodeBox, crs: ModelCrs): ModelNode {
+export function decodeModelNode(data: ArrayBuffer, obb: NodeBox, crs: ModelCrs, ground: ((lon: number, lat: number) => number) | null = null): ModelNode {
   const view = new DataView(data)
   const vertexCount = data.byteLength >= 8 ? view.getUint32(0, true) : 0
   const featureCount = data.byteLength >= 8 ? view.getUint32(4, true) : 0
@@ -234,21 +238,26 @@ export function decodeModelNode(data: ArrayBuffer, obb: NodeBox, crs: ModelCrs):
   const ranges = new Uint32Array(data, 8 + vertexCount * 36 + featureCount * 8, featureCount * 2)
 
   // Positions are offsets from the centre of the node's box: degrees or Mercator metres across, metres up.
-  const [centreX, centreY] = obb.center
+  const [centreX, centreY, centreZ] = obb.center
   const origin: [number, number] = [crsX(crs, centreX), crsY(crs, centreY)]
   const scale = metreScale(latitudeOf(origin[1]))
   const positions = new Float32Array(vertexCount * 3)
-  let ground = Infinity
+  let lowest = Infinity
   for (let v = 0; v < vertexCount; v++) {
     positions[3 * v] = (crsX(crs, centreX + source[3 * v]) - origin[0]) / scale
     positions[3 * v + 1] = (origin[1] - crsY(crs, centreY + source[3 * v + 1])) / scale
-    ground = Math.min(ground, source[3 * v + 2])
+    lowest = Math.min(lowest, source[3 * v + 2])
   }
-  // Heights are above sea level. Each building is set down at its own lowest point, so it stands
-  // on the map's ground; anything outside every building goes down with the node's lowest.
-  for (let v = 0; v < vertexCount; v++) positions[3 * v + 2] = source[3 * v + 2] - ground
+  // The box's centre is above sea level. Each building is set down on the ground, so it stands on
+  // the map's; anything outside every building goes down with the node's lowest point.
+  for (let v = 0; v < vertexCount; v++) positions[3 * v + 2] = source[3 * v + 2] - lowest
 
+  // Per building: its footprint box, its lowest and highest point, and the terrain under its middle,
+  // all as the node's offsets. NaN where the terrain is unknown.
   const buildings = new Float32Array(featureCount * 7)
+  const bottoms = new Float64Array(featureCount)
+  const tops = new Float64Array(featureCount)
+  const levels = new Float64Array(featureCount).fill(NaN)
   for (let f = 0; f < featureCount; f++) {
     const first = ranges[2 * f] * 3
     const end = (ranges[2 * f + 1] + 1) * 3
@@ -267,8 +276,24 @@ export function decodeModelNode(data: ArrayBuffer, obb: NodeBox, crs: ModelCrs):
       south = Math.min(south, positions[3 * v + 1])
       north = Math.max(north, positions[3 * v + 1])
     }
-    for (let v = first; v < end; v++) positions[3 * v + 2] = source[3 * v + 2] - bottom
-    buildings.set([first, end - first, west, south, east, north, top - bottom], f * 7)
+    bottoms[f] = bottom
+    tops[f] = top
+    if (ground) levels[f] = ground((origin[0] + ((west + east) / 2) * scale) * 360 - 180, latitudeOf(origin[1] - ((south + north) / 2) * scale)) - centreZ
+    buildings.set([first, end - first, west, south, east, north], f * 7)
+  }
+  // Most buildings stand within a metre of the terrain. Where it lies metres above most of them, it
+  // is no model of the ground there but of the roofs (central Hamburg) or of another datum (Zürich,
+  // 3 m), and is left out.
+  const above = [...levels].map((level, f) => level - bottoms[f]).filter(Number.isFinite).sort((a, b) => a - b)
+  const trusted = above.length > 0 && above[above.length >> 1] < TERRAIN_AGREES
+  for (let f = 0; f < featureCount; f++) {
+    // A building whose lowest point lies below the terrain has a basement, which goes underground.
+    // One whose lowest point lies above it stands on a terrace or a slope the terrain smooths
+    // over, and keeps standing on its own lowest point.
+    const floor = trusted && levels[f] > bottoms[f] ? levels[f] : bottoms[f]
+    const [first, length] = buildings.subarray(f * 7, f * 7 + 2)
+    for (let v = first; v < first + length; v++) positions[3 * v + 2] = source[3 * v + 2] - floor
+    buildings[f * 7 + 6] = tops[f] - floor
   }
   return { kind: 'model', origin, scale, positions, buildings }
 }

@@ -20,11 +20,10 @@ const SHADE = 'relief-shade'
 const EXAGGERATION = 2
 
 /**
- * Lifts the ground into relief and shades it, or lays it flat again. Over imagery the extruded
- * buildings come back as well, since a photo's roofs stay flat. Call after applyBaseMode, which
- * hides them and puts its imagery where the shading would otherwise end up underneath.
+ * Lifts the ground into relief and shades it, or lays it flat again. Call after applyBaseMode,
+ * which puts its imagery where the shading would otherwise end up underneath.
  */
-export function applyRelief(map: Map, on: boolean, imagery: boolean): void {
+export function applyRelief(map: Map, on: boolean): void {
   if (on) {
     for (const id of [DEM, SHADE_DEM]) {
       if (!map.getSource(id)) map.addSource(id, { type: 'raster-dem', tiles: [DEM_TILES], tileSize: 512, encoding: 'terrarium', maxzoom: 12 })
@@ -46,6 +45,4 @@ export function applyRelief(map: Map, on: boolean, imagery: boolean): void {
     if (map.getTerrain()) map.setTerrain(null)
     if (map.getLayer(SHADE)) map.removeLayer(SHADE)
   }
-  // The 3D city (src/map/city/layer.ts), which MapView also makes see-through over a photo.
-  if (imagery) map.setLayoutProperty('building-3d', 'visibility', on ? 'visible' : 'none')
 }
