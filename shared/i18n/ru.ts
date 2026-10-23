@@ -513,8 +513,6 @@ export const ru: Record<string, string> = {
   'Situation panel': 'Панель обстановки',
 
   // src/ui/TopBar.tsx
-  'Latvia // Intelligence Panel': 'Латвия // Разведывательная панель',
-  'Public sources only': 'Только открытые источники',
   'Search places, callsigns, trains, satellites and layers': 'Поиск мест, позывных, поездов, спутников и слоёв',
   'Language': 'Язык',
   'Server build {commit}': 'Сборка сервера {commit}',

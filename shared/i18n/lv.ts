@@ -517,8 +517,6 @@ export const lv: Record<string, string> = {
   'Situation panel': 'Situācijas panelis',
 
   // src/ui/TopBar.tsx
-  'Latvia // Intelligence Panel': 'Latvija // Izlūkošanas panelis',
-  'Public sources only': 'Tikai publiski avoti',
   'Search places, callsigns, trains, satellites and layers': 'Meklēt vietas, izsaukuma signālus, vilcienus, satelītus un slāņus',
   'Language': 'Valoda',
   'Server build {commit}': 'Servera būvējums {commit}',

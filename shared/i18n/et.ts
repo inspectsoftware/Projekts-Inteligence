@@ -515,8 +515,6 @@ export const et: Record<string, string> = {
   'Situation panel': 'Olukorrapaneel',
 
   // src/ui/TopBar.tsx
-  'Latvia // Intelligence Panel': 'Läti // Luurepaneel',
-  'Public sources only': 'Ainult avalikud allikad',
   'Search places, callsigns, trains, satellites and layers': 'Otsi kohti, kutsungeid, ronge, satelliite ja kihte',
   'Language': 'Keel',
   'Server build {commit}': 'Serveri versioon {commit}',

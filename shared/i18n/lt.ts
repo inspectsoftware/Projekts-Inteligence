@@ -493,8 +493,6 @@ export const lt: Record<string, string> = {
   'Situation panel': 'Situacijos skydelis',
 
   // src/ui/TopBar.tsx
-  'Latvia // Intelligence Panel': 'Latvija // Žvalgybos skydelis',
-  'Public sources only': 'Tik vieši šaltiniai',
   'Search places, callsigns, trains, satellites and layers': 'Ieškoti vietų, šaukinių, traukinių, palydovų ir sluoksnių',
   'Language': 'Kalba',
   'Server build {commit}': 'Serverio versija {commit}',

@@ -38,10 +38,6 @@ export function TopBar() {
         <i className="bg-carmine" />
       </span>
       <h1 className="font-semibold tracking-[0.3em] whitespace-nowrap text-fg-strong">{APP.codename}</h1>
-      <span className="hidden whitespace-nowrap text-fg-mute lg:inline">{t('Latvia // Intelligence Panel')}</span>
-      <span className="hidden border border-ok/40 px-1.5 py-px text-[9px] tracking-[0.2em] text-ok xl:inline">
-        {t('Public sources only')}
-      </span>
 
       <button
         type="button"
