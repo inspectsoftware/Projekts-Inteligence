@@ -20,7 +20,10 @@ export interface DiskStore<T = FeedPayload> {
  * host documents no persistent folder, so every failure here is ignored and the feed
  * simply falls back to its upstream.
  */
-export function createDiskStore<T = FeedPayload>(dir = process.env.CACHE_DIR || join(tmpdir(), 'pwh-cache')): DiskStore<T> {
+/** Where everything kept on disk goes: last-good feed copies, and the rewind history. */
+export const CACHE_DIR = process.env.CACHE_DIR || join(tmpdir(), 'pwh-cache')
+
+export function createDiskStore<T = FeedPayload>(dir = CACHE_DIR): DiskStore<T> {
   const fileFor = (id: string) => join(dir, `${id}.json`)
 
   return {

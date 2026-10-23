@@ -1,7 +1,8 @@
+import { join } from 'node:path'
 import { Hono } from 'hono'
 import { readBuildInfo } from './buildInfo'
 import { FeedCache } from './core/cache'
-import { createDiskStore } from './core/disk'
+import { CACHE_DIR, createDiskStore } from './core/disk'
 import { History } from './core/history'
 import { FEEDS, type FeedRegistry } from './feeds/registry'
 import { proxyHops, rateLimit } from './http/ratelimit'
@@ -43,7 +44,8 @@ export function createApp(options: AppOptions = {}): Hono {
     return app
   }
   app.use('/api/*', rateLimit(options.requestsPerMinute ?? 600, Date.now, proxyHops(env)))
-  const history = new History()
+  // Only the app's own cache records frames, so only then is there a record worth keeping on disk.
+  const history = new History(undefined, undefined, options.cache ? undefined : join(CACHE_DIR, 'history'))
   app.route(
     '/api',
     apiRoutes({

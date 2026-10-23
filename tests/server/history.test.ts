@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 import { Snapshot } from '../../server/core/cache'
@@ -30,5 +33,22 @@ describe('activity', () => {
     expect(activity({ shape: 'entities', entities: [plane(0), plane(Flag.MIL), plane(Flag.MIL | Flag.EMERGENCY)] })).toBe(2)
     const cell = (good: number, bad: number) => ({ id: `${good}-${bad}`, boundary: [], good, bad })
     expect(activity({ shape: 'cells', windowStart: 0, cells: [cell(10, 0), cell(5, 5), cell(1, 0)] })).toBe(1)
+  })
+})
+
+describe('History on disk', () => {
+  it('reads back what an earlier process kept, and forgets what is past the span', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pwh-history-'))
+    try {
+      const before = new History(MIN, 10 * MIN, dir, 0)
+      for (let at = 0; at <= 5 * MIN; at += MIN) before.record('aircraft', snap(at))
+      // The writes are not waited for by record(); give them a moment.
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      const after = new History(MIN, 10 * MIN, dir, 13 * MIN)
+      expect(after.times('aircraft')).toEqual([3 * MIN, 4 * MIN, 5 * MIN])
+      expect(after.frame('aircraft', 4 * MIN)?.gzip.length).toBeGreaterThan(0)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

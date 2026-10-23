@@ -88,7 +88,8 @@ One npm package, one Node process.
   upstream load does not grow with the number of visitors, and the process can be stopped and
   restarted at any time without losing anything that matters.
 - The one record it keeps is the rewind history: a gzipped frame a minute of the aircraft, ships and
-  GPS interference feeds, for six hours, in memory (`server/core/history.ts`). A restart empties it.
+  GPS interference feeds, for six hours (`server/core/history.ts`), also written to the cache folder
+  so a restart picks it up again.
 - Two routes depend on where visitors look, and both are bounded. Outside the Baltic, aircraft are
   fetched for wherever the map is (`/api/aircraft`): answers are shared per 4° grid cell for ten
   seconds, 40 cells are held at most, the sources are asked at most once every 1.5 s across all
