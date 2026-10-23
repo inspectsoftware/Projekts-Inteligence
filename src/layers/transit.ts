@@ -6,10 +6,9 @@ import { t } from '../i18n'
 import { formatLat, formatLon } from '../lib/coords'
 import { formatAge, formatBearing, formatInt } from '../lib/format'
 import { getIconAtlas } from '../map/icons'
-import { positionAt } from '../map/motion'
 import { getEntities } from '../runtime/entityStore'
 import { useLayers } from '../state/layers'
-import { HALO, LABEL_FONT, OUTLINE, SELECTED, iconScale, selectionRing } from './common'
+import { HALO, LABEL_FONT, OUTLINE, SELECTED, iconScale, memoLast, selectionRing } from './common'
 import type { InspectorModel, LayerDef } from './types'
 
 const MODE_COLOR: Record<TransitMode, Color> = {
@@ -28,6 +27,11 @@ export const MODE_LABEL: Record<TransitMode, string> = {
 
 /** Route numbers only become readable once a town fills a good part of the screen. */
 const LABEL_ZOOM = 10.5
+
+/** The vehicles of the modes being shown; the selected one whatever its mode, as it was asked for by name. */
+const shownVehicles = memoLast((all: TransitVehicle[], hiddenModes: Record<string, boolean>, selectedId: string | null) =>
+  all.filter((vehicle) => !hiddenModes[vehicle.props.mode] || vehicle.id === selectedId),
+)
 
 function describe(entity: Entity, now: number): InspectorModel {
   const vehicle = entity as TransitVehicle
@@ -67,8 +71,7 @@ export const transitLayer: LayerDef = {
 
   build({ now, zoom, selectedId, hoveredId, fontsReady }) {
     const { hiddenModes } = useLayers.getState()
-    // The selected one is drawn whatever its kind: it was asked for by name.
-    const data = (getEntities('transit') as TransitVehicle[]).filter((vehicle) => !hiddenModes[vehicle.props.mode] || vehicle.id === selectedId)
+    const data = shownVehicles(getEntities('transit') as TransitVehicle[], hiddenModes, selectedId)
     const { canvas, mapping } = getIconAtlas()
     const iconAtlas = canvas as unknown as string
     const scale = iconScale(zoom)
@@ -85,12 +88,12 @@ export const transitLayer: LayerDef = {
       iconAtlas,
       iconMapping: mapping,
       getIcon: () => 'bus' as const,
-      getPosition: (vehicle: TransitVehicle) => positionAt(vehicle, now),
+      // Buses are drawn where they last reported (see positionAt), so they move only when a poll does.
+      getPosition: (vehicle: TransitVehicle) => [vehicle.lon, vehicle.lat] as [number, number],
       getAngle: (vehicle: TransitVehicle) => -(vehicle.trk ?? 0),
       sizeUnits: 'pixels' as const,
       sizeScale: scale,
       billboard: false,
-      updateTriggers: { getPosition: now },
     }
 
     return [
@@ -101,7 +104,7 @@ export const transitLayer: LayerDef = {
         pickable: true,
         getSize: 14,
         getColor: colorOf,
-        updateTriggers: { ...icons.updateTriggers, getColor: highlight },
+        updateTriggers: { getColor: highlight },
       }),
       selectionRing(
         'transit-selection',
@@ -115,7 +118,7 @@ export const transitLayer: LayerDef = {
         data,
         visible: fontsReady,
         getText: (vehicle) => vehicle.label ?? '',
-        getPosition: (vehicle) => positionAt(vehicle, now),
+        getPosition: (vehicle) => [vehicle.lon, vehicle.lat],
         getSize: (vehicle) => (zoom >= LABEL_ZOOM || vehicle.id === selectedId || vehicle.id === hoveredId ? 10 : 0),
         getColor: (vehicle) => {
           const [r, g, b] = colorOf(vehicle)
@@ -130,7 +133,7 @@ export const transitLayer: LayerDef = {
         outlineWidth: 2.5,
         outlineColor: OUTLINE,
         characterSet: 'auto',
-        updateTriggers: { getPosition: now, getSize: `${zoom >= LABEL_ZOOM}|${highlight}`, getColor: highlight },
+        updateTriggers: { getSize: `${zoom >= LABEL_ZOOM}|${highlight}`, getColor: highlight },
       }),
     ]
   },

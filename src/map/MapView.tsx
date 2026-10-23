@@ -17,7 +17,7 @@ import { setMap, setMapFailure, useMap, useMapFailure } from './instance'
 import { CLIP_SCHEME, TRIM_SCHEME, loadEstoniaTile, loadLatviaTile, setClipBorder } from './orthoClip'
 import { PATIENT_SCHEME, loadPatientTile } from './patientTiles'
 import { applyRelief } from './relief'
-import { startScene } from './scene'
+import { prewarmFeeds, startScene } from './scene'
 import { addSpotlight } from './spotlight'
 import { applyMapTheme, buildStyle } from './style'
 import { WORLD_SCHEME, loadWorldOrthoTile } from './worldOrtho'
@@ -111,6 +111,10 @@ export function MapView() {
 
     let cancelled = false
     let stopScene: (() => void) | undefined
+    // Both on their way while the style and the first tiles load, rather than after.
+    const releaseWarm = prewarmFeeds()
+    const borderRequest = fetch('/data/lv-border.json').then((res) => res.json() as Promise<FeatureCollection<Polygon | MultiPolygon>>)
+    borderRequest.catch(() => {})
     // Never leave the boot screen up if the style or tiles cannot be reached.
     const bootTimeout = setTimeout(finishBoot, 8000)
 
@@ -142,8 +146,7 @@ export function MapView() {
     created.once('load', () => {
       void (async () => {
         try {
-          const res = await fetch('/data/lv-border.json')
-          const border = (await res.json()) as FeatureCollection<Polygon | MultiPolygon>
+          const border = await borderRequest
           if (cancelled) return
           addSpotlight(created, border)
           setBorder(border)
@@ -156,6 +159,7 @@ export function MapView() {
         addCity(created, 'building-outline')
         setMap(created)
         stopScene = startScene(created)
+        releaseWarm()
         finishBoot()
         if (!urlView) runIntro(created)
         created.on('contextmenu', (event) => whatIsHere(created, event.lngLat.lng, event.lngLat.lat))
@@ -173,6 +177,7 @@ export function MapView() {
     return () => {
       cancelled = true
       clearTimeout(bootTimeout)
+      releaseWarm()
       window.removeEventListener('hashchange', followLink)
       container.removeEventListener('webglcontextlost', onContextLost, true)
       stopScene?.()

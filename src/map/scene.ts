@@ -29,6 +29,19 @@ function tickIntervalMs(zoom: number): number {
 }
 
 /**
+ * Starts polling the feeds of the layers that will be on, before the map has loaded, so their
+ * data is on its way while the style and tiles are. The scene holds the feeds itself once it
+ * starts; call the result then (or when the map is given up) to let go of these.
+ */
+export function prewarmFeeds(): () => void {
+  const { visible } = useLayers.getState()
+  const releases = LAYERS.filter((layer) => isLayerOn(visible, layer.id, layer.defaultOn)).flatMap((layer) => layer.feeds.map(acquireFeed))
+  return () => {
+    for (const release of releases.splice(0)) release()
+  }
+}
+
+/**
  * Draws every live layer on a deck.gl canvas laid over the map, and keeps it moving.
  * Overlaid rather than interleaved: redrawing the moving objects many times a second
  * then never forces the basemap to repaint.

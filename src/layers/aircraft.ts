@@ -10,6 +10,7 @@ import { positionAt } from '../map/motion'
 import { insideLatvia } from '../runtime/border'
 import { getEntities } from '../runtime/entityStore'
 import { getTrail } from '../runtime/trails'
+import { memoLast } from './common'
 import type { InspectorModel, LayerDef } from './types'
 
 const CIVIL: Color = [164, 232, 255]
@@ -22,6 +23,13 @@ const HALO: Color = [4, 7, 10, 215]
 
 const LABEL_FONT = '"JetBrains Mono Variable", ui-monospace, monospace'
 const TURBOPROP = /^(AT[4-7]|DH8|SF34|SB20|B350|BE20|BE9|PC12|C208|L410|SW4|JS[34]|D228|D328|AN2[4-6]|F50)/
+
+/** The region's aircraft, then the world's military ones, then those around the map's middle: one of each. */
+const mergeAircraft = memoLast((...lists: Entity[][]) => {
+  const seen = new Map<string, Aircraft>()
+  for (const list of lists) for (const aircraft of list as Aircraft[]) if (!seen.has(aircraft.id)) seen.set(aircraft.id, aircraft)
+  return [...seen.values()]
+})
 
 const is = (a: Entity, flag: number) => (a.flags & flag) !== 0
 
@@ -154,11 +162,7 @@ export const aircraftLayer: LayerDef = {
   build({ now, zoom, selectedId, hoveredId, fontsReady }) {
     // The region's own picture first; then the rest of the world's military aircraft, and whatever
     // is flying around the middle of the map when that is somewhere else. One of each aircraft.
-    const seen = new Map<string, Aircraft>()
-    for (const aircraft of [...getEntities('aircraft'), ...getEntities('aircraft-mil'), ...getEntities(VIEW_AIRCRAFT)] as Aircraft[]) {
-      if (!seen.has(aircraft.id)) seen.set(aircraft.id, aircraft)
-    }
-    const data = [...seen.values()]
+    const data = mergeAircraft(getEntities('aircraft'), getEntities('aircraft-mil'), getEntities(VIEW_AIRCRAFT))
     const { canvas, mapping } = getIconAtlas()
     // deck.gl accepts a canvas here at runtime; its typings only list URLs and textures.
     const iconAtlas = canvas as unknown as string

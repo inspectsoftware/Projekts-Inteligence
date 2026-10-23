@@ -9,6 +9,23 @@ export const HALO: Color = [4, 7, 10, 215]
 export const SELECTED: Color = [255, 255, 255]
 export const OUTLINE: Color = [4, 7, 10, 255]
 
+/**
+ * Keeps the last result for as long as it is asked with the same objects. A layer handed a new
+ * array is recomputed whole by deck.gl (every position, colour and label glyph), so data worked
+ * out in build() must stay the same array until the entities it comes from change.
+ */
+export function memoLast<A extends unknown[], R>(fn: (...args: A) => R): (...args: A) => R {
+  let last: A | null = null
+  let result: R
+  return (...args) => {
+    if (!last || args.length !== last.length || args.some((arg, i) => arg !== last![i])) {
+      last = args
+      result = fn(...args)
+    }
+    return result
+  }
+}
+
 /** Icons grow a little as the camera closes in, within sensible limits. */
 export function iconScale(zoom: number): number {
   return Math.min(1.5, Math.max(0.75, 0.75 + (zoom - 5.5) * 0.11))

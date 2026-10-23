@@ -5,8 +5,14 @@ import { locale, t } from '../i18n'
 import { formatLat, formatLon } from '../lib/coords'
 import { formatAge } from '../lib/format'
 import { getEntities } from '../runtime/entityStore'
-import { LABEL_FONT, OUTLINE, dots } from './common'
+import { LABEL_FONT, OUTLINE, dots, memoLast } from './common'
 import type { InspectorModel, LayerDef } from './types'
+
+/** Two layers so that the few urgent dots are never buried under the many roadworks. */
+const splitRoads = memoLast((data: RoadEvent[]) => ({
+  urgent: data.filter((event) => event.props.category !== 'roadworks'),
+  works: data.filter((event) => event.props.category === 'roadworks'),
+}))
 
 const SOURCE_LINK = [{ label: 'transportdata.gov.lv', href: 'https://map.transportdata.gov.lv/' }]
 
@@ -115,10 +121,7 @@ export const roadEventsLayer: LayerDef = {
   },
 
   build(ctx) {
-    const data = getEntities('roads') as RoadEvent[]
-    // Two layers so that the few urgent dots are never buried under the many roadworks.
-    const urgent = data.filter((event) => event.props.category !== 'roadworks')
-    const works = data.filter((event) => event.props.category === 'roadworks')
+    const { urgent, works } = splitRoads(getEntities('roads') as RoadEvent[])
     return [
       ...dots('road-works', works, () => CATEGORY.roadworks.color, CATEGORY.roadworks.radius, ctx),
       ...dots('road-incidents', urgent, (event) => CATEGORY[event.props.category].color, 5.5, ctx),
