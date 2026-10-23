@@ -1,4 +1,5 @@
 import { FEED_HEADERS, type FeedBody, type FeedId, type FeedsResponse } from '../../shared/feeds'
+import type { HistoryFeedId, HistoryIndex } from '../../shared/history'
 import { observeServerTime } from './clock'
 
 export type FeedFetch =
@@ -53,4 +54,17 @@ export async function fetchFeedList(signal?: AbortSignal): Promise<FeedsResponse
   const res = await fetch('/api/feeds', { signal, cache: 'no-store' })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return (await res.json()) as FeedsResponse
+}
+
+export async function fetchHistoryIndex(signal?: AbortSignal): Promise<HistoryIndex> {
+  const res = await fetch('/api/history', { signal, cache: 'no-store' })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  return (await res.json()) as HistoryIndex
+}
+
+/** A moving feed as it was at one of the times the history index lists. */
+export async function fetchHistoryFrame(id: HistoryFeedId, at: number, signal: AbortSignal): Promise<FeedBody> {
+  const res = await fetch(`/api/history/${id}?at=${at}`, { signal })
+  if (!res.ok) throw new FeedError(`HTTP ${res.status}`, res.status, null)
+  return (await res.json()) as FeedBody
 }

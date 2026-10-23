@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { readBuildInfo } from './buildInfo'
 import { FeedCache } from './core/cache'
 import { createDiskStore } from './core/disk'
+import { History } from './core/history'
 import { FEEDS, type FeedRegistry } from './feeds/registry'
 import { proxyHops, rateLimit } from './http/ratelimit'
 import type { Room } from './http/room'
@@ -42,12 +43,16 @@ export function createApp(options: AppOptions = {}): Hono {
     return app
   }
   app.use('/api/*', rateLimit(options.requestsPerMinute ?? 600, Date.now, proxyHops(env)))
+  const history = new History()
   app.route(
     '/api',
     apiRoutes({
       build: readBuildInfo(),
       feeds,
-      cache: options.cache ?? new FeedCache({ env, disk: createDiskStore(), resolve: (id) => feeds[id] }),
+      cache:
+        options.cache ??
+        new FeedCache({ env, disk: createDiskStore(), resolve: (id) => feeds[id], onSnapshot: (id, snapshot) => history.record(id, snapshot) }),
+      history,
       env,
       room: options.room,
     }),

@@ -1,5 +1,6 @@
 import { type ReactNode, useState } from 'react'
 import { t } from '../i18n'
+import { useRewind } from '../state/rewind'
 import { useUi } from '../state/ui'
 import { useWindows } from '../state/windows'
 import { POLITICS_HREF } from './politics'
@@ -56,6 +57,8 @@ export function Dock() {
   const resetLayout = useWindows((s) => s.resetLayout)
   const saveLayout = useWindows((s) => s.saveLayout)
   const developer = useUi((s) => s.developer)
+  const rewindOpen = useRewind((s) => s.open)
+  const rewound = useRewind((s) => s.at !== null)
   const [saved, setSaved] = useState(false)
   const save = () => {
     saveLayout()
@@ -80,6 +83,15 @@ export function Dock() {
         </a>
       </div>
       <div className="flex shrink-0 border-l border-line">
+        <button
+          type="button"
+          aria-pressed={rewindOpen}
+          title={t('Wind the aircraft, ships and GPS interference back over the last six hours')}
+          onClick={() => useRewind.getState().setOpen(!rewindOpen)}
+          className={`${BUTTON} hover:bg-ink-700 ${rewound ? 'text-warn' : rewindOpen ? 'text-accent' : 'text-fg-mute hover:text-fg'}`}
+        >
+          <DockIcon path="M8 3.5a4.5 4.5 0 11-4.5 4.5M3.5 4v4h4M8 5.5V8l2 1.5">{t('dock::Rewind')}</DockIcon>
+        </button>
         <button
           type="button"
           title={t('Save this window layout for the next visit. Without it the page opens with no windows')}

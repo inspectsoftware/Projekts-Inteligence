@@ -37,6 +37,9 @@ after two weeks.
   news and video.
 - **Watch and listen.** Live television from the publishers' own players, officially published
   live cameras across the Baltic, and radio from around the world.
+- **Wind it back.** **Rewind** in the taskbar winds the aircraft, ships and GPS interference back
+  over the last six hours, a frame a minute. The server keeps frames only while somebody is
+  looking (and a check every 15 minutes asks too), so quiet hours have gaps.
 - **Arrange it your way.** Every panel is a window you can drag, resize from any corner and keep. Share the exact
   view as a link, and use it in English, Latvian, Lithuanian, Estonian or Russian, in a dark or a
   light theme, on a desktop or a phone.
@@ -84,6 +87,8 @@ One npm package, one Node process.
 - The server is stateless and request-driven: every upstream feed sits behind an in-memory cache, so
   upstream load does not grow with the number of visitors, and the process can be stopped and
   restarted at any time without losing anything that matters.
+- The one record it keeps is the rewind history: a gzipped frame a minute of the aircraft, ships and
+  GPS interference feeds, for six hours, in memory (`server/core/history.ts`). A restart empties it.
 - Two routes depend on where visitors look, and both are bounded. Outside the Baltic, aircraft are
   fetched for wherever the map is (`/api/aircraft`): answers are shared per 4° grid cell for ten
   seconds, 40 cells are held at most, the sources are asked at most once every 1.5 s across all

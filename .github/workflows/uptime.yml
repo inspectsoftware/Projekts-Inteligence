@@ -1,0 +1,32 @@
+name: Uptime
+
+# Asks the live site whether it is up. A failed run is GitHub's own email to the repository's owner.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Health
+        run: |
+          # The host stops an idle process; the first request may wait for it to start again.
+          for attempt in 1 2 3; do
+            body=$(curl -fsS -m 30 https://inteligence.lv/api/health) && echo "$body" | grep -q '"ok":true' && { echo "$body"; exit 0; }
+            sleep 20
+          done
+          echo "::error::https://inteligence.lv/api/health did not answer ok"
+          exit 1
+
+      # Asking for the moving feeds makes the server refresh them, and so keep a frame of each
+      # for the rewind bar while nobody has the site open. Best effort: never fails the run.
+      - name: Record a rewind frame
+        run: |
+          for id in aircraft aircraft-mil ships gps-hex; do
+            curl -s -o /dev/null -m 30 -w "$id %{http_code}\n" "https://inteligence.lv/api/feed/$id" || true
+          done

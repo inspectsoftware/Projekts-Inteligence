@@ -1,3 +1,4 @@
+import { gunzipSync } from 'node:zlib'
 import { type Context, Hono } from 'hono'
 import { bodyLimit } from 'hono/body-limit'
 import { FEED_HEADERS, type FeedMeta, type FeedStatus, type FeedsResponse, isFeedId } from '../../shared/feeds'
@@ -7,6 +8,8 @@ import { type RadioResponse, isRadioBy } from '../../shared/radio'
 import { type ChatResponse, type PresenceResponse, VISITOR_HEADER, isVisitorId } from '../../shared/room'
 import type { BuildInfo } from '../buildInfo'
 import { type FeedCache, type FeedState, FeedUnavailable } from '../core/cache'
+import { History } from '../core/history'
+import { HISTORY_FEEDS, HISTORY_SPAN_MS, type HistoryIndex, isHistoryFeed } from '../../shared/history'
 import { camStill } from '../feeds/cams'
 import type { FeedRegistry } from '../feeds/registry'
 import { cameraFrame } from '../feeds/roads'
@@ -22,6 +25,8 @@ export interface ApiDeps {
   feeds: FeedRegistry
   cache: FeedCache
   env: NodeJS.ProcessEnv
+  /** The moving feeds' recent past. Overridable for tests. */
+  history?: History
   /** Overridable for tests. */
   room?: Room
 }
@@ -62,6 +67,7 @@ export function apiRoutes(deps: ApiDeps): Hono {
   /** A limit of a route's own, on top of the one every request counts against. */
   const limit = (perMinute: number) => rateLimit(perMinute, Date.now, hops)
   const radio = createRadioSearch()
+  const history = deps.history ?? new History()
 
   api.get('/health', (c) => {
     c.header('Cache-Control', 'no-store')
@@ -117,6 +123,34 @@ export function apiRoutes(deps: ApiDeps): Hono {
     if (encoding) c.header('Content-Encoding', encoding)
     c.header('Content-Type', 'application/json; charset=utf-8')
     return c.body(new Uint8Array(body))
+  })
+
+  /** When each moving feed has a frame from the last few hours. */
+  api.get('/history', (c) => {
+    const now = Date.now()
+    const body: HistoryIndex = {
+      serverTime: now,
+      spanMs: HISTORY_SPAN_MS,
+      feeds: Object.fromEntries(HISTORY_FEEDS.map((id) => [id, history.times(id)])) as HistoryIndex['feeds'],
+    }
+    c.header('Cache-Control', 'no-store')
+    return c.json(body)
+  })
+
+  /** One feed as it was at ?at= (epoch ms): the newest frame made at or before then. */
+  api.get('/history/:id', (c) => {
+    const id = c.req.param('id')
+    const at = Number(c.req.query('at'))
+    if (!isHistoryFeed(id) || !Number.isFinite(at)) return c.json({ error: 'bad_request' }, 400)
+    const frame = history.frame(id, at)
+    if (!frame) return c.json({ error: 'not_found' }, 404)
+    // Asked by its own time, a frame never changes; asked by any other, a newer one may yet answer.
+    c.header('Cache-Control', frame.at === at ? 'public, max-age=86400, immutable' : 'no-store')
+    c.header('Content-Type', 'application/json; charset=utf-8')
+    c.header('Vary', 'Accept-Encoding')
+    if (!/gzip/.test(c.req.header('accept-encoding') ?? '')) return c.body(new Uint8Array(gunzipSync(frame.gzip)))
+    c.header('Content-Encoding', 'gzip')
+    return c.body(new Uint8Array(frame.gzip))
   })
 
   /** Latest still from one road camera. The frames arrive inside the cameras feed and are kept in memory. */

@@ -2,6 +2,7 @@ import { AlertEngine } from '../../shared/alerts/engine'
 import { RULES } from '../../shared/alerts/rules'
 import { locale, t } from '../i18n'
 import { useAlerts } from '../state/alerts'
+import { rewinding } from '../state/rewind'
 import { insideLatvia } from './border'
 import { serverNow } from './clock'
 import { getEntities, getPayload, subscribeEntities } from './entityStore'
@@ -19,6 +20,8 @@ export function startAlerts(): () => void {
 
   const run = () => {
     pending = null
+    // The past raises no alerts: they would be about what is no longer happening.
+    if (rewinding()) return
     lastRun = Date.now()
     const result = engine.evaluate({
       now: serverNow(),

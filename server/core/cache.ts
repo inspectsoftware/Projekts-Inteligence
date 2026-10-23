@@ -88,6 +88,8 @@ export interface CacheDeps {
   disk?: DiskStore
   /** Looks up another feed's definition, for feeds that are derived from one. */
   resolve?(id: FeedId): FeedDef | undefined
+  /** Told of every fresh snapshot, for keeping a record of it. */
+  onSnapshot?(id: FeedId, snapshot: Snapshot): void
 }
 
 /**
@@ -103,6 +105,7 @@ export class FeedCache {
   private readonly log: (message: string) => void
   private readonly disk?: DiskStore
   private readonly resolve?: (id: FeedId) => FeedDef | undefined
+  private readonly onSnapshot?: (id: FeedId, snapshot: Snapshot) => void
 
   constructor(deps: CacheDeps = {}) {
     this.now = deps.now ?? Date.now
@@ -111,6 +114,7 @@ export class FeedCache {
     this.log = deps.log ?? ((message) => console.log(message))
     this.disk = deps.disk
     this.resolve = deps.resolve
+    this.onSnapshot = deps.onSnapshot
   }
 
   private entry(id: FeedId): Entry {
@@ -203,6 +207,7 @@ export class FeedCache {
           },
         })
         entry.snapshot = new Snapshot(def.id, payload, this.now(), this.countFor(def, payload))
+        this.onSnapshot?.(def.id, entry.snapshot)
         if (def.persist) void this.disk?.write(def.id, { updatedAt: entry.snapshot.updatedAt, payload })
         entry.error = null
         entry.failures = 0

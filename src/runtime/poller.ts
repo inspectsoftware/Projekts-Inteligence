@@ -1,7 +1,9 @@
 import type { FeedId } from '../../shared/feeds'
+import { isHistoryFeed } from '../../shared/history'
 import { layersFedBy } from '../layers/registry'
 import { useFeeds } from '../state/feeds'
-import { FeedError, fetchFeed } from './api'
+import { frameTime, useRewind } from '../state/rewind'
+import { FeedError, fetchFeed, fetchHistoryFrame } from './api'
 import { clearFeed, ingest } from './entityStore'
 import { logEvent } from './log'
 
@@ -37,6 +39,23 @@ async function poll(id: FeedId, job: Job): Promise<void> {
   job.controller = controller
   const { report } = useFeeds.getState()
   try {
+    const { at, index } = useRewind.getState()
+    if (at !== null && isHistoryFeed(id)) {
+      // Wound back: one frame, and no further polls until the moment shown changes.
+      const body = await fetchHistoryFrame(id, frameTime(index, id, at), controller.signal)
+      if (jobs.get(id) !== job) return
+      job.failures = 0
+      ingest(body)
+      const { payload, updatedAt } = body
+      const entities = payload.shape === 'entities' ? payload.entities : null
+      report(id, {
+        status: 'ok',
+        updatedAt,
+        error: null,
+        ...(entities && { count: entities.length, stats: layersFedBy(id).flatMap((layer) => layer.stats?.(entities) ?? []) }),
+      })
+      return
+    }
     const result = await fetchFeed(id, job.etag, controller.signal)
     if (jobs.get(id) !== job) return
     job.failures = 0
@@ -100,6 +119,20 @@ export function acquireFeed(id: FeedId): () => void {
     useFeeds.getState().report(id, { status: 'idle', count: null, stats: [] })
   }
 }
+
+// Winding back or forward, or back to live: the moving feeds ask again at once.
+useRewind.subscribe((state, before) => {
+  if (state.at === before.at) return
+  for (const [id, job] of jobs) {
+    if (!isHistoryFeed(id)) continue
+    if (job.timer) clearTimeout(job.timer)
+    job.timer = null
+    job.controller?.abort()
+    // What is held is a frame from the past, so the live copy must come back whole, not as a 304.
+    job.etag = null
+    void poll(id, job)
+  }
+})
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) return

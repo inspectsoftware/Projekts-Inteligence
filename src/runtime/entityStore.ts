@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { type Entity, MOVING_KINDS } from '../../shared/entity'
 import type { FeedBody, FeedId, FeedPayload, PayloadOf } from '../../shared/feeds'
+import { rewound } from '../state/rewind'
 import { serverNow } from './clock'
 import { recordTrails } from './trails'
 
@@ -37,7 +38,8 @@ export function ingest(body: FeedBody): void {
   if (body.payload.shape === 'entities') {
     const { entities } = body.payload
     replaceSlot(body.id, entities)
-    if (entities.length > 0 && MOVING_KINDS.has(entities[0].kind)) recordTrails(entities, serverNow())
+    // A frame from the past is no step along anyone's track.
+    if (entities.length > 0 && MOVING_KINDS.has(entities[0].kind) && !rewound(entities[0].kind)) recordTrails(entities, serverNow())
   }
   notify()
 }

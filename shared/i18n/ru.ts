@@ -1238,4 +1238,10 @@ export const ru: Record<string, string> = {
   'None in the next 3 hours': 'В ближайшие 3 часа нет',
   'Timetable (saraksti.lv)': 'Расписание (saraksti.lv)',
   'Rīgas satiksme open data (CC0)': 'Открытые данные Rīgas satiksme (CC0)',
+  'dock::Rewind': 'Назад',
+  'Rewind': 'Перемотка назад',
+  'Rewind time': 'Время перемотки',
+  'Back to live': 'К текущему',
+  'Wind the aircraft, ships and GPS interference back over the last six hours': 'Перемотать самолёты, суда и помехи GPS на последние шесть часов назад',
+  'Nothing recorded yet: the server keeps a frame a minute while someone is watching': 'Пока ничего не записано: сервер хранит кадр в минуту, пока кто-то смотрит',
 }

@@ -7,6 +7,7 @@ import { Dock } from './ui/Dock'
 import { Hud } from './ui/Hud'
 import { MapButtons } from './ui/MapButtons'
 import { PoliticsPage } from './ui/PoliticsPage'
+import { RewindBar } from './ui/RewindBar'
 import { onPoliticsPage } from './ui/politics'
 import { TopBar } from './ui/TopBar'
 import { WalkPanel } from './ui/WalkPanel'
@@ -26,6 +27,7 @@ export default function App() {
       <MapView />
       <TopBar />
       <Dock />
+      <RewindBar />
       <MapButtons />
       <Hud />
       <WalkPanel />

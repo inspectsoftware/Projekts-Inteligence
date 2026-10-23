@@ -1,5 +1,6 @@
-import type { Entity } from '../../shared/entity'
+import type { Entity, EntityKind } from '../../shared/entity'
 import { haversine } from '../../shared/geo/sphere'
+import { rewound } from '../state/rewind'
 
 /** Where an entity has recently been, oldest first. Kept in the browser: the server stores no history. */
 export interface Trail {
@@ -33,5 +34,6 @@ export function recordTrails(entities: readonly Entity[], now: number): void {
 }
 
 export function getTrail(id: string): Trail | undefined {
-  return trails.get(id)
+  // The trails run up to now: drawn behind a frame from the past they would lead nowhere.
+  return rewound(id.slice(0, id.indexOf(':')) as EntityKind) ? undefined : trails.get(id)
 }

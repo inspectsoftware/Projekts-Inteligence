@@ -1256,4 +1256,10 @@ export const lv: Record<string, string> = {
   'None in the next 3 hours': 'Tuvāko 3 stundu laikā nav',
   'Timetable (saraksti.lv)': 'Saraksts (saraksti.lv)',
   'Rīgas satiksme open data (CC0)': 'Rīgas satiksmes atvērtie dati (CC0)',
+  'dock::Rewind': 'Atpakaļ',
+  'Rewind': 'Attīšana atpakaļ',
+  'Rewind time': 'Attīšanas laiks',
+  'Back to live': 'Uz tiešraidi',
+  'Wind the aircraft, ships and GPS interference back over the last six hours': 'Attīt gaisa kuģus, kuģus un GPS traucējumus atpakaļ pēdējo sešu stundu robežās',
+  'Nothing recorded yet: the server keeps a frame a minute while someone is watching': 'Vēl nekas nav ierakstīts: serveris saglabā kadru minūtē, kamēr kāds skatās',
 }

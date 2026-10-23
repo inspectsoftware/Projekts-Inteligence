@@ -23,3 +23,10 @@ scripts/.cache
 
 # Security-test accounts (secrets, never commit)
 tests/security/accounts.local.json
+
+# Video projects: keep the sources, not what renders and previews rebuild
+videos/*/renders/
+videos/*/renders-log.txt
+videos/*/snapshots/
+videos/*/.thumbnails/
+videos/*/.waveform-cache/
