@@ -1232,4 +1232,7 @@ export const lt: Record<string, string> = {
   'Back to live': 'Grįžti į dabartį',
   'Wind the aircraft, ships and GPS interference back over the last six hours': 'Atsukti orlaivius, laivus ir GPS trikdžius iki šešių valandų atgal',
   'Nothing recorded yet: the server keeps a frame a minute while someone is watching': 'Kol kas nieko neįrašyta: serveris išsaugo kadrą per minutę, kol kas nors žiūri',
+  'Most military aircraft: {n} at {time}': 'Daugiausia karinių orlaivių: {n} {time}',
+  'Most heavily jammed GPS cells: {n} at {time}': 'Daugiausia stipriai trikdomų GPS langelių: {n} {time}',
+  'Most military or sanctioned ships: {n} at {time}': 'Daugiausia karinių ar sankcionuotų laivų: {n} {time}',
 }

@@ -1,10 +1,12 @@
 import { gzipSync } from 'node:zlib'
-import { HISTORY_FEEDS, HISTORY_SPAN_MS, HISTORY_STEP_MS, type HistoryFeedId, isHistoryFeed } from '../../shared/history'
+import { HISTORY_FEEDS, activity, HISTORY_SPAN_MS, HISTORY_STEP_MS, type HistoryFeedId, isHistoryFeed } from '../../shared/history'
 import type { FeedId } from '../../shared/feeds'
 import type { Snapshot } from './cache'
 
 interface Frame {
   at: number
+  /** See activity() in shared/history.ts. */
+  activity: number
   /** The snapshot's body, gzipped once when it is kept. */
   gzip: Buffer
 }
@@ -36,7 +38,7 @@ export class History {
     const last = list[list.length - 1]
     if (last && snapshot.updatedAt - last.at < this.stepMs) return
     const gzip = gzipSync(snapshot.json, { level: 6 })
-    list.push({ at: snapshot.updatedAt, gzip })
+    list.push({ at: snapshot.updatedAt, activity: activity(snapshot.payload), gzip })
     let bytes = this.bytes.get(id)! + gzip.length
     while (list.length > 0 && (list[0].at < snapshot.updatedAt - this.spanMs || bytes > MAX_BYTES_PER_FEED)) {
       bytes -= list.shift()!.gzip.length
@@ -46,6 +48,10 @@ export class History {
 
   times(id: HistoryFeedId): number[] {
     return this.frames.get(id)!.map((frame) => frame.at)
+  }
+
+  activity(id: HistoryFeedId): number[] {
+    return this.frames.get(id)!.map((frame) => frame.activity)
   }
 
   /** The newest frame made at or before `at`, or the oldest one when `at` is earlier than all of them. */

@@ -1263,4 +1263,7 @@ export const et: Record<string, string> = {
   'Back to live': 'Tagasi otsepilti',
   'Wind the aircraft, ships and GPS interference back over the last six hours': 'Keri õhusõidukid, laevad ja GPS-häired kuni kuus tundi tagasi',
   'Nothing recorded yet: the server keeps a frame a minute while someone is watching': 'Veel pole midagi salvestatud: server hoiab kaadri minutis, kuni keegi vaatab',
+  'Most military aircraft: {n} at {time}': 'Kõige rohkem sõjaväe õhusõidukeid: {n} kell {time}',
+  'Most heavily jammed GPS cells: {n} at {time}': 'Kõige rohkem tugevalt häiritud GPS-lahtreid: {n} kell {time}',
+  'Most military or sanctioned ships: {n} at {time}': 'Kõige rohkem sõjaväe- või sanktsioneeritud laevu: {n} kell {time}',
 }

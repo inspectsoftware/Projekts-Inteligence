@@ -1262,4 +1262,7 @@ export const lv: Record<string, string> = {
   'Back to live': 'Uz tiešraidi',
   'Wind the aircraft, ships and GPS interference back over the last six hours': 'Attīt gaisa kuģus, kuģus un GPS traucējumus atpakaļ pēdējo sešu stundu robežās',
   'Nothing recorded yet: the server keeps a frame a minute while someone is watching': 'Vēl nekas nav ierakstīts: serveris saglabā kadru minūtē, kamēr kāds skatās',
+  'Most military aircraft: {n} at {time}': 'Visvairāk militāro gaisa kuģu: {n} plkst. {time}',
+  'Most heavily jammed GPS cells: {n} at {time}': 'Visvairāk stipri traucētu GPS šūnu: {n} plkst. {time}',
+  'Most military or sanctioned ships: {n} at {time}': 'Visvairāk militāro vai sankcionēto kuģu: {n} plkst. {time}',
 }

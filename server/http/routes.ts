@@ -132,6 +132,7 @@ export function apiRoutes(deps: ApiDeps): Hono {
       serverTime: now,
       spanMs: HISTORY_SPAN_MS,
       feeds: Object.fromEntries(HISTORY_FEEDS.map((id) => [id, history.times(id)])) as HistoryIndex['feeds'],
+      activity: Object.fromEntries(HISTORY_FEEDS.map((id) => [id, history.activity(id)])) as HistoryIndex['activity'],
     }
     c.header('Cache-Control', 'no-store')
     return c.json(body)

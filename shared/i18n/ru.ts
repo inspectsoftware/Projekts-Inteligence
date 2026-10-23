@@ -1244,4 +1244,7 @@ export const ru: Record<string, string> = {
   'Back to live': 'К текущему',
   'Wind the aircraft, ships and GPS interference back over the last six hours': 'Перемотать самолёты, суда и помехи GPS на последние шесть часов назад',
   'Nothing recorded yet: the server keeps a frame a minute while someone is watching': 'Пока ничего не записано: сервер хранит кадр в минуту, пока кто-то смотрит',
+  'Most military aircraft: {n} at {time}': 'Больше всего военных самолётов: {n} в {time}',
+  'Most heavily jammed GPS cells: {n} at {time}': 'Больше всего ячеек с сильными помехами GPS: {n} в {time}',
+  'Most military or sanctioned ships: {n} at {time}': 'Больше всего военных или подсанкционных судов: {n} в {time}',
 }

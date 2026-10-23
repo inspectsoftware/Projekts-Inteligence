@@ -2,6 +2,8 @@ import { gunzipSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
 import { Snapshot } from '../../server/core/cache'
 import { History } from '../../server/core/history'
+import { Flag } from '../../shared/entity'
+import { activity } from '../../shared/history'
 
 const MIN = 60_000
 const snap = (at: number) => new Snapshot('aircraft', { shape: 'entities', entities: [] }, at, 0)
@@ -19,5 +21,14 @@ describe('History', () => {
     expect(history.frame('ships', 0)).toBeUndefined()
     const body = JSON.parse(gunzipSync(history.frame('aircraft', 20 * MIN)!.gzip).toString()) as { updatedAt: number }
     expect(body.updatedAt).toBe(20 * MIN)
+  })
+})
+
+describe('activity', () => {
+  it('counts what a spike would be made of', () => {
+    const plane = (flags: number) => ({ id: `aircraft:${flags}`, kind: 'aircraft' as const, lon: 24, lat: 57, ts: 0, flags, props: {} })
+    expect(activity({ shape: 'entities', entities: [plane(0), plane(Flag.MIL), plane(Flag.MIL | Flag.EMERGENCY)] })).toBe(2)
+    const cell = (good: number, bad: number) => ({ id: `${good}-${bad}`, boundary: [], good, bad })
+    expect(activity({ shape: 'cells', windowStart: 0, cells: [cell(10, 0), cell(5, 5), cell(1, 0)] })).toBe(1)
   })
 })
