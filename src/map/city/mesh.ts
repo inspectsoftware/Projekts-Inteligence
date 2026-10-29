@@ -8,7 +8,7 @@
 import { VectorTile, classifyRings } from '@mapbox/vector-tile'
 import earcut from 'earcut'
 import { PbfReader } from 'pbf'
-import type { ExtrudedTile, ModelCrs, ModelNode, NodeBox, TreeNode } from './types'
+import type { ExtrudedTile, MeshPiece, ModelCrs, ModelNode, NodeBox, Polygon, TreeNode } from './types'
 
 /** MapLibre's own figure, so that a metre here is a metre to its camera and its extrusions. */
 const EARTH_CIRCUMFERENCE = 2 * Math.PI * 6371008.8
@@ -296,6 +296,105 @@ export function decodeModelNode(data: ArrayBuffer, obb: NodeBox, crs: ModelCrs, 
     buildings[f * 7 + 6] = tops[f] - floor
   }
   return { kind: 'model', origin, scale, positions, buildings }
+}
+
+/** Bytes a vertex of each array a mesh's geometry may carry. */
+const MESH_ARRAY_BYTES: Record<string, number> = { position: 12, normal: 12, uv0: 8, color: 4 }
+
+/** Squares along each side of a mesh piece's cover (MeshPiece.cover). */
+export const MESH_COVER = 16
+
+/** Whether a point lies inside a polygon given as rings of x, y one after another: inside an odd number of them. */
+export function inside(x: number, y: number, rings: number[][]): boolean {
+  let odd = false
+  for (const ring of rings) {
+    for (let i = 0, j = ring.length - 2; i < ring.length; j = i, i += 2) {
+      if (ring[i + 1] > y !== ring[j + 1] > y && x < ((ring[j] - ring[i]) * (y - ring[i + 1])) / (ring[j + 1] - ring[i + 1]) + ring[i]) odd = !odd
+    }
+  }
+  return odd
+}
+
+/**
+ * One node of a photographed city (I3S IntegratedMesh): geometry buffer 0, uncompressed. After a
+ * count of vertices and of features come whole arrays one after another, in the order `attributes`
+ * lists them, then an id and a range of triangles per feature, which a mesh has no use for. Only
+ * the positions and the photo's coordinates are read: the light is in the photo already. Positions
+ * are Web Mercator offsets from the centre of the node's box, heights metres in Latvia's system,
+ * as the terrain's are. Each corner is set down by the terrain under it (`ground`, NaN where there
+ * is none, as over open sea, which lies at 0), so the mesh stands on the map's ground as the rest of
+ * the city does. Subtracting a smooth terrain keeps walls upright: a wall's top and foot share x, y.
+ * Triangles whose middle lies in one of `cuts` are left out, as the layer's scene leaves them out.
+ */
+export function decodeMeshNode(
+  data: ArrayBuffer,
+  obb: NodeBox,
+  ground: (lon: number, lat: number) => number,
+  attributes: readonly string[] = ['position', 'uv0'],
+  cuts: readonly Polygon[] = [],
+): Omit<MeshPiece, 'photo'> {
+  const view = new DataView(data)
+  const vertexCount = data.byteLength >= 8 ? view.getUint32(0, true) : 0
+  const featureCount = data.byteLength >= 8 ? view.getUint32(4, true) : 0
+  const bytes = attributes.map((attribute) => MESH_ARRAY_BYTES[attribute])
+  if (attributes[0] !== 'position' || !attributes.includes('uv0') || !bytes.every(Boolean)) throw new Error(`A mesh of ${attributes.join(', ')} per vertex`)
+  // 16 bytes a feature: id 8, range 8.
+  if (data.byteLength < 8 + vertexCount * bytes.reduce((sum, size) => sum + size, 0) + featureCount * 16 || vertexCount % 3 !== 0) {
+    throw new Error(`A mesh node of ${data.byteLength} bytes cannot hold the ${vertexCount} vertices and ${featureCount} features it claims`)
+  }
+  const source = new Float32Array(data, 8, vertexCount * 3)
+  const uvAt = 8 + vertexCount * bytes.slice(0, attributes.indexOf('uv0')).reduce((sum, size) => sum + size, 0)
+  const uvs = new Float32Array(data, uvAt, vertexCount * 2).slice()
+
+  const [centreX, centreY, centreZ] = obb.center
+  const origin: [number, number] = [crsX(3857, centreX), crsY(3857, centreY)]
+  const scale = metreScale(latitudeOf(origin[1]))
+  const positions = new Float32Array(vertexCount * 3)
+  const grounds = new Float32Array(vertexCount)
+  for (let v = 0; v < vertexCount; v++) {
+    const x = crsX(3857, centreX + source[3 * v])
+    const y = crsY(3857, centreY + source[3 * v + 1])
+    const under = ground(x * 360 - 180, latitudeOf(y))
+    grounds[v] = Number.isFinite(under) ? under : 0
+    positions[3 * v] = (x - origin[0]) / scale
+    positions[3 * v + 1] = (origin[1] - y) / scale
+    positions[3 * v + 2] = centreZ + source[3 * v + 2] - grounds[v]
+  }
+
+  let kept = vertexCount
+  if (cuts.length) {
+    const polygons = cuts.map((polygon) => polygon.map((ring) => ring.flatMap(([lon, lat]) => [mercatorX(lon), mercatorY(lat)])))
+    kept = 0
+    for (let t = 0; t < vertexCount; t += 3) {
+      const x = origin[0] + ((positions[3 * t] + positions[3 * t + 3] + positions[3 * t + 6]) / 3) * scale
+      const y = origin[1] - ((positions[3 * t + 1] + positions[3 * t + 4] + positions[3 * t + 7]) / 3) * scale
+      if (polygons.some((rings) => inside(x, y, rings))) continue
+      positions.copyWithin(3 * kept, 3 * t, 3 * t + 9)
+      uvs.copyWithin(2 * kept, 2 * t, 2 * t + 6)
+      grounds.copyWithin(kept, t, t + 3)
+      kept += 3
+    }
+  }
+
+  // Where it has triangles, square by square over its box: a triangle marks every square its own box
+  // reaches. A node's ground interlocks with its neighbours', so a quarter of its box may be theirs.
+  const cover = new Uint8Array(MESH_COVER * MESH_COVER)
+  let [west, south, east, north] = [Infinity, Infinity, -Infinity, -Infinity]
+  for (let v = 0; v < kept; v++) {
+    west = Math.min(west, positions[3 * v])
+    east = Math.max(east, positions[3 * v])
+    south = Math.min(south, positions[3 * v + 1])
+    north = Math.max(north, positions[3 * v + 1])
+  }
+  const square = (value: number, low: number, high: number) => Math.min(MESH_COVER - 1, Math.max(0, Math.floor(((value - low) / (high - low)) * MESH_COVER)))
+  for (let t = 0; t < kept; t += 3) {
+    const xs = [positions[3 * t], positions[3 * t + 3], positions[3 * t + 6]]
+    const ys = [positions[3 * t + 1], positions[3 * t + 4], positions[3 * t + 7]]
+    for (let j = square(Math.min(...ys), south, north); j <= square(Math.max(...ys), south, north); j++) {
+      for (let i = square(Math.min(...xs), west, east); i <= square(Math.max(...xs), west, east); i++) cover[j * MESH_COVER + i] = 1
+    }
+  }
+  return { kind: 'mesh', origin, scale, positions: positions.slice(0, 3 * kept), uvs: uvs.slice(0, 2 * kept), grounds: grounds.slice(0, kept), cover }
 }
 
 /**

@@ -347,7 +347,8 @@ export const lt: Record<string, string> = {
   'Sat': 'Palyd',
   'Sat 3D': 'Palyd 3D',
   'Air photos with the buildings standing in 3D, their roofs taken from the photos': 'Aerofoto su pastatais 3D, jų stogai iš nuotraukų',
-  'Official 3D city models where there are any, elsewhere buildings from map data. Roofs as sharp as the air photos.': 'Oficialūs miestų 3D modeliai, kur jų yra, kitur pastatai iš žemėlapio duomenų. Stogai tokie ryškūs, kokios aerofotonuotraukos.',
+  'Rīga as a photorealistic 3D model. Elsewhere official 3D city models where there are any, or buildings from map data; roofs as sharp as the air photos.':
+    'Ryga – fotorealistiniame 3D modelyje. Kitur oficialūs miestų 3D modeliai, kur jų yra, arba pastatai iš žemėlapio duomenų; stogai tokie ryškūs, kokios aerofotonuotraukos.',
   'National orthophotos over the Sentinel-2 cloudless mosaic (2025)': 'Nacionalinės ortofotografijos ant Sentinel-2 mozaikos be debesų (2025)',
   'Air photos of the Baltic states, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.': 'Baltijos šalių aerofotografijos, apie 0,25 m pikseliui. Kitur 10 m palydoviniai duomenys, neryškūs didinant daugiau kaip iki 13 lygio.',
   'Air photos of Latvia and Estonia, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.': 'Latvijos ir Estijos aerofotografijos, apie 0,25 m pikseliui. Kitur 10 m palydoviniai duomenys, neryškūs didinant daugiau kaip iki 13 lygio.',

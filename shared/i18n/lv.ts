@@ -370,7 +370,8 @@ export const lv: Record<string, string> = {
   'Sat': 'Sat',
   'Sat 3D': 'Sat 3D',
   'Air photos with the buildings standing in 3D, their roofs taken from the photos': 'Gaisa foto ar ēkām 3D, to jumti no foto',
-  'Official 3D city models where there are any, elsewhere buildings from map data. Roofs as sharp as the air photos.': 'Oficiālie pilsētu 3D modeļi, kur tādi ir, citur ēkas no kartes datiem. Jumti tik asi, cik gaisa foto.',
+  'Rīga as a photorealistic 3D model. Elsewhere official 3D city models where there are any, or buildings from map data; roofs as sharp as the air photos.':
+    'Rīga fotoreālistiskā 3D modelī. Citur oficiālie pilsētu 3D modeļi, kur tādi ir, vai ēkas no kartes datiem; jumti tik asi, cik gaisa foto.',
   'National orthophotos over the Sentinel-2 cloudless mosaic (2025)': 'Valstu ortofoto virs Sentinel-2 bezmākoņu mozaīkas (2025)',
   'Air photos of the Baltic states, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.':
     'Baltijas valstu aerofoto, aptuveni 0,25 m uz pikseli. Citur 10 m satelītdati, izplūduši aiz 13. mēroga līmeņa.',

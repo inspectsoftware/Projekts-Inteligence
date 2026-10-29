@@ -39,6 +39,11 @@ void finish(vec3 color) {
 float hash(vec3 p) {
   return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
 }
+
+// As the satellite base is shown under it: a quarter less saturated, and no brighter than 0.7.
+vec3 tone(vec3 c) {
+  return mix(c, vec3((c.r + c.g + c.b) / 3.0), 0.25) * 0.7;
+}
 `
 
 export const BUILDING_VERTEX = `#version 300 es
@@ -100,11 +105,6 @@ vec4 photo(vec2 tiles, int finest) {
   return color;
 }
 
-// As the satellite base is shown under it: a quarter less saturated, and no brighter than 0.7.
-vec3 tone(vec3 c) {
-  return mix(c, vec3((c.r + c.g + c.b) / 3.0), 0.25) * 0.7;
-}
-
 void main() {
   // A building across a tile edge comes in both tiles: each draws only the part on its own square.
   if (v_pos.x < u_clip.x || v_pos.y < u_clip.y || v_pos.x > u_clip.z || v_pos.y > u_clip.w) discard;
@@ -154,6 +154,52 @@ void main() {
     color += u_glow * vec3(1.0, 0.72, 0.42) * pane * lamp * detail;
   }
   finish(color);
+}
+`
+
+/**
+ * Rīga photographed in 3D (Sat 3D). Each corner comes set down on z = 0 by the terrain under it
+ * (mesh.ts), and is raised again as far as the relief raises that terrain, plus a little clearance
+ * so the relief's own drape does not show through: u_relief is the exaggeration (0 without the
+ * relief) and that clearance. A piece drawn beside a closer photographed one is moved back along
+ * the line from the camera (u_eye, in the piece's metres), as far as lowers it u_push.y and no
+ * further than u_push.x, metres (0 for none): where both show the same ground the closer one
+ * wins, and on the screen neither moves.
+ */
+export const MESH_VERTEX = `#version 300 es
+precision highp float;
+uniform mat4 u_matrix;
+uniform vec2 u_relief;
+uniform vec3 u_eye;
+uniform vec2 u_push;
+in vec3 a_pos;
+in vec2 a_uv;
+in float a_ground;
+out vec3 v_pos;
+out vec2 v_uv;
+out float v_w;
+
+void main() {
+  v_pos = vec3(a_pos.xy, a_pos.z + u_relief.x * a_ground + u_relief.y);
+  if (u_push.x > 0.0) {
+    vec3 ray = normalize(v_pos - u_eye);
+    v_pos += ray * min(u_push.x, u_push.y / max(-ray.z, 0.01));
+  }
+  v_uv = a_uv;
+  gl_Position = u_matrix * vec4(v_pos, 1.0);
+  v_w = gl_Position.w;
+}
+`
+
+export const MESH_FRAGMENT = `#version 300 es
+precision highp float;
+uniform sampler2D u_photo;
+in vec2 v_uv;
+${SHADING}
+
+void main() {
+  // The photo has its sun and shade in it already: it is only toned as the air photo round it is, and hazed.
+  finish(tone(texture(u_photo, v_uv).rgb));
 }
 `
 

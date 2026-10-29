@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TILE_ORIGINS } from '../../shared/origins'
 import { valueIn } from '../../src/map/city/building'
 import { DEM_SIZE, DEM_ZOOM, sampleGround, terrariumHeights, tilesAround } from '../../src/map/city/dem'
-import { attributeStrings, decodeModelNode, decodeTrees, extrudeTile, mercatorX, mercatorY, metreScale, parseColour } from '../../src/map/city/mesh'
-import { bakedLeaves, boxCentre, boxRadius, moveMetres } from '../../src/map/city/sources'
+import { MESH_COVER, attributeStrings, decodeMeshNode, decodeModelNode, decodeTrees, extrudeTile, mercatorX, mercatorY, metreScale, parseColour } from '../../src/map/city/mesh'
+import { type MeshNode, type MeshPick, type MeshView, bakedLeaves, boxCentre, boxRadius, meshCut, meshNode, moveMetres, selectMesh, shrunkTexels } from '../../src/map/city/sources'
 import type { BakedLeaf, CityCatalogue, CityLayer, NodeBox } from '../../src/map/city/types'
 
 /** A fixture's bytes in a buffer of their own: Node pools small files into one shared buffer. */
@@ -331,6 +331,296 @@ describe('city trees', () => {
   })
 })
 
+describe('city mesh', () => {
+  // Mesh_V3_WSL1 node 1628, geometry resource 21: a narrow leaf of LĢIA's mesh of Rīga, 417 corners.
+  // Its box is Web Mercator metres across and metres up, turned in that space.
+  const obb: NodeBox = {
+    center: [2685888.012106022, 7748050.651909767, 8.853949638240627],
+    halfSize: [31.742277, 5.2460127, 3.7043521],
+    quaternion: [-0.06160055117410437, 0.4989349605919598, 0.8640419525785721, 0.026472275655008374],
+  }
+  const world = 2 * 20037508.342789244
+  const layer: CityLayer = { name: 'Test', url: 'https://example.org/layers/0', crs: 3857, bbox: [0, 0, 0, 0] }
+
+  /** A corner of the piece as Web Mercator metres across and metres up from the box's centre, its ground given back. */
+  const offset = (piece: ReturnType<typeof decodeMeshNode>, v: number, ground: number) => [
+    piece.positions[3 * v] * piece.scale * world,
+    piece.positions[3 * v + 1] * piece.scale * world,
+    piece.positions[3 * v + 2] + ground - obb.center[2],
+  ]
+
+  it('reads every corner and its place in the photo, set down by the ground under it, all inside the box', () => {
+    const piece = decodeMeshNode(fixture('city.mesh.bin'), obb, () => 5)
+    expect(piece.positions.length).toBe(417 * 3)
+    expect(piece.uvs.every((value) => value >= 0 && value <= 1)).toBe(true)
+    expect(piece.grounds.every((ground) => ground === 5)).toBe(true)
+    // Turned back into the box's own frame, each corner lies within its half sizes.
+    const [x, y, z, w] = obb.quaternion
+    const turn = [
+      [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+      [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+      [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)],
+    ]
+    for (let v = 0; v < 417; v++) {
+      const d = offset(piece, v, 5)
+      for (let axis = 0; axis < 3; axis++) {
+        const along = turn[0][axis] * d[0] + turn[1][axis] * d[1] + turn[2][axis] * d[2]
+        expect(Math.abs(along)).toBeLessThan(obb.halfSize[axis] + 0.01)
+      }
+    }
+  })
+
+  it('makes a node whose sphere holds every corner, in the space the camera is measured in', () => {
+    const node = meshNode(layer, { index: 1628, obb, lodThreshold: 409728.83, mesh: { geometry: { resource: 21, vertexCount: 417 }, material: { resource: 21, texelCountHint: 2097152 } } })
+    expect(node.content).toEqual({ geometry: 'https://example.org/layers/0/nodes/21/geometries/0', photo: 'https://example.org/layers/0/nodes/21/textures/0', vertices: 417, texels: 2097152, attributes: undefined })
+    expect(node.centre[0]).toBeCloseTo(mercatorX(boxCentre(obb, 3857).lng), 12)
+    expect(node.centre[1]).toBeCloseTo(mercatorY(boxCentre(obb, 3857).lat), 12)
+    // Up is stretched as Mercator stretches the ground there.
+    const stretch = 1 / Math.cos((boxCentre(obb, 3857).lat * Math.PI) / 180)
+    const piece = decodeMeshNode(fixture('city.mesh.bin'), obb, () => 0)
+    let farthest = 0
+    for (let v = 0; v < 417; v++) {
+      const [dx, dy, dz] = offset(piece, v, 0)
+      farthest = Math.max(farthest, Math.hypot(dx, dy, dz * stretch))
+    }
+    expect(farthest).toBeLessThanOrEqual(node.radius * world)
+    // Between the box's corners unstretched and stretched every way.
+    expect(node.radius * world).toBeGreaterThanOrEqual(Math.hypot(...obb.halfSize))
+    expect(node.radius * world).toBeLessThanOrEqual(Math.hypot(...obb.halfSize) * stretch)
+  })
+
+  it('finds the photo after normals where a layer has them, and refuses what it cannot read', () => {
+    // One triangle: positions, normals, places in the photo and colours, then one feature's id and range.
+    const buffer = new ArrayBuffer(8 + 3 * (12 + 12 + 8 + 4) + 16)
+    new DataView(buffer).setUint32(0, 3, true)
+    new DataView(buffer).setUint32(4, 1, true)
+    new Float32Array(buffer, 8, 9).set([0, 0, 1, 2, 0, 1, 0, 2, 1])
+    new Float32Array(buffer, 8 + 72, 6).set([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
+    const flat: NodeBox = { ...obb, center: [obb.center[0], obb.center[1], 0] }
+    const layout = ['position', 'normal', 'uv0', 'color']
+    const piece = decodeMeshNode(buffer, flat, () => NaN, layout)
+    expect([...piece.uvs]).toEqual([0.1, 0.2, 0.3, 0.4, 0.5, 0.6].map(Math.fround))
+    // Over open sea there is no terrain, and it stands on 0.
+    expect([...piece.grounds]).toEqual([0, 0, 0])
+    expect([...piece.positions].filter((_, i) => i % 3 === 2)).toEqual([1, 1, 1])
+    // 2 Web Mercator metres east, in ground metres there.
+    expect(piece.positions[3]).toBeCloseTo(2 / (piece.scale * world), 5)
+    expect(() => decodeMeshNode(buffer.slice(0, buffer.byteLength - 1), flat, () => 0, layout)).toThrow(/cannot hold/)
+    expect(() => decodeMeshNode(buffer, flat, () => 0, ['position', 'uvRegion'])).toThrow(/per vertex/)
+    expect(decodeMeshNode(new ArrayBuffer(8), flat, () => 0).positions.length).toBe(0)
+  })
+
+  // A root with no mesh of its own, then A, then B and C side by side: as Rīga's blocks begin.
+  const node = (children: number[], x: number, radius: number, threshold: number, content = true): MeshNode => ({
+    key: `i:test#${x}/${radius}`,
+    children,
+    obb,
+    centre: [x, 0, 0],
+    radius,
+    box: [x - radius, -radius, -radius, x + radius, radius, radius],
+    threshold,
+    rank: 1,
+    content: content ? { geometry: '', photo: '', vertices: 0, texels: 0 } : null,
+  })
+  const nodes = [node([1], 0, 100, 0, false), node([2, 3], 0, 100, 2000), node([], -50, 50, 1000), node([], 50, 50, 1000)]
+
+  /**
+   * What is drawn and what the view asks for, seen from `eye` on the x axis, with `ready` on the
+   * graphics card, `hidden` out of view, the point looked at `near` away and `covered` shown by a
+   * closer mesh. Every node is known.
+   */
+  function select(eye: number, ready: number[], hidden: number[] = [], near = Infinity, covered: number[] = [], list = nodes) {
+    const pick: MeshPick = { targets: [], draw: [] }
+    const shows = (box: number[]) => !hidden.some((i) => list[i].box === box)
+    const view: MeshView = { eye: [eye, 0, 0], focal: 1000, photo: 1024, near, shows, onScreen: shows }
+    const tree = { node: (index: number) => list[index], known: (index: number) => list[index] }
+    selectMesh(tree, 0, view, (n) => ready.includes(list.indexOf(n)), pick, (n) => covered.includes(list.indexOf(n)))
+    return { draw: pick.draw.map((n) => list.indexOf(n)), targets: pick.targets.map((n) => list.indexOf(n)) }
+  }
+
+  it('draws a node until its sphere outgrows its threshold, then its children, never both, standing in while they come', () => {
+    // π (100 · 1000 / d)² is 2000 at d of about 3963: from further away A will do.
+    expect(select(5000, [])).toEqual({ draw: [], targets: [1] })
+    expect(select(5000, [1])).toEqual({ draw: [1], targets: [1] })
+    const edge = (100 * 1000) / Math.sqrt(2000 / Math.PI)
+    expect(select(edge * 1.0001, [1, 2, 3]).draw).toEqual([1])
+    expect(select(edge * 0.9999, [1, 2, 3]).draw).toEqual([2, 3])
+    // Nearer, with C on its way, A stands in for both.
+    expect(select(1000, [1, 2])).toEqual({ draw: [1], targets: [2, 3] })
+    expect(select(1000, [1, 3])).toEqual({ draw: [1], targets: [2, 3] })
+    // Without A, B shows alone, and what lay there before shows where C will be.
+    expect(select(1000, [2])).toEqual({ draw: [2], targets: [2, 3] })
+    // C out of view is neither drawn nor asked for; from inside A's sphere, A always gives way.
+    expect(select(1000, [1, 2], [3])).toEqual({ draw: [2], targets: [2] })
+    expect(select(0, [1, 2, 3]).draw).toEqual([2, 3])
+  })
+
+  it('lets the finer pieces still loaded stand in for a coarser target on its way', () => {
+    // Zoomed out from where B and C were drawn: A is what the view asks for, and they stand in.
+    expect(select(5000, [2, 3])).toEqual({ draw: [2, 3], targets: [1] })
+    // With only B, B stands in, and what lay there before shows where C was.
+    expect(select(5000, [2])).toEqual({ draw: [2], targets: [1] })
+  })
+
+  it('passes over a node a closer mesh covers, or its scene cuts out, like one out of view', () => {
+    expect(select(1000, [1, 2], [], Infinity, [3])).toEqual({ draw: [2], targets: [2] })
+    // Nor does it stand in for the coarser target on its way.
+    expect(select(5000, [2, 3], [], Infinity, [3])).toEqual({ draw: [2], targets: [1] })
+    const cut = nodes.map((n, i) => (i === 3 ? { ...n, gone: true } : n))
+    expect(select(1000, [1, 2], [], Infinity, [], cut)).toEqual({ draw: [2], targets: [2] })
+    expect(select(5000, [2, 3], [], Infinity, [], cut)).toEqual({ draw: [2], targets: [1] })
+  })
+
+  it('never refines a node while its photo is still as sharp as the screen', () => {
+    // From 560, A covers about π (100 · 1000 / 560)² = 100 000 px², past its threshold of 2000 but
+    // short of π/4 · 0.8² of its million photo pixels: its children would show nothing more.
+    const sharp = nodes.map((n, i) => (i === 1 ? { ...n, content: { ...n.content!, texels: 2 ** 20 } } : n))
+    expect(select(560, [1, 2, 3]).targets).toEqual([2, 3])
+    expect(select(560, [1, 2, 3], [], Infinity, [], sharp).targets).toEqual([1])
+    // Closer, it gives way after all.
+    expect(select(200, [1, 2, 3], [], Infinity, [], sharp).targets).toEqual([2, 3])
+    // A photo of 2048 × 1024 shrunk to 1024 along its longer side; 1024 × 1024 to 512.
+    expect(shrunkTexels(2 ** 21, 1024)).toBe(2 ** 19)
+    expect(shrunkTexels(2 ** 20, 512)).toBe(2 ** 18)
+    expect(shrunkTexels(2 ** 20, 1024)).toBe(2 ** 20)
+  })
+
+  it('takes nodes past the point looked at as smaller, the further the smaller', () => {
+    // From 3000, A outgrows its threshold: π (100 · 1000 / 3000)² is about 3491. Looking at a point
+    // 1000 away, A counts a third the size across, about 388.
+    expect(select(3000, [1, 2, 3]).draw).toEqual([2, 3])
+    expect(select(3000, [1, 2, 3], [], 1000).draw).toEqual([1])
+  })
+
+  it('bounds a node by its turned box, inside the cube round its sphere, and leaves room for the terrain', () => {
+    const real = meshNode(layer, { index: 1628, obb, lodThreshold: 409728.83 })
+    const [west, north, bottom, east, south, top] = real.box
+    for (const [low, high, middle] of [
+      [west, east, real.centre[0]],
+      [north, south, real.centre[1]],
+    ]) {
+      expect(high - middle).toBeCloseTo(middle - low, 12)
+      expect(high - middle).toBeLessThanOrEqual(real.radius)
+    }
+    // A long thin box lying flat: much narrower one way than its sphere.
+    expect(Math.min(east - west, south - north)).toBeLessThan(real.radius)
+    const stretch = 1 / Math.cos((boxCentre(obb, 3857).lat * Math.PI) / 180)
+    expect(top - bottom).toBeGreaterThan((2 * 60 * stretch) / world)
+    // Every corner of the piece inside it.
+    const piece = decodeMeshNode(fixture('city.mesh.bin'), obb, () => 0)
+    for (let v = 0; v < 417; v++) {
+      const x = piece.origin[0] + piece.positions[3 * v] * piece.scale
+      const y = piece.origin[1] - piece.positions[3 * v + 1] * piece.scale
+      expect(x >= west && x <= east && y >= north && y <= south).toBe(true)
+    }
+  })
+
+  it('leaves out the triangles its scene cuts, and tells where it has triangles left', () => {
+    const whole = decodeMeshNode(fixture('city.mesh.bin'), obb, () => 0)
+    expect(whole.cover.length).toBe(MESH_COVER * MESH_COVER)
+    expect(whole.cover.some((flag) => flag === 1)).toBe(true)
+    // A cut round the western half of the piece, as [longitude, latitude].
+    const lonOf = (x: number) => x * 360 - 180
+    const latOf = (y: number) => (360 / Math.PI) * Math.atan(Math.exp(((180 - y * 360) * Math.PI) / 180)) - 90
+    const xs = Array.from({ length: 417 }, (_, v) => whole.origin[0] + whole.positions[3 * v] * whole.scale)
+    const ys = Array.from({ length: 417 }, (_, v) => whole.origin[1] - whole.positions[3 * v + 1] * whole.scale)
+    const [west, east, north, south] = [Math.min(...xs) - 1e-9, Math.max(...xs) + 1e-9, Math.min(...ys) - 1e-9, Math.max(...ys) + 1e-9]
+    const middle = (west + east) / 2
+    const ring: [number, number][] = [
+      [lonOf(west), latOf(north)],
+      [lonOf(middle), latOf(north)],
+      [lonOf(middle), latOf(south)],
+      [lonOf(west), latOf(south)],
+      [lonOf(west), latOf(north)],
+    ]
+    const cut = decodeMeshNode(fixture('city.mesh.bin'), obb, () => 0, undefined, [[ring]])
+    const left = cut.positions.length / 9
+    expect(left).toBeGreaterThan(0)
+    expect(left).toBeLessThan(417 / 3)
+    expect(cut.uvs.length).toBe(left * 6)
+    expect(cut.grounds.length).toBe(left * 3)
+    // Every triangle kept has its middle east of the cut.
+    for (let t = 0; t < left * 3; t += 3) {
+      const x = cut.origin[0] + ((cut.positions[3 * t] + cut.positions[3 * t + 3] + cut.positions[3 * t + 6]) / 3) * cut.scale
+      expect(x).toBeGreaterThanOrEqual(middle)
+    }
+    // A hole in the cut keeps what lies in it.
+    expect(decodeMeshNode(fixture('city.mesh.bin'), obb, () => 0, undefined, [[ring, ring]]).positions.length).toBe(whole.positions.length)
+  })
+
+  it('marks the squares of its cover a triangle reaches, rows south to north', () => {
+    // A square piece with a small triangle in its south-west, south-east and north-east corners
+    // only, each within its corner square.
+    const side = 160
+    const s = (0.8 * side) / MESH_COVER
+    const triangles = [
+      [0, 0, s, 0, 0, s],
+      [side, 0, side, s, side - s, 0],
+      [side, side, side - s, side, side, side - s],
+    ].flat()
+    const vertices = triangles.length / 2
+    const buffer = new ArrayBuffer(8 + vertices * 20 + 16)
+    new DataView(buffer).setUint32(0, vertices, true)
+    new DataView(buffer).setUint32(4, 1, true)
+    const positions = new Float32Array(buffer, 8, vertices * 3)
+    for (let v = 0; v < vertices; v++) positions.set([triangles[2 * v] - side / 2, triangles[2 * v + 1] - side / 2, 0], 3 * v)
+    const { cover } = decodeMeshNode(buffer, { ...obb, center: [obb.center[0], obb.center[1], 0] }, () => 0)
+    const last = MESH_COVER - 1
+    expect([cover[0], cover[last], cover[last * MESH_COVER], cover[last * MESH_COVER + last]]).toEqual([1, 1, 0, 1])
+    expect(cover.reduce((sum, flag) => sum + flag, 0)).toBe(3)
+  })
+
+  it('keeps only the cuts whose edges cross a node, and leaves out a node a cut holds whole', () => {
+    const real = meshNode(layer, { index: 1628, obb, lodThreshold: 409728.83, mesh: { geometry: { resource: 21, vertexCount: 417 } } })
+    const [west, north, , east, south] = real.box
+    const [w, h] = [east - west, south - north]
+    const rect = (x0: number, y0: number, x1: number, y1: number): [number, number][] => [
+      lonLatOf(x0, y0),
+      lonLatOf(x1, y0),
+      lonLatOf(x1, y1),
+      lonLatOf(x0, y1),
+      lonLatOf(x0, y0),
+    ]
+    const around = rect(west - w, north - h, east + w, south + h)
+    const half = rect(west - w, north - h, (west + east) / 2, south + h)
+    // A frame round the node, its hole wider than the node's box: it reaches round the node, not into it.
+    const frame = [rect(west - 3 * w, north - 3 * h, east + 3 * w, south + 3 * h), around]
+    // All but a slit right through the node, whose ends lie beyond it: every corner of the box in the cut.
+    const slit: [number, number][] = [
+      lonLatOf(west - w, north - h),
+      lonLatOf(west + w * 0.45, north - h),
+      lonLatOf(west + w * 0.45, south + h / 2),
+      lonLatOf(west + w * 0.55, south + h / 2),
+      lonLatOf(west + w * 0.55, north - h),
+      lonLatOf(east + w, north - h),
+      lonLatOf(east + w, south + h),
+      lonLatOf(west - w, south + h),
+      lonLatOf(west - w, north - h),
+    ]
+    const of = (polygons: [number, number][][][]) => {
+      const node = meshNode(layer, { index: 1628, obb, mesh: { geometry: { resource: 21, vertexCount: 417 } } }, polygons.map(meshCut))
+      return { gone: !!node.gone, cuts: node.content?.cuts?.length ?? 0 }
+    }
+    expect(of([[around]])).toEqual({ gone: true, cuts: 0 })
+    expect(of([[half]])).toEqual({ gone: false, cuts: 1 })
+    expect(of([frame])).toEqual({ gone: false, cuts: 0 })
+    expect(of([[slit]])).toEqual({ gone: false, cuts: 1 })
+    expect(of([[half], frame])).toEqual({ gone: false, cuts: 1 })
+  })
+
+  it('sets each corner down by the ground right under it', () => {
+    // Ground rising a metre for every thousandth of a degree east, about 61 m there.
+    const slope = (lon: number) => (lon - 24) * 1000
+    const piece = decodeMeshNode(fixture('city.mesh.bin'), obb, slope)
+    const flat = decodeMeshNode(fixture('city.mesh.bin'), obb, () => 0)
+    for (const v of [0, 200, 416]) {
+      const lon = (piece.origin[0] + piece.positions[3 * v] * piece.scale) * 360 - 180
+      expect(piece.grounds[v]).toBeCloseTo(slope(lon), 2)
+      expect(piece.positions[3 * v + 2]).toBeCloseTo(flat.positions[3 * v + 2] - slope(lon), 2)
+    }
+  })
+})
+
 describe('mapped building colours', () => {
   it('reads hex colours and the names mappers use, ignoring case and space', () => {
     expect(parseColour('#fff')).toEqual([255, 255, 255])
@@ -529,5 +819,33 @@ describe('city catalogue', () => {
       )
       expect(odd, layer.name).toEqual([])
     }
+  })
+
+  it('lists Rīga photographed in 3D, block by block, from the host the policy allows', () => {
+    const meshes = catalogue.meshes ?? []
+    expect(meshes.length).toBeGreaterThan(100)
+    for (const mesh of meshes) {
+      expect(mesh.url.startsWith(`${TILE_ORIGINS.rigaModelTiles}/`), mesh.name).toBe(true)
+      expect(mesh.crs).toBe(3857)
+      const [west, south, east, north] = mesh.bbox
+      expect(west >= 23.8 && east <= 24.4 && south >= 56.8 && north <= 57.1 && west < east && south < north, mesh.name).toBe(true)
+      // The arrays the worker can read, in I3S's order, starting with the positions.
+      const attributes = mesh.attributes ?? ['position', 'uv0']
+      expect(attributes[0], mesh.name).toBe('position')
+      expect(attributes.every((attribute) => ['position', 'normal', 'uv0', 'color'].includes(attribute)), mesh.name).toBe(true)
+      // Every cut closed rings of points in Rīga, reaching into the block: one lent by another block may reach past it.
+      for (const polygon of mesh.cuts ?? []) {
+        const points = polygon.flat()
+        expect(polygon.every((ring) => ring.length >= 4 && ring[0].join() === ring[ring.length - 1].join()), mesh.name).toBe(true)
+        expect(points.every(([lon, lat]) => lon > 23.8 && lon < 24.4 && lat > 56.8 && lat < 57.1), mesh.name).toBe(true)
+        const lons = points.map(([lon]) => lon)
+        const lats = points.map(([, lat]) => lat)
+        expect(Math.min(...lons) < east && Math.max(...lons) > west && Math.min(...lats) < north && Math.max(...lats) > south, mesh.name).toBe(true)
+      }
+    }
+    // The city's own, closer blocks of its centre, drawn over LĢIA's.
+    const close = meshes.filter((mesh) => mesh.rank === 0)
+    expect(close.length).toBeGreaterThan(20)
+    expect(close.some((mesh) => mesh.cuts?.length)).toBe(true)
   })
 })

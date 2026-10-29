@@ -17,7 +17,7 @@ const SHADE = 'relief-shade'
  * ponytail: live layers are not lifted onto the ground; give them map.queryTerrainElevation if
  * trains off their rails in the uplands start to matter.
  */
-const EXAGGERATION = 2
+export const EXAGGERATION = 2
 
 /**
  * Lifts the ground into relief and shades it, or lays it flat again. Call after applyBaseMode,

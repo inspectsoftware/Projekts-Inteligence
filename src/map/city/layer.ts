@@ -1,9 +1,11 @@
 import { type CustomLayerInterface, type CustomRenderMethodInput, type Map as MapLibreMap, type MapSourceDataEvent, MercatorCoordinate, type VectorTileSource } from 'maplibre-gl'
+import { EXAGGERATION } from '../relief'
 import type { MapTheme } from '../style'
 import { PHOTO_LEVELS, PhotoCache } from './photo'
-import { BUILDING_FRAGMENT, BUILDING_VERTEX, TREE_FRAGMENT, TREE_VERTEX } from './shaders'
-import { CityModel, type Leaf, TILE_ZOOM, cameraDistanceMetres, cameraGround, offsetMetres, visibleTiles } from './sources'
-import type { ChunkMesh, CityJob, CityResult, ModelNode } from './types'
+import { MESH_COVER } from './mesh'
+import { BUILDING_FRAGMENT, BUILDING_VERTEX, MESH_FRAGMENT, MESH_VERTEX, TREE_FRAGMENT, TREE_VERTEX } from './shaders'
+import { CityModel, type Leaf, type MeshNode, type MeshPick, type MeshTree, type MeshView, TILE_ZOOM, cameraDistanceMetres, cameraGround, offsetMetres, selectMesh, shrunkTexels, visibleTiles } from './sources'
+import type { ChunkMesh, CityJob, CityResult, MeshPiece, ModelNode } from './types'
 import CityWorker from './worker?worker'
 
 /**
@@ -15,7 +17,9 @@ import CityWorker from './worker?worker'
  * the buildings are Overture's, with the roof shapes and colours mapped for them; further out,
  * they are extruded from the vector tiles. All of it per building: where a building of a model is
  * drawn, the extruded block that stood in for it is left out, and until the model has arrived the
- * block holds its place. In Sat 3D the roofs are the air photo (photo.ts).
+ * block holds its place. In Sat 3D the roofs are the air photo (photo.ts), and where Rīga is
+ * photographed in 3D (LĢIA's textured surface of the whole city, and the city's own, sharper one
+ * of its centre over it) that mesh stands in place of all of it, piece by piece as the pieces arrive.
  *
  * Keeps the id of the layer it replaces, so base and relief changes reach it as they did.
  */
@@ -42,8 +46,50 @@ const TILE_LIMIT = coarse ? 40 : 80
 const SPARE_TILES = 60
 const SPARE_MODEL = MODEL_BUDGET
 const SPARE_TREES = TREE_BUDGET
-/** Requests at once, per kind: the blocks are placeholders, so they never hold up the model. */
-const IN_FLIGHT: Record<Exclude<CityJob['kind'], 'cancel' | 'photo'>, number> = { extruded: 3, overture: 3, model: 4, trees: 2 }
+/**
+ * Requests at once, per kind: the blocks are placeholders, so they never hold up the model. The
+ * mesh's host speaks HTTP/2, and its small pieces wait mostly on the round trip; a phone keeps
+ * fewer full-size photos in hand at once.
+ */
+const IN_FLIGHT: Record<Exclude<CityJob['kind'], 'cancel' | 'photo'>, number> = { extruded: 3, overture: 3, model: 4, trees: 2, mesh: coarse ? 6 : 12 }
+
+/** Sat 3D, Rīga photographed: bytes on the graphics card at once, and kept besides for when the camera comes back. The photos are most of it. */
+const MESH_BUDGET = (coarse ? 96 : 384) * 2 ** 20
+const SPARE_MESH = (coarse ? 32 : 128) * 2 ** 20
+/**
+ * A node's photo is shrunk to this many pixels a side: at full size a street-level view would take
+ * about 830 MiB. ponytail: one cap for every node; fetch the nearest leaves again at full size if
+ * 1024 looks soft.
+ */
+const MESH_PHOTO = coarse ? 512 : 1024
+/** A phone moves on to finer nodes only once they look twice as large. */
+const MESH_DETAIL = coarse ? 0.5 : 1
+/** With the relief on, the terrain is drawn into the same depth from the same ground the mesh stands on: the mesh stands this far clear of it, metres. */
+const MESH_CLEARANCE = 1
+/** How far past the screen's edges a node still counts as in view, so that a turn of the camera finds it there. */
+const MESH_MARGIN = 1.3
+/** The least detail the budget may push the mesh down to, as a share of the full. */
+const MESH_LEAST_DETAIL = 0.3
+/**
+ * A piece of LĢIA's drawn beside one of the city's own is moved back along the line of sight, so
+ * the city's wins where both show the same ground, and neither moves on the screen. Their streets
+ * agree to half a metre: it goes back as far as lowers it MESH_DROP, more than that and less than
+ * MESH_CLEARANCE, so it never sinks into the relief's own ground; and never further than MESH_PUSH,
+ * metres, where a low line of sight would take it far back past what stands behind it.
+ */
+const MESH_PUSH = 3
+const MESH_DROP = 0.75
+/** Points tried along each side of a node's box to tell whether a closer mesh covers all of it. */
+const MESH_PROBES = 4
+
+/**
+ * What a mesh piece will take on the graphics card, from what its node says before it comes: 24
+ * bytes a vertex, and its photo once shrunk to MESH_PHOTO a side, with a third more for the smaller
+ * copies. The photos are powers of two, square or twice as wide as high.
+ */
+function meshSize({ vertices, texels }: NonNullable<MeshNode['content']>): number {
+  return vertices * 24 + (shrunkTexels(texels, MESH_PHOTO) * 16) / 3
+}
 
 /** How far around where the camera looks the city model is drawn: wider when seen from higher up. */
 function modelReach(zoom: number): number {
@@ -175,6 +221,13 @@ interface Chunk {
   polygons?: Float32Array
   coverageDone: number
   hidesAny: boolean
+  /** Its own number, to tell pieces apart briefly (MeshCover.piecesIn). */
+  serial: number
+  /** The mesh cover's version when it last looked, and the mesh pieces over its ground then. */
+  meshSeen: number
+  meshNear?: string
+  /** Blocks only: which of its polygons are left out now, one flag each. */
+  hidden?: Uint8Array
   buildings?: Float32Array
   trees?: Float32Array
   vertices: number
@@ -182,6 +235,14 @@ interface Chunk {
   leaf?: Leaf
   /** A piece of the city model: the ground each building stands on, as last lifted. */
   grounds?: Float32Array
+  /** A piece of the city model: its buildings the mesh does not show, as runs of vertices, first and count two by two. */
+  runs?: number[]
+  /** A piece of the mesh: its photo. */
+  texture: WebGLTexture | null
+  /** A piece of the mesh: where it has triangles (MeshPiece.cover). */
+  cover?: Uint8Array
+  /** A piece of the mesh: moved back along the line of sight, so the closer photographed one beside it wins where both are (MESH_PUSH). */
+  push?: boolean
 }
 
 /** Where a click met a building of the city model: its leaf, its place among the leaf's features, and the point. */
@@ -234,8 +295,8 @@ function multiply(a: ArrayLike<number>, b: ArrayLike<number>): Float64Array {
   return out
 }
 
-/** True when the box is wholly outside one side of the view. */
-function outside(matrix: Float64Array, box: number[], heightScale: number): boolean {
+/** True when the box is wholly outside one side of the view, the view widened `margin` times. */
+function outside(matrix: ArrayLike<number>, box: number[], heightScale: number, margin = 1): boolean {
   let left = 0
   let right = 0
   let below = 0
@@ -248,10 +309,10 @@ function outside(matrix: Float64Array, box: number[], heightScale: number): bool
     const cx = matrix[0] * x + matrix[4] * y + matrix[8] * z + matrix[12]
     const cy = matrix[1] * x + matrix[5] * y + matrix[9] * z + matrix[13]
     const cw = matrix[3] * x + matrix[7] * y + matrix[11] * z + matrix[15]
-    if (cx < -cw) left++
-    if (cx > cw) right++
-    if (cy < -cw) below++
-    if (cy > cw) above++
+    if (cx < -margin * cw) left++
+    if (cx > margin * cw) right++
+    if (cy < -margin * cw) below++
+    if (cy > margin * cw) above++
     if (cw <= 0) behind++
   }
   return left === 8 || right === 8 || below === 8 || above === 8 || behind === 8
@@ -298,6 +359,117 @@ class Coverage {
   }
 }
 
+/**
+ * Where the mesh is drawn: its pieces, filed by squares of about 80 m in Rīga, each telling where
+ * in its box it has triangles, so the city's other pieces give way to it exactly there. Its version
+ * moves on whenever the pieces drawn change; each of the city's other pieces then looks through its
+ * own again only if the pieces over its own ground changed (piecesIn).
+ */
+class MeshCover {
+  private static readonly SIDE = 2 ** 18
+  private cells = new Map<number, Chunk[]>()
+  private keys = ''
+  version = 0
+  /** Mercator box all of it lies within, or null when nothing is covered. */
+  bounds: [number, number, number, number] | null = null
+
+  rebuild(pieces: Chunk[]): void {
+    const keys = pieces.map((piece) => piece.key).join('|')
+    if (keys === this.keys) return
+    this.keys = keys
+    const n = MeshCover.SIDE
+    const cells = new Map<number, Chunk[]>()
+    let bounds: [number, number, number, number] | null = null
+    for (const piece of pieces) {
+      const { origin, scale, box } = piece
+      const [west, north, east, south] = [origin[0] + box[0] * scale, origin[1] - box[4] * scale, origin[0] + box[3] * scale, origin[1] - box[1] * scale]
+      bounds = bounds ? [Math.min(bounds[0], west), Math.min(bounds[1], north), Math.max(bounds[2], east), Math.max(bounds[3], south)] : [west, north, east, south]
+      for (let x = Math.floor(west * n); x <= Math.floor(east * n); x++) {
+        for (let y = Math.floor(north * n); y <= Math.floor(south * n); y++) {
+          const list = cells.get(x * n + y)
+          if (list) list.push(piece)
+          else cells.set(x * n + y, [piece])
+        }
+      }
+    }
+    this.cells = cells
+    this.bounds = bounds
+    this.version++
+  }
+
+  covers(x: number, y: number): boolean {
+    return this.squareAt(x, y) > 0
+  }
+
+  /** The side of the cover's square at a Mercator point, in Mercator units, where a piece has triangles there; else 0. */
+  private squareAt(x: number, y: number): number {
+    for (const piece of this.cells.get(Math.floor(x * MeshCover.SIDE) * MeshCover.SIDE + Math.floor(y * MeshCover.SIDE)) ?? []) {
+      if (photographed(piece, x, y)) return (Math.max(piece.box[3] - piece.box[0], piece.box[4] - piece.box[1]) * piece.scale) / MESH_COVER
+    }
+    return 0
+  }
+
+  /** Whether a piece's box meets a Mercator box (as outside() takes boxes). */
+  meets(box: number[]): boolean {
+    const n = MeshCover.SIDE
+    for (let x = Math.floor(box[0] * n); x <= Math.floor(box[3] * n); x++) {
+      for (let y = Math.floor(box[1] * n); y <= Math.floor(box[4] * n); y++) {
+        for (const { origin, scale, box: b } of this.cells.get(x * n + y) ?? []) {
+          if (origin[0] + b[3] * scale >= box[0] && origin[0] + b[0] * scale <= box[3] && origin[1] - b[1] * scale >= box[1] && origin[1] - b[4] * scale <= box[4]) return true
+        }
+      }
+    }
+    return false
+  }
+
+  /** The pieces filed in the squares a Mercator box reaches into, as one string to compare. */
+  piecesIn(west: number, north: number, east: number, south: number): string {
+    const n = MeshCover.SIDE
+    const found = new Set<number>()
+    for (let x = Math.floor(west * n); x <= Math.floor(east * n); x++) {
+      for (let y = Math.floor(north * n); y <= Math.floor(south * n); y++) for (const piece of this.cells.get(x * n + y) ?? []) found.add(piece.serial)
+    }
+    return [...found].sort((a, b) => a - b).join()
+  }
+
+  /**
+   * Whether it covers all of a Mercator box, as far as a few points spread over it can tell: each
+   * well inside it, a square of its cover clear of its edge every way, or one `elsewhere` lets off.
+   * A square is marked where any triangle reaches into it, so one at the very edge may be mostly bare.
+   */
+  coversAll(box: number[], elsewhere: (x: number, y: number) => boolean = () => false): boolean {
+    for (let i = 0; i < MESH_PROBES; i++) {
+      for (let j = 0; j < MESH_PROBES; j++) {
+        const x = box[0] + ((i + 0.5) / MESH_PROBES) * (box[3] - box[0])
+        const y = box[1] + ((j + 0.5) / MESH_PROBES) * (box[4] - box[1])
+        if (elsewhere(x, y)) continue
+        const side = this.squareAt(x, y)
+        if (!side || !this.squareAt(x - side, y) || !this.squareAt(x + side, y) || !this.squareAt(x, y - side) || !this.squareAt(x, y + side)) return false
+      }
+    }
+    return true
+  }
+}
+
+/** Whether a mesh piece has triangles at a Mercator point: inside its box, in a square of its cover a triangle reaches. */
+function photographed(piece: Chunk, x: number, y: number): boolean {
+  const b = piece.box
+  const east = (x - piece.origin[0]) / piece.scale
+  const north = (piece.origin[1] - y) / piece.scale
+  if (!(east >= b[0] && east <= b[3] && north >= b[1] && north <= b[4])) return false
+  if (!piece.cover) return true
+  const square = (value: number, low: number, high: number) => Math.min(MESH_COVER - 1, Math.max(0, Math.floor(((value - low) / (high - low)) * MESH_COVER)))
+  return piece.cover[square(north, b[1], b[4]) * MESH_COVER + square(east, b[0], b[3])] === 1
+}
+
+/** Whether a piece's box reaches into a Mercator box. */
+function reaches(chunk: Chunk, bounds: [number, number, number, number] | null): boolean {
+  const [mx, my] = chunk.origin
+  const s = chunk.scale
+  const b = chunk.box
+  return !!bounds && b.length > 0 && mx + b[3] * s >= bounds[0] && mx + b[0] * s <= bounds[2] && my - b[1] * s >= bounds[1] && my - b[4] * s <= bounds[3]
+}
+
 class CityLayer implements CustomLayerInterface {
   readonly id = CITY_LAYER
   readonly type = 'custom'
@@ -307,12 +479,26 @@ class CityLayer implements CustomLayerInterface {
   private gl: WebGL2RenderingContext | null = null
   private buildingProgram: Program | null = null
   private treeProgram: Program | null = null
+  private meshProgram: Program | null = null
+  private anisotropy: { ext: EXT_texture_filter_anisotropic; max: number } | null = null
   private unitTree: WebGLBuffer | null = null
   private workers: Worker[] = []
   private chunks = new Map<string, Chunk>()
   private drawn: Chunk[] = []
   private model = new CityModel(() => this.schedule())
   private coverage = new Coverage()
+  private meshCover = new MeshCover()
+  /** Where the city's own, closer photographed blocks are drawn: LĢIA's pieces they cover give way. */
+  private closeCover = new MeshCover()
+  /** The same for a trial of more detail. */
+  private trialCover = new MeshCover()
+  /** Mesh pieces back from the workers, waiting to be handed to the graphics card while drawing. */
+  private arrived: { chunk: Chunk; mesh: MeshPiece }[] = []
+  /** The camera as last drawn, for picking the mesh's nodes. */
+  private view: MeshView | null = null
+  /** How much of the mesh's full detail is asked for: less while what the view asks for does not fit the budget. */
+  private meshDetail = 1
+  private serials = 0
   private drawnModelKeys = ''
   private tileUrl: string | null = null
   private theme: MapTheme = 'dark'
@@ -350,6 +536,9 @@ class CityLayer implements CustomLayerInterface {
       'u_photoOn',
     ])
     this.treeProgram = compile(gl, TREE_VERTEX, TREE_FRAGMENT, ['a_shape', 'a_tree', 'a_ground'], [...SHARED_UNIFORMS, 'u_leaf', 'u_bark'])
+    this.meshProgram = compile(gl, MESH_VERTEX, MESH_FRAGMENT, ['a_pos', 'a_uv', 'a_ground'], [...SHARED_UNIFORMS, 'u_relief', 'u_photo', 'u_eye', 'u_push'])
+    const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic')
+    if (anisotropy) this.anisotropy = { ext: anisotropy, max: Math.min(8, gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number) }
     this.unitTree = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, this.unitTree)
     gl.bufferData(gl.ARRAY_BUFFER, UNIT_TREE, gl.STATIC_DRAW)
@@ -384,9 +573,10 @@ class CityLayer implements CustomLayerInterface {
     for (const worker of this.workers) worker.terminate()
     for (const chunk of this.chunks.values()) this.release(chunk)
     this.chunks.clear()
+    for (const { mesh } of this.arrived.splice(0)) mesh.photo.close()
     this.photo?.dispose(gl, () => {})
     this.photo = null
-    for (const program of [this.buildingProgram, this.treeProgram]) if (program) gl.deleteProgram(program.program)
+    for (const program of [this.buildingProgram, this.treeProgram, this.meshProgram]) if (program) gl.deleteProgram(program.program)
     gl.deleteBuffer(this.unitTree)
     this.map = null
     this.gl = null
@@ -408,6 +598,20 @@ class CityLayer implements CustomLayerInterface {
     } else {
       this.photo!.dispose(gl, (id) => this.cancel(id))
       this.photo = null
+      // The mesh is Sat 3D's alone: what it holds on the graphics card goes with it.
+      for (const chunk of [...this.chunks.values()]) {
+        if (chunk.kind !== 'mesh') continue
+        if (chunk.state === 'loading') this.cancel(chunk.key)
+        this.release(chunk)
+        this.chunks.delete(chunk.key)
+      }
+      for (const { mesh } of this.arrived.splice(0)) mesh.photo.close()
+      this.drawn = this.drawn.filter((chunk) => chunk.kind !== 'mesh')
+      // What gave way to the mesh comes back with the next frame, not the next look round.
+      this.meshCover.rebuild([])
+      this.closeCover.rebuild([])
+      this.trialCover.rebuild([])
+      this.meshDetail = 1
     }
     this.setLook(this.theme)
     this.schedule()
@@ -496,6 +700,9 @@ class CityLayer implements CustomLayerInterface {
     this.lastUpdate = performance.now()
     const now = Date.now()
     const wanted: Chunk[] = []
+    // The mesh's pieces to draw. Others of its pieces are wanted without being drawn: those on their
+    // way, and those that came before their siblings, kept for when the rest have come too.
+    const meshes: Chunk[] = []
     const visible = map.getLayer(CITY_LAYER) && map.getLayoutProperty(CITY_LAYER, 'visibility') !== 'none'
     const zoom = map.getZoom()
 
@@ -555,6 +762,59 @@ class CityLayer implements CustomLayerInterface {
           }
         }
       }
+      // Sat 3D: Rīga photographed, out to where the haze ends. Once it is up, it stays up half a
+      // level further out, so zooming out a little does not drop it all at once.
+      const meshZoom = this.drawn.some((chunk) => chunk.kind === 'mesh') ? MODEL_ZOOM - 0.5 : MODEL_ZOOM
+      if (this.photo && this.view && zoom >= meshZoom) {
+        this.model.load()
+        const detail = this.meshDetail
+        const view = { ...this.view, focal: this.view.focal * detail }
+        const ready = (node: MeshNode) => this.chunks.get(node.key)?.state === 'ready'
+        // A block out of view reads no pages.
+        const trees = this.model.meshesNear(cameraGround(map).at, reach).filter((tree) => view.shows(tree.box))
+        const { pick, later, need } = this.chooseMesh(trees, view, this.closeCover)
+        for (const node of pick.draw) {
+          const chunk = this.chunks.get(node.key)!
+          // Moved back only beside a piece of the city's own: elsewhere it stands as clear of the relief as theirs.
+          chunk.push = node.rank > 0 && this.closeCover.meets(node.box)
+          wanted.push(chunk)
+          meshes.push(chunk)
+        }
+        // The targets that have come count first, then those still to come: on the screen before
+        // those only beside it, nearest first, those waiting on the city's own last, while the
+        // budget lasts. Stand-ins are not counted: they go once what they stand in for has come.
+        const sizeOf = (node: MeshNode) => this.chunks.get(node.key)?.size ?? meshSize(node.content!)
+        const order = (node: MeshNode) =>
+          Math.hypot(node.centre[0] - view.eye[0], node.centre[1] - view.eye[1], node.centre[2] - view.eye[2]) + (view.onScreen(node.box) ? 0 : 1) + (later.has(node) ? 2 : 0)
+        let used = 0
+        const coming: MeshNode[] = []
+        for (const node of pick.targets) {
+          if (!ready(node)) coming.push(node)
+          else {
+            used += sizeOf(node)
+            // One that came before its siblings is kept, not drawn, until they have come too.
+            wanted.push(this.chunks.get(node.key)!)
+          }
+        }
+        for (const node of coming.sort((a, b) => order(a) - order(b))) {
+          const size = sizeOf(node)
+          if (used + size > MESH_BUDGET) break
+          used += size
+          const { geometry, photo, attributes, cuts } = node.content!
+          const job = { kind: 'mesh', id: node.key, geometryUrl: geometry, photoUrl: photo, obb: node.obb, attributes, cuts, maxPhoto: MESH_PHOTO } as const
+          wanted.push(this.chunk(node.key, job, order(node), size))
+        }
+        // While what the view asks for does not fit, the next look round asks for less detail. Once
+        // it fits, for more again, up to the full, but only where what that would ask for is seen to
+        // fit too: it grows unevenly with the detail, in steps and stretches.
+        if (need > MESH_BUDGET) this.meshDetail = Math.max(MESH_LEAST_DETAIL, detail * 0.85)
+        else if (detail < 1) {
+          const up = Math.min(1, detail * 1.15)
+          if (this.chooseMesh(trees, { ...view, focal: this.view.focal * up }, this.trialCover).need <= MESH_BUDGET) this.meshDetail = up
+        }
+        // The new detail is picked at the next look round, even with nothing on its way to call for one.
+        if (this.meshDetail !== detail) this.schedule()
+      }
     }
 
     const wantedKeys = new Set(wanted.map((chunk) => chunk.key))
@@ -576,15 +836,40 @@ class CityLayer implements CustomLayerInterface {
       free[chunk.job.kind]--
     }
 
-    this.drawn = wanted.filter((chunk) => chunk.state === 'ready')
+    // A mesh piece is drawn only where the traversal chose it.
+    this.drawn = [...wanted.filter((chunk) => chunk.state === 'ready' && chunk.kind !== 'mesh'), ...meshes]
     const models = this.drawn.filter((chunk) => chunk.kind === 'model')
     const modelKeys = models.map((chunk) => chunk.key).sort().join('|')
     if (modelKeys !== this.drawnModelKeys) {
       this.drawnModelKeys = modelKeys
       this.coverage.rebuild(models)
     }
+    this.meshCover.rebuild(meshes)
     this.evict(wantedKeys)
     map.triggerRepaint()
+  }
+
+  /**
+   * What of Rīga's photographed blocks a view asks for, the city's own first: a piece of LĢIA's
+   * they wholly cover, as `cover` then holds them, is passed over. Until theirs have come, one of
+   * LĢIA's under where they will be waits (`later`): it is not counted in what the view asks for
+   * (`need`, bytes), and comes only with room to spare.
+   */
+  private chooseMesh(trees: MeshTree[], view: MeshView, cover: MeshCover): { pick: MeshPick; later: Set<MeshNode>; need: number } {
+    const ready = (node: MeshNode) => this.chunks.get(node.key)?.state === 'ready'
+    const pick: MeshPick = { targets: [], draw: [] }
+    for (const tree of trees) if ((tree.layer.rank ?? 1) === 0) selectMesh(tree, 0, view, ready, pick)
+    const close = pick.targets.length
+    cover.rebuild(pick.draw.map((node) => this.chunks.get(node.key)!))
+    // Out of view nothing is drawn, so nothing need cover it there: the next look round tries again as the camera turns.
+    const beyond = (box: number[]) => (x: number, y: number) => !view.shows([x, y, box[2], x, y, box[5]])
+    for (const tree of trees) if ((tree.layer.rank ?? 1) !== 0) selectMesh(tree, 0, view, ready, pick, (node) => cover.coversAll(node.box, beyond(node.box)))
+    const coming = pick.targets.slice(0, close).filter((node) => !ready(node)).map((node) => node.box)
+    const under = (x: number, y: number) => coming.some((b) => x >= b[0] && x <= b[3] && y >= b[1] && y <= b[4])
+    const later = new Set(pick.targets.slice(close).filter((node) => coming.length && cover.coversAll(node.box, (x, y) => beyond(node.box)(x, y) || under(x, y))))
+    let need = 0
+    for (const node of pick.targets) if (!later.has(node)) need += this.chunks.get(node.key)?.size ?? meshSize(node.content!)
+    return { pick, later, need }
   }
 
   /** The chunk for a key, made on first asking. A new one waits for its turn in `update`. */
@@ -611,7 +896,10 @@ class CityLayer implements CustomLayerInterface {
         count: 0,
         coverageDone: -1,
         hidesAny: false,
+        serial: this.serials++,
+        meshSeen: -1,
         vertices: 0,
+        texture: null,
       }
       this.chunks.set(key, chunk)
     }
@@ -637,7 +925,7 @@ class CityLayer implements CustomLayerInterface {
 
   /** Lets go of what was not drawn for longest, past what is kept in reserve. */
   private evict(wanted: Set<string>): void {
-    const spare: Record<Kind, number> = { extruded: SPARE_TILES, model: SPARE_MODEL, trees: SPARE_TREES }
+    const spare: Record<Kind, number> = { extruded: SPARE_TILES, model: SPARE_MODEL, trees: SPARE_TREES, mesh: SPARE_MESH }
     const idle = [...this.chunks.values()].filter((chunk) => chunk.state === 'ready' && !wanted.has(chunk.key)).sort((a, b) => b.usedAt - a.usedAt)
     for (const chunk of idle) {
       spare[chunk.kind] -= chunk.size
@@ -654,9 +942,11 @@ class CityLayer implements CustomLayerInterface {
     gl.deleteVertexArray(chunk.vao)
     for (const buffer of chunk.buffers) gl.deleteBuffer(buffer)
     gl.deleteBuffer(chunk.ground)
+    gl.deleteTexture(chunk.texture)
     chunk.vao = null
     chunk.buffers = []
     chunk.ground = null
+    chunk.texture = null
   }
 
   private receive(result: CityResult): void {
@@ -675,16 +965,52 @@ class CityLayer implements CustomLayerInterface {
       return
     }
     const chunk = this.chunks.get(result.id)
-    if (!chunk || chunk.state !== 'loading') return
+    if (!chunk || chunk.state !== 'loading') {
+      if ('mesh' in result && result.mesh.kind === 'mesh') result.mesh.photo.close()
+      return
+    }
     if ('error' in result) {
       console.warn(`[city] ${result.id}: ${result.error}`)
       chunk.state = 'failed'
       chunk.failedAt = Date.now()
     } else if ('mesh' in result) {
+      // A mesh piece waits to be drawn in: handing its photo over takes a few milliseconds, so one goes a frame.
+      if (result.mesh.kind === 'mesh') {
+        this.arrived.push({ chunk, mesh: result.mesh })
+        this.map?.triggerRepaint()
+        return
+      }
       this.upload(chunk, result.mesh)
       chunk.state = 'ready'
     }
     this.schedule()
+  }
+
+  /**
+   * Hands one arrived mesh piece a frame to the graphics card, while drawing: its photo alone takes a
+   * few milliseconds. The nearest piece still waiting its turn goes out to the workers at once, in
+   * the request it leaves free, rather than with the next look round.
+   */
+  private uploadArrived(): void {
+    while (this.arrived.length) {
+      const { chunk, mesh } = this.arrived.shift()!
+      // Called off meanwhile, or the camera moved on and it is no longer wanted.
+      if (this.chunks.get(chunk.key) !== chunk || chunk.state !== 'loading') {
+        mesh.photo.close()
+        continue
+      }
+      this.upload(chunk, mesh)
+      chunk.state = 'ready'
+      let next: Chunk | null = null
+      for (const queued of this.chunks.values()) if (queued.kind === 'mesh' && queued.state === 'queued' && (!next || queued.priority < next.priority)) next = queued
+      if (next) {
+        next.state = 'loading'
+        this.workerForKey(next.key).postMessage(next.job)
+      }
+      this.schedule()
+      break
+    }
+    if (this.arrived.length) this.map?.triggerRepaint()
   }
 
   /** Hands a finished piece to the graphics card. Only what is needed later stays in memory. */
@@ -714,6 +1040,40 @@ class CityLayer implements CustomLayerInterface {
       chunk.trees = mesh.trees
       chunk.count = mesh.trees.length / 3
       chunk.box = boxOf(mesh.trees, 3)
+    } else if (mesh.kind === 'mesh') {
+      const { attributes } = this.meshProgram!
+      attribute(mesh.positions, attributes.a_pos, 3, gl.FLOAT, false, 0)
+      attribute(mesh.uvs, attributes.a_uv, 2, gl.FLOAT, false, 0)
+      attribute(mesh.grounds, attributes.a_ground, 1, gl.FLOAT, false, 0)
+      chunk.vertices = chunk.count = mesh.positions.length / 3
+      chunk.box = boxOf(mesh.positions, 3)
+      chunk.cover = mesh.cover
+      // Its box reaches as high as the relief can raise it.
+      chunk.box[5] += EXAGGERATION * mesh.grounds.reduce((high, ground) => Math.max(high, ground), 0) + MESH_CLEARANCE
+      // A node its scene's cuts leave nothing of has no use for its photo.
+      if (!chunk.count) {
+        chunk.size = 0
+        mesh.photo.close()
+        gl.bindVertexArray(null)
+        return
+      }
+      chunk.texture = gl.createTexture()
+      gl.bindTexture(gl.TEXTURE_2D, chunk.texture)
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
+      // I3S puts 0, 0 at the photo's top left, where WebGL puts the first row it is given.
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, mesh.photo)
+      gl.generateMipmap(gl.TEXTURE_2D)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+      // A street seen at a slant stays sharp along its length.
+      if (this.anisotropy) gl.texParameterf(gl.TEXTURE_2D, this.anisotropy.ext.TEXTURE_MAX_ANISOTROPY_EXT, this.anisotropy.max)
+      gl.bindTexture(gl.TEXTURE_2D, null)
+      // What it really takes: 24 bytes a vertex, four a pixel and a third more for the smaller copies.
+      chunk.size = chunk.vertices * 24 + (mesh.photo.width * mesh.photo.height * 16) / 3
+      mesh.photo.close()
     } else {
       const { attributes } = this.buildingProgram!
       attribute(mesh.positions, attributes.a_pos, 3, gl.FLOAT, false, 0)
@@ -805,35 +1165,111 @@ class CityLayer implements CustomLayerInterface {
     else gl.disableVertexAttribArray(location)
   }
 
-  /** Leaves out the blocks the city model now shows, and brings back those it no longer does. */
+  /**
+   * Whether the mesh pieces over a piece's ground have changed since it last looked: only then need
+   * it look through its blocks, buildings or trees again.
+   */
+  private meshMoved(chunk: Chunk): boolean {
+    const cover = this.meshCover
+    if (chunk.meshSeen === cover.version) return false
+    chunk.meshSeen = cover.version
+    const [mx, my] = chunk.origin
+    const s = chunk.scale
+    const b = chunk.box
+    const near = cover.piecesIn(mx + b[0] * s, my - b[4] * s, mx + b[3] * s, my - b[1] * s)
+    if (near === chunk.meshNear) return false
+    chunk.meshNear = near
+    return true
+  }
+
+  /** Leaves out the blocks the city model or the mesh now shows, and brings back those they no longer do. */
   private hideCovered(chunk: Chunk): void {
     const coverage = this.coverage
-    if (chunk.coverageDone === coverage.version) return
+    const meshCover = this.meshCover
+    const meshMoved = this.meshMoved(chunk)
+    if (chunk.coverageDone === coverage.version && !meshMoved) return
     chunk.coverageDone = coverage.version
     const [mx, my] = chunk.origin
     const s = chunk.scale
-    const b = coverage.bounds
-    // A tile wholly outside what the model covers keeps every block, and need not be looked through.
-    const reaches = b && chunk.box.length && mx + chunk.box[3] * s >= b[0] && mx + chunk.box[0] * s <= b[2] && my - chunk.box[1] * s >= b[1] && my - chunk.box[4] * s <= b[3]
-    if (!reaches && !chunk.hidesAny) return
+    // A tile wholly outside what the model and the mesh cover keeps every block, and need not be looked through.
+    const byModel = reaches(chunk, coverage.bounds)
+    const byMesh = reaches(chunk, meshCover.bounds)
+    if (!byModel && !byMesh && !chunk.hidesAny) return
     const polygons = chunk.polygons!
+    const hidden = new Uint8Array(polygons.length / 6)
+    let hidesAny = false
+    for (let p = 0; p < hidden.length; p++) {
+      const x = mx + polygons[6 * p + 2] * s
+      const y = my - polygons[6 * p + 3] * s
+      if ((byMesh && meshCover.covers(x, y)) || (byModel && coverage.covers(x, y))) {
+        hidden[p] = 1
+        hidesAny = true
+      }
+    }
+    // The same blocks left out as before: the index buffer as it stands is right.
+    const was = chunk.hidden
+    if (was ? was.every((flag, p) => flag === hidden[p]) : !hidesAny) return
+    chunk.hidden = hidden
+    chunk.hidesAny = hidesAny
     const all = chunk.indices!
     const kept = new Uint32Array(all.length)
     let length = 0
-    let hidesAny = false
-    for (let i = 0; i < polygons.length; i += 6) {
-      if (reaches && coverage.covers(mx + polygons[i + 2] * s, my - polygons[i + 3] * s)) {
-        hidesAny = true
-        continue
-      }
-      kept.set(all.subarray(polygons[i], polygons[i] + polygons[i + 1]), length)
-      length += polygons[i + 1]
+    for (let p = 0; p < hidden.length; p++) {
+      if (hidden[p]) continue
+      kept.set(all.subarray(polygons[6 * p], polygons[6 * p] + polygons[6 * p + 1]), length)
+      length += polygons[6 * p + 1]
     }
-    chunk.hidesAny = hidesAny
     chunk.count = length
     const gl = this.gl!
     gl.bindVertexArray(chunk.vao)
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, kept.subarray(0, length), gl.DYNAMIC_DRAW)
+  }
+
+  /**
+   * A model piece's buildings the mesh does not show, as runs of vertices. Where the mesh shows a
+   * building, the model's is left out; it stays loaded, so that a click still finds it.
+   */
+  private unmeshed(chunk: Chunk): number[] {
+    const cover = this.meshCover
+    if (this.meshMoved(chunk) || !chunk.runs) {
+      const b = chunk.buildings!
+      const [mx, my] = chunk.origin
+      const s = chunk.scale
+      const byMesh = reaches(chunk, cover.bounds)
+      const runs: number[] = []
+      for (let i = 0; i < b.length; i += 7) {
+        if (byMesh && cover.covers(mx + ((b[i + 2] + b[i + 4]) / 2) * s, my - ((b[i + 3] + b[i + 5]) / 2) * s)) continue
+        // A building that follows straight on from the one before lengthens its run.
+        const last = runs.length - 2
+        if (last >= 0 && runs[last] + runs[last + 1] === b[i]) runs[last + 1] += b[i + 1]
+        else runs.push(b[i], b[i + 1])
+      }
+      chunk.runs = runs
+    }
+    return chunk.runs
+  }
+
+  /** Lays the trees the mesh shows itself down flat, where they draw nothing, and stands them up again where it no longer does. Called with the piece's vertex array bound. */
+  private hideMeshedTrees(chunk: Chunk): void {
+    const cover = this.meshCover
+    if (!this.meshMoved(chunk)) return
+    const trees = chunk.trees!
+    const byMesh = reaches(chunk, cover.bounds)
+    if (!byMesh && !chunk.hidesAny) return
+    const [mx, my] = chunk.origin
+    const s = chunk.scale
+    const shown = trees.slice()
+    let hidesAny = false
+    for (let i = 0; i < trees.length; i += 3) {
+      if (!byMesh || !cover.covers(mx + trees[i] * s, my - trees[i + 1] * s)) continue
+      shown[i + 2] = 0
+      hidesAny = true
+    }
+    chunk.hidesAny = hidesAny
+    // The trees' own buffer is the piece's first. chunk.trees keeps every height, for lifting them.
+    const gl = this.gl!
+    gl.bindBuffer(gl.ARRAY_BUFFER, chunk.buffers[0])
+    gl.bufferSubData(gl.ARRAY_BUFFER, 0, shown)
   }
 
   render(gl: WebGL2RenderingContext, args: CustomRenderMethodInput): void {
@@ -844,10 +1280,25 @@ class CityLayer implements CustomLayerInterface {
     // Photos are put in place even with nothing to draw yet, so a jump's old photos are gone first.
     const photo = this.photo
     if (photo?.upload(gl)) map.triggerRepaint()
+    this.uploadArrived()
+    const main = args.defaultProjectionData.mainMatrix
+    const m = (this.matrix = Array.from(main))
+    // Where the camera is, in Mercator: the one point at which the view's x, y and w all come to 0.
+    const eye = solve([m[0], m[1], m[3], 0, m[4], m[5], m[7], 0, m[8], m[9], m[11], 0, m[12], m[13], m[15], 1], [0, 0, 0, 1])
+    // At full detail: `update` takes it down as far as the budget asks.
+    const focal = ((map.getCanvas().clientHeight / 2) / Math.tan(args.fov / 2)) * MESH_DETAIL
+    // The point the camera looks at, which the mesh's detail falls away beyond.
+    const target = MercatorCoordinate.fromLngLat(map.getCenter(), map.getCenterElevation())
+    this.view = {
+      eye: [eye[0], eye[1], eye[2]],
+      focal,
+      photo: MESH_PHOTO,
+      near: Math.hypot(target.x - eye[0], target.y - eye[1], target.z - eye[2]),
+      shows: (box) => !outside(m, box, 1, MESH_MARGIN),
+      onScreen: (box) => !outside(m, box, 1),
+    }
     if (!this.drawn.length) return
     const zoom = map.getZoom()
-    const main = args.defaultProjectionData.mainMatrix
-    this.matrix = Array.from(main)
     const look = this.look
     const centre = map.getCenter()
     // Haze in the units the depth comes in, which are pixels at the centre of the map.
@@ -867,6 +1318,32 @@ class CityLayer implements CustomLayerInterface {
     const matrixFor = (chunk: Chunk) => multiply(main, [chunk.scale, 0, 0, 0, 0, -chunk.scale, 0, 0, 0, 0, chunk.scale, 0, chunk.origin[0], chunk.origin[1], 0, 1])
 
     const draw = () => {
+      // Rīga photographed, first: the depth it lays down spares the card what it hides.
+      const mesh = this.meshProgram!
+      shared(mesh)
+      const exaggeration = map.getTerrain()?.exaggeration ?? 0
+      gl.uniform2f(mesh.uniforms.u_relief, exaggeration, exaggeration ? MESH_CLEARANCE : 0)
+      gl.uniform1i(mesh.uniforms.u_photo, 0)
+      gl.activeTexture(gl.TEXTURE0)
+      const eye = this.view!.eye
+      gl.uniform2f(mesh.uniforms.u_push, 0, 0)
+      let pushed = false
+      for (const chunk of this.drawn) {
+        if (chunk.kind !== 'mesh' || !chunk.count) continue
+        const matrix = matrixFor(chunk)
+        if (outside(matrix, chunk.box, 1)) continue
+        gl.uniformMatrix4fv(mesh.uniforms.u_matrix, false, new Float32Array(matrix))
+        if (chunk.push) {
+          // The camera in the piece's own metres, for moving it back along the line of sight.
+          gl.uniform3f(mesh.uniforms.u_eye, (eye[0] - chunk.origin[0]) / chunk.scale, (chunk.origin[1] - eye[1]) / chunk.scale, eye[2] / chunk.scale)
+          if (!pushed) gl.uniform2f(mesh.uniforms.u_push, MESH_PUSH, MESH_DROP)
+        } else if (pushed) gl.uniform2f(mesh.uniforms.u_push, 0, 0)
+        pushed = !!chunk.push
+        gl.bindTexture(gl.TEXTURE_2D, chunk.texture)
+        gl.bindVertexArray(chunk.vao)
+        gl.drawArrays(gl.TRIANGLES, 0, chunk.count)
+      }
+
       const buildings = this.buildingProgram!
       shared(buildings)
       const u = buildings.uniforms
@@ -885,7 +1362,7 @@ class CityLayer implements CustomLayerInterface {
       gl.uniform1f(u.u_glow, look.glow)
       gl.vertexAttrib1f(buildings.attributes.a_ground, 0)
       for (const chunk of this.drawn) {
-        if (chunk.kind === 'trees') continue
+        if (chunk.kind === 'trees' || chunk.kind === 'mesh') continue
         // The blocks rise out of the ground between the two levels, as they always have.
         const heightScale = chunk.kind === 'extruded' ? Math.min(1, Math.max(0, zoom - MIN_ZOOM)) : 1
         const matrix = matrixFor(chunk)
@@ -904,7 +1381,10 @@ class CityLayer implements CustomLayerInterface {
         gl.bindVertexArray(chunk.vao)
         this.lift(chunk, buildings.attributes.a_ground, 0)
         if (chunk.kind === 'extruded') gl.drawElements(gl.TRIANGLES, chunk.count, gl.UNSIGNED_INT, 0)
-        else gl.drawArrays(gl.TRIANGLES, 0, chunk.count)
+        else {
+          const runs = this.unmeshed(chunk)
+          for (let r = 0; r < runs.length; r += 2) gl.drawArrays(gl.TRIANGLES, runs[r], runs[r + 1])
+        }
       }
 
       const trees = this.treeProgram!
@@ -918,6 +1398,7 @@ class CityLayer implements CustomLayerInterface {
         if (outside(matrix, chunk.box, 1)) continue
         gl.uniformMatrix4fv(trees.uniforms.u_matrix, false, new Float32Array(matrix))
         gl.bindVertexArray(chunk.vao)
+        this.hideMeshedTrees(chunk)
         this.lift(chunk, trees.attributes.a_ground, 1)
         gl.drawArraysInstanced(gl.TRIANGLES, 0, UNIT_TREE.length / 4, chunk.count)
       }
@@ -942,7 +1423,7 @@ class CityLayer implements CustomLayerInterface {
   }
 }
 
-/** The local box around a list of points: west, south, bottom, east, north, top. */
+/** The local box around a list of points: west, south, bottom, east, north, top. It reaches down to 0 at least, and further where a point lies below. */
 function boxOf(values: Float32Array, stride: number): number[] {
   const box = [Infinity, Infinity, 0, -Infinity, -Infinity, 0]
   for (let i = 0; i < values.length; i += stride) {
@@ -950,7 +1431,10 @@ function boxOf(values: Float32Array, stride: number): number[] {
     box[1] = Math.min(box[1], values[i + 1])
     box[3] = Math.max(box[3], values[i])
     box[4] = Math.max(box[4], values[i + 1])
-    if (stride === 3) box[5] = Math.max(box[5], values[i + 2])
+    if (stride === 3) {
+      box[2] = Math.min(box[2], values[i + 2])
+      box[5] = Math.max(box[5], values[i + 2])
+    }
   }
   return box
 }

@@ -56,13 +56,37 @@ export interface TreeNode extends Placement {
   trees: Float32Array
 }
 
-export type ChunkMesh = ExtrudedTile | ModelNode | TreeNode
+/**
+ * One node of a photographed city (I3S IntegratedMesh): unindexed triangles, each corner with its
+ * place in the node's photo. It stands on z = 0 as the rest of the city does: each corner is set
+ * down by the terrain under it, which is kept per corner so the relief can raise it again.
+ */
+export interface MeshPiece extends Placement {
+  kind: 'mesh'
+  positions: Float32Array
+  /** u, v per corner; 0, 0 is the photo's top left. */
+  uvs: Float32Array
+  /** The terrain under each corner, metres, before the relief's exaggeration. */
+  grounds: Float32Array
+  /**
+   * Where the piece has triangles: its x, y box cut into MESH_COVER × MESH_COVER squares, west to
+   * east along each row, rows south to north, 1 where a triangle reaches.
+   */
+  cover: Uint8Array
+  photo: ImageBitmap
+}
+
+/** A polygon as rings of [longitude, latitude]: a point inside an odd number of them is inside. */
+export type Polygon = [number, number][][]
+
+export type ChunkMesh = ExtrudedTile | ModelNode | TreeNode | MeshPiece
 
 /** A request to the city worker. The worker fetches the URLs itself, so the main thread only receives finished geometry. */
 export type CityJob =
   | { kind: 'extruded'; id: string; url: string; z: number; x: number; y: number }
   | { kind: 'model'; id: string; url: string; obb: NodeBox; crs: ModelCrs }
   | { kind: 'trees'; id: string; featuresUrl: string; heightsUrl: string | null; crs: ModelCrs }
+  | { kind: 'mesh'; id: string; geometryUrl: string; photoUrl: string; obb: NodeBox; attributes?: string[]; cuts?: Polygon[]; maxPhoto: number }
   | { kind: 'overture'; id: string; z: number; x: number; y: number }
   | { kind: 'photo'; id: string; z: number; x: number; y: number }
   | { kind: 'cancel'; id: string }
@@ -100,6 +124,16 @@ export interface CityLayer {
   fields?: Partial<Record<BuildingField, string>>
   /** A layer of too many node pages to read in the browser: its leaves, baked (public/data/city-leaves/). */
   leaves?: string
+  /** Mesh layers only: what each vertex carries, in the order of its arrays, where more than its position and its place in the photo. */
+  attributes?: string[]
+  /** Mesh layers only: drawn in place of those of a higher rank where both are. 1 where none is given. */
+  rank?: number
+  /**
+   * Mesh layers only: what is cut out of it. Mostly its scene's cuts, where another of the city's
+   * blocks takes over; two leave holes no block of the city's fills, where LĢIA's shows instead. A
+   * few the bake adds where two blocks of the city's overlap.
+   */
+  cuts?: Polygon[]
 }
 
 /**
@@ -116,4 +150,6 @@ export interface CityCatalogue {
   baked: string
   buildings: CityLayer[]
   trees: CityLayer[]
+  /** Rīga photographed in 3D, one integrated mesh layer per block, drawn in Sat 3D. */
+  meshes?: CityLayer[]
 }

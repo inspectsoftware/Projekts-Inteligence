@@ -232,7 +232,7 @@ export const BASE_MODES: readonly { id: BaseMode; label: string; hint: string; d
     id: 'satellite3d',
     label: t('Sat 3D'),
     hint: t('Air photos with the buildings standing in 3D, their roofs taken from the photos'),
-    detail: t('Official 3D city models where there are any, elsewhere buildings from map data. Roofs as sharp as the air photos.'),
+    detail: t('Rīga as a photorealistic 3D model. Elsewhere official 3D city models where there are any, or buildings from map data; roofs as sharp as the air photos.'),
   },
   {
     id: 'recent',

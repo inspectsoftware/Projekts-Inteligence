@@ -1,10 +1,11 @@
 /**
  * Fetches and builds the city's geometry off the main thread: a vector tile's buildings
  * extruded, a node of Rīga's city model decoded, or a node's trees; and, for Sat 3D, the air
- * photo of one tile. Only finished arrays and pictures come back, handed over rather than copied.
+ * photo of one tile, or a node of Rīga photographed in 3D with its photo. Only finished arrays and
+ * pictures come back, handed over rather than copied.
  */
 import { groundUnder } from './dem'
-import { decodeModelNode, decodeTrees, extrudeTile } from './mesh'
+import { decodeMeshNode, decodeModelNode, decodeTrees, extrudeTile } from './mesh'
 import { overtureTile } from './overture'
 import { photoTile } from './photoTiles'
 import type { ChunkMesh, CityJob, CityResult } from './types'
@@ -37,10 +38,32 @@ async function build(job: Exclude<CityJob, { kind: 'cancel' | 'photo' }>, signal
       ])
       return decodeTrees(features, heights, job.crs)
     }
+    case 'mesh': {
+      // The photo is on its way while the geometry and the terrain under it are read. It is decoded
+      // last, so a node that fails leaves no picture behind.
+      const photo = fetchOk(job.photoUrl, signal).then((res) => res.blob())
+      photo.catch(() => {})
+      const [data, ground] = await Promise.all([fetchOk(job.geometryUrl, signal).then((res) => res.arrayBuffer()), groundUnder(job.obb, 3857)])
+      // Without the terrain the mesh would stand metres off the map: it is asked for again later,
+      // and what stood there before goes on standing meanwhile.
+      if (!ground) throw new Error('no terrain to set the mesh down on')
+      const piece = decodeMeshNode(data, job.obb, ground, job.attributes, job.cuts)
+      return { ...piece, photo: await photoOf(await photo, job.maxPhoto) }
+    }
   }
 }
 
-function buffersOf(mesh: ChunkMesh): ArrayBuffer[] {
+/** A node's photo, decoded here rather than on the page, and no wider or taller than `max`. */
+async function photoOf(blob: Blob, max: number): Promise<ImageBitmap> {
+  const full = await createImageBitmap(blob)
+  const shrink = max / Math.max(full.width, full.height)
+  if (shrink >= 1) return full
+  const small = await createImageBitmap(full, { resizeWidth: Math.max(1, Math.round(full.width * shrink)), resizeHeight: Math.max(1, Math.round(full.height * shrink)), resizeQuality: 'high' })
+  full.close()
+  return small
+}
+
+function buffersOf(mesh: ChunkMesh): Transferable[] {
   switch (mesh.kind) {
     case 'extruded':
       return [mesh.positions.buffer, mesh.colors.buffer, mesh.indices.buffer, mesh.polygons.buffer] as ArrayBuffer[]
@@ -48,6 +71,8 @@ function buffersOf(mesh: ChunkMesh): ArrayBuffer[] {
       return [mesh.positions.buffer, mesh.buildings.buffer] as ArrayBuffer[]
     case 'trees':
       return [mesh.trees.buffer] as ArrayBuffer[]
+    case 'mesh':
+      return [mesh.positions.buffer, mesh.uvs.buffer, mesh.grounds.buffer, mesh.cover.buffer, mesh.photo] as Transferable[]
   }
 }
 
@@ -67,7 +92,10 @@ scope.onmessage = async ({ data: job }: MessageEvent<CityJob>) => {
       return
     }
     const mesh = await build(job, abort.signal)
-    if (abort.signal.aborted) return
+    if (abort.signal.aborted) {
+      if (mesh.kind === 'mesh') mesh.photo.close()
+      return
+    }
     scope.postMessage({ id: job.id, mesh } satisfies CityResult, buffersOf(mesh))
   } catch (err) {
     // A cancelled job was forgotten by the page already; anything else is reported so it can try again later.

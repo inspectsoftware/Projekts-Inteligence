@@ -7,7 +7,11 @@
 // not read thousands of nodes to find the few near the camera. The browser fetches the geometry
 // itself, straight from the scene services. Never runs as part of `npm run build`; the result is
 // committed. Run it again when a city adds or replaces a layer.
-// Data: Rīgas valstspilsētas pašvaldība (GEO RĪGA), CC BY 4.0; the others as listed in OTHERS.
+// For Sat 3D, Rīga is also photographed in 3D: LĢIA's textured surface of the whole city, and the
+// city's own, sharper one of its centre, as two of GEO RĪGA's web scenes list their blocks (see
+// MESH_SCENES).
+// Data: Rīgas valstspilsētas pašvaldība (GEO RĪGA), CC BY 4.0; LĢIA's mesh © Latvijas Ģeotelpiskās
+// informācijas aģentūra, 2021, CC BY 4.0; the others as listed in OTHERS.
 //
 //   node scripts/bake-city-3d.mjs
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -55,6 +59,54 @@ const OTHERS = [
   },
 ]
 
+/**
+ * Rīga's photographed surface, one I3S integrated mesh layer per block. The organisation's services
+ * directory lists only some of its layers, and a different some each time, so the web scenes that
+ * show them are read instead. `rank` 0 is drawn in place of rank 1 where both are.
+ * - "RĪGAS REALITĀTES MODELIS (LĢIA)": LĢIA's model of the whole city from its spring 2021 air
+ *   photos, about 7 cm a pixel. Its blocks meet only along their seams.
+ * - The city's own "realitātes modelis" of its centre, from aerial photography (by helicopter in
+ *   2022) and laser scanning since 2022, about 1-2 cm a pixel. Its blocks name no height system,
+ *   but their streets lie within half a metre of LĢIA's, so they are taken to be in Latvia's too.
+ *   Its underground group is no use from the air, its few patches of 25 and 50 cm are coarser than
+ *   LĢIA's, and one block comes in degrees, which the worker does not read: LĢIA's shows there
+ *   instead. The scene cuts some blocks, mostly where another block takes over, twice leaving a
+ *   hole, where LĢIA's shows: the polygons go with them.
+ */
+const MESH_SCENES = [
+  { item: '0f550060386a435da391357ccf89d269', rank: 0, heightsUnnamed: true, skipGroups: ['Pazeme'], skipTitles: /\d+\s?cm/i },
+  { item: '63cd8006b9194bd59577faec2ed04591', rank: 1 },
+]
+
+/**
+ * Where two of the city's blocks both have triangles, the depth alone would choose between two
+ * flights' surfaces a few centimetres apart, in a patchwork that crawls as the camera moves: one of
+ * the two is cut there instead. A cut is either another block's, found by its number of points so
+ * that a changed scene stops the bake, or a ring traced from where both blocks have triangles.
+ */
+const MESH_SHARED_CUTS = {
+  // Uzvaras parks, flown again in 2025: Region_19 makes room for the new block, region_20 does not.
+  region_20_wgs: [{ from: 'Region_19_wgs', points: 147 }],
+  // The Central Market's 2025 block reaches into the Old Town's. The Old Town's makes room where
+  // region_4 does for the market, and along their seam where the market's has triangles: traced in
+  // October 2026, half a metre to a metre inside the market's edge.
+  vecriga_lod_rebuilt_wgs: [
+    { from: 'region_4_11122023_WGS', points: 105 },
+    {
+      ring: [
+        [24.108609, 56.943526], [24.112659, 56.943526], [24.112659, 56.945199], [24.112502, 56.945136], [24.112411, 56.945132], [24.112131, 56.945289],
+        [24.111265, 56.944947], [24.111018, 56.944848], [24.11091, 56.944857], [24.109871, 56.944448], [24.109772, 56.944452], [24.109253, 56.944583],
+        [24.108345, 56.944862], [24.108222, 56.944772], [24.108032, 56.944677], [24.107537, 56.944367], [24.108906, 56.943733], [24.108906, 56.943692],
+        [24.108609, 56.943526],
+      ],
+    },
+  ],
+}
+
+/** What a mesh's uncompressed vertices may carry, in the order I3S lays the arrays out; the city worker reads the positions and the photo's coordinates. */
+const MESH_ATTRIBUTES = ['position', 'normal', 'uv0', 'color']
+const MESH_TYPES = { position: 'Float32x3', normal: 'Float32x3', uv0: 'Float32x2', color: 'UInt8x4', featureId: 'UInt64x1', faceRange: 'UInt32x2' }
+
 async function get(url) {
   const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(30_000) })
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`)
@@ -84,6 +136,31 @@ function problem(layer) {
   if (layer.layerType === 'Point' && !layer.pointNodePages) return `no point node pages (store ${layer.store?.version})`
   if (layer.layerType !== '3DObject' && layer.layerType !== 'Point') return `layer type ${layer.layerType}`
   if (!crsOf(layer)) return `coordinate system ${layer.spatialReference?.wkid}`
+  if (!layer.fullExtent) return 'no extent'
+  return null
+}
+
+/** The vertex arrays of a geometry definition's first buffer, in order, or null where it is not uncompressed in a layout the worker reads. */
+function meshLayout(definition) {
+  const buffer = definition?.geometryBuffers?.[0]
+  const keys = Object.keys(buffer ?? {}).filter((key) => key !== 'offset')
+  if (buffer?.offset !== 8 || !keys.includes('position') || !keys.includes('uv0') || !keys.every((key) => MESH_TYPES[key] === `${buffer[key].type}x${buffer[key].component}`)) return null
+  return MESH_ATTRIBUTES.filter((attribute) => keys.includes(attribute))
+}
+
+/** Why the city worker could not draw a mesh layer, or null when it can. */
+function meshProblem(layer, heightsUnnamed) {
+  if (layer.layerType !== 'IntegratedMesh') return `layer type ${layer.layerType}`
+  if (crsOf(layer) !== 3857) return `coordinate system ${layer.spatialReference?.wkid}`
+  // Heights in Latvia's own system, as the terrain's are: the mesh is set down on that terrain.
+  const vcs = layer.spatialReference?.vcsWkid
+  if (vcs !== 7700 && !(heightsUnnamed && vcs === undefined)) return `heights in ${vcs ?? 'no named system'}`
+  // A node names the definition its geometry follows: every one must read the same way.
+  const layouts = (layer.geometryDefinitions ?? []).map((definition) => meshLayout(definition)?.join())
+  if (!layouts.length || !layouts[0] || layouts.some((layout) => layout !== layouts[0])) return 'no uncompressed geometry in a layout the worker reads'
+  const texture = layer.textureSetDefinitions?.[0]?.formats?.[0]
+  if (texture?.name !== '0' || texture.format !== 'jpg') return 'no JPEG photo'
+  if (layer.nodePages?.nodesPerPage !== 64 || layer.nodePages.lodSelectionMetricType !== 'maxScreenThresholdSQ') return 'other node pages'
   if (!layer.fullExtent) return 'no extent'
   return null
 }
@@ -198,7 +275,62 @@ for (const other of OTHERS) {
   buildings.push(fields.length ? { ...entry, fields: Object.fromEntries(fields) } : entry)
 }
 
+/**
+ * The polygons a scene cuts out of a block, as rings of [longitude, latitude]. A scene keeps its
+ * cuts with the item; "replace" sinks the mesh inside to make room for another block's, so it is a
+ * cut here too.
+ */
+async function meshCuts(item, modifications) {
+  if (!modifications) return null
+  const list = await get(`https://www.arcgis.com/sharing/rest/content/items/${item}/${String(modifications).replace(/^\.\//, '')}`)
+  return list.map(({ geometry, type }) => {
+    if (type !== 'clip' && type !== 'replace') throw new Error(`a cut of type ${type}`)
+    const crs = crsOf(geometry) ?? 3857
+    return geometry.rings.map((ring) => ring.map(([x, y]) => degrees(x, y, crs).map((value) => +value.toFixed(6))))
+  })
+}
+
+const meshes = []
+for (const { item, rank, heightsUnnamed, skipGroups = [], skipTitles } of MESH_SCENES) {
+  const scene = await get(`https://www.arcgis.com/sharing/rest/content/items/${item}/data?f=json`)
+  const found = []
+  const gather = (layers, group) => {
+    for (const layer of layers ?? []) {
+      if (layer.layers) gather(layer.layers, layer.title)
+      else if (layer.layerType === 'IntegratedMeshLayer') found.push({ group, name: layer.title, url: layer.url.replace(/\/$/, ''), modifications: layer.modifications })
+    }
+  }
+  gather(scene.operationalLayers, '')
+  for (const { group, name, url, modifications } of found) {
+    if (skipGroups.includes(group) || skipTitles?.test(name)) {
+      console.warn(`left out mesh ${name} (${group})`)
+      continue
+    }
+    // An error in place of the layer, as the service answers for one taken down, skips it.
+    const layer = await get(`${url}?f=json`).catch((err) => ({ problem: err.message }))
+    const reason = layer.problem ?? meshProblem(layer, heightsUnnamed)
+    if (reason) {
+      console.warn(`skipped mesh ${name} (${url}): ${reason}`)
+      continue
+    }
+    const attributes = meshLayout(layer.geometryDefinitions[0])
+    const cuts = await meshCuts(item, modifications)
+    const entry = { name, url, crs: 3857, bbox: bbox(layer.fullExtent, 3857) }
+    // Positions and the photo's coordinates alone, as LĢIA's blocks have them, go without saying; so does rank 1.
+    meshes.push({ ...entry, ...(rank !== 1 && { rank }), ...(attributes.join() !== 'position,uv0' && { attributes }), ...(cuts && { cuts }) })
+  }
+}
+for (const [name, shared] of Object.entries(MESH_SHARED_CUTS)) {
+  const mesh = meshes.find((entry) => entry.name === name)
+  if (!mesh) throw new Error(`MESH_SHARED_CUTS: no mesh ${name}`)
+  for (const { from, points, ring } of shared) {
+    const polygon = ring ? [ring] : meshes.find((entry) => entry.name === from)?.cuts?.find((cut) => cut.flat().length === points)
+    if (!polygon) throw new Error(`MESH_SHARED_CUTS: ${from} has no cut of ${points} points`)
+    mesh.cuts = [...(mesh.cuts ?? []), polygon]
+  }
+}
+
 const byName = (a, b) => a.name.localeCompare(b.name, 'lv')
 const lines = (layers) => layers.sort(byName).map((layer) => JSON.stringify(layer)).join(',\n')
-writeFileSync(outFile, `{"baked":"${today}","buildings":[\n${lines(buildings)}\n],"trees":[\n${lines(trees)}\n]}\n`)
-console.log(`city-3d.json: ${buildings.length} building layers, ${trees.length} tree layers`)
+writeFileSync(outFile, `{"baked":"${today}","buildings":[\n${lines(buildings)}\n],"trees":[\n${lines(trees)}\n],"meshes":[\n${lines(meshes)}\n]}\n`)
+console.log(`city-3d.json: ${buildings.length} building layers, ${trees.length} tree layers, ${meshes.length} mesh layers`)

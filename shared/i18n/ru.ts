@@ -367,7 +367,8 @@ export const ru: Record<string, string> = {
   'Sat': 'Спутник',
   'Sat 3D': 'Спутник 3D',
   'Air photos with the buildings standing in 3D, their roofs taken from the photos': 'Аэрофото со зданиями в 3D, крыши с фотографий',
-  'Official 3D city models where there are any, elsewhere buildings from map data. Roofs as sharp as the air photos.': 'Официальные 3D-модели городов, где они есть, в остальных местах здания по картографическим данным. Крыши настолько чёткие, насколько позволяют аэрофото.',
+  'Rīga as a photorealistic 3D model. Elsewhere official 3D city models where there are any, or buildings from map data; roofs as sharp as the air photos.':
+    'Рига в виде фотореалистичной 3D-модели. В остальных местах официальные 3D-модели городов, где они есть, или здания по картографическим данным; крыши настолько чёткие, насколько позволяют аэрофото.',
   'National orthophotos over the Sentinel-2 cloudless mosaic (2025)': 'Национальные ортофотоснимки поверх безоблачной мозаики Sentinel-2 (2025)',
   'Air photos of the Baltic states, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.':
     'Аэрофотоснимки стран Балтии, около 0,25 м на пиксель. За их пределами — спутниковые данные 10 м, нечёткие после масштаба 13.',

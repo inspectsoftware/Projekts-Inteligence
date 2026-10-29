@@ -367,7 +367,8 @@ export const et: Record<string, string> = {
   'Sat': 'Sat',
   'Sat 3D': 'Sat 3D',
   'Air photos with the buildings standing in 3D, their roofs taken from the photos': 'Aerofotod hoonetega 3D-s, katused fotodelt',
-  'Official 3D city models where there are any, elsewhere buildings from map data. Roofs as sharp as the air photos.': 'Ametlikud linnade 3D-mudelid, kus neid on, mujal hooned kaardiandmetest. Katused nii teravad, kui aerofotod lubavad.',
+  'Rīga as a photorealistic 3D model. Elsewhere official 3D city models where there are any, or buildings from map data; roofs as sharp as the air photos.':
+    'Riia fotorealistliku 3D-mudelina. Mujal ametlikud linnade 3D-mudelid, kus neid on, või hooned kaardiandmetest; katused nii teravad, kui aerofotod lubavad.',
   'National orthophotos over the Sentinel-2 cloudless mosaic (2025)': 'Riiklikud ortofotod Sentinel-2 pilvevaba mosaiigi peal (2025)',
   'Air photos of the Baltic states, about 0.25 m per pixel. Elsewhere 10 m satellite data, soft past zoom 13.':
     'Balti riikide aerofotod, umbes 0,25 m piksli kohta. Mujal 10 m satelliidiandmed, alates suumiastmest 13 udune.',
