@@ -23,7 +23,7 @@ export const camerasLayer: LayerDef = {
   group: 'land',
   label: t('Road cameras'),
   hint: t("The road authority's roadside cameras on the main roads around Rīga: a still every few minutes"),
-  defaultOn: true,
+  defaultOn: false,
   swatch: '#78dcff',
   feeds: ['cameras'],
   describes: ['camera'],

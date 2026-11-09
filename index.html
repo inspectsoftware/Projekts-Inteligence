@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#04070a" />
+    <meta name="theme-color" content="#f7f9fb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#04070a" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>PROJEKTS INTELIĢENCE // Latvia</title>
     <!-- What a link to the site shows when it is posted: one card for every view, as the view itself is in the fragment the server never sees. -->
@@ -26,7 +27,7 @@
       body {
         margin: 0;
         height: 100%;
-        background: #04070a;
+        background: #e4e9ee;
       }
       #boot {
         position: fixed;
@@ -34,8 +35,8 @@
         z-index: 100;
         display: grid;
         place-items: center;
-        background: radial-gradient(ellipse at center, #0a1118 0%, #04070a 70%);
-        color: #d5e1ea;
+        background: radial-gradient(ellipse at center, #f7f9fb 0%, #e4e9ee 70%);
+        color: #17222b;
         font: 11px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         letter-spacing: 0.14em;
         transition:
@@ -78,11 +79,28 @@
         font-size: 17px;
         font-weight: 600;
         letter-spacing: 0.32em;
-        color: #f4f6f8;
+        color: #04080b;
       }
       .boot-sub {
         margin-top: 2px;
-        color: #8499a8;
+        color: #445663;
+      }
+      /* Light unless the device asks for dark, as the app itself decides (useTheme). */
+      @media (prefers-color-scheme: dark) {
+        html,
+        body {
+          background: #04070a;
+        }
+        #boot {
+          background: radial-gradient(ellipse at center, #0a1118 0%, #04070a 70%);
+          color: #d5e1ea;
+        }
+        .boot-title {
+          color: #f4f6f8;
+        }
+        .boot-sub {
+          color: #8499a8;
+        }
       }
       @keyframes boot-lids {
         0%,

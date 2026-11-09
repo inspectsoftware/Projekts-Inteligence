@@ -436,7 +436,7 @@ export const underseaLayer = referenceLayer(
     label: t('Undersea cables'),
     hint: t('Named telecom cables, power links and pipelines on the Baltic seabed, as mapped in OpenStreetMap'),
     swatch: '#c08cff',
-    defaultOn: true,
+    defaultOn: false,
   },
   staticLayer(
     'infrastructure',

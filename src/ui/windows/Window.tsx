@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type PointerEvent as ReactPointerEvent, useLayoutEffect, useRef } from 'react'
+import { type KeyboardEvent, type PointerEvent as ReactPointerEvent, Suspense, useLayoutEffect, useRef } from 'react'
 import { t } from '../../i18n'
 import { prefersReducedMotion } from '../../map/camera'
 import { useWindows } from '../../state/windows'
@@ -344,7 +344,9 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
       </header>
       {/* Hidden rather than unmounted when collapsed, so a body keeps its tab, its scroll and its stream. */}
       <div hidden={collapsed} className="flex min-h-0 flex-1 flex-col overflow-y-auto border-t border-line">
-        <Body />
+        <Suspense fallback={null}>
+          <Body />
+        </Suspense>
       </div>
       {!sheet &&
         !collapsed &&

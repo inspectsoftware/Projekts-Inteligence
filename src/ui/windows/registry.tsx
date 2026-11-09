@@ -1,4 +1,4 @@
-import { type ComponentType, useMemo, useSyncExternalStore } from 'react'
+import { type ComponentType, lazy, useMemo, useSyncExternalStore } from 'react'
 import { t } from '../../i18n'
 import { useLog } from '../../runtime/log'
 import { usePinged } from '../../runtime/presence'
@@ -12,22 +12,24 @@ import { Inspector } from '../Inspector'
 import { LayerTree } from '../LayerTree'
 import { RadarControl } from '../RadarControl'
 import { StatusPanel } from '../StatusPanel'
-import { CctvWindow } from './CctvWindow'
 import { useChat } from './chat/store'
-import { ChatWindow } from './ChatWindow'
 import { ConsoleWindow } from './ConsoleWindow'
-import { CountryWindow } from './CountryWindow'
-import { DisplayWindow } from './DisplayWindow'
 import type { Placement, Size } from './geometry'
 import { useIntelBadge } from './intel'
-import { IntelWindow } from './IntelWindow'
 import { useMilitaryBadge } from './military/badge'
-import { MilitaryWindow } from './MilitaryWindow'
-import { NoticesWindow } from './NoticesWindow'
-import { RadioWindow } from './RadioWindow'
-import { SyncWindow } from './SyncWindow'
-import { TransportWindow } from './TransportWindow'
-import { TvWindow } from './TvWindow'
+
+// Window bodies load the first time their window opens, so the first page load carries only the map.
+const CctvWindow = lazy(() => import('./CctvWindow').then((m) => ({ default: m.CctvWindow })))
+const ChatWindow = lazy(() => import('./ChatWindow').then((m) => ({ default: m.ChatWindow })))
+const CountryWindow = lazy(() => import('./CountryWindow').then((m) => ({ default: m.CountryWindow })))
+const DisplayWindow = lazy(() => import('./DisplayWindow').then((m) => ({ default: m.DisplayWindow })))
+const IntelWindow = lazy(() => import('./IntelWindow').then((m) => ({ default: m.IntelWindow })))
+const MilitaryWindow = lazy(() => import('./MilitaryWindow').then((m) => ({ default: m.MilitaryWindow })))
+const NoticesWindow = lazy(() => import('./NoticesWindow').then((m) => ({ default: m.NoticesWindow })))
+const RadioWindow = lazy(() => import('./RadioWindow').then((m) => ({ default: m.RadioWindow })))
+const SyncWindow = lazy(() => import('./SyncWindow').then((m) => ({ default: m.SyncWindow })))
+const TransportWindow = lazy(() => import('./TransportWindow').then((m) => ({ default: m.TransportWindow })))
+const TvWindow = lazy(() => import('./TvWindow').then((m) => ({ default: m.TvWindow })))
 
 /** A count or a short flag, shown in a window's header and on its taskbar button. */
 export interface WindowBadge {

@@ -135,7 +135,7 @@ export const aircraftLayer: LayerDef = {
   group: 'air',
   label: t('Aircraft'),
   hint: t('Live ADS-B and multilateration positions within 250 nm, refreshed every 10 s, plus military aircraft across the wider Baltic region every 30 s'),
-  defaultOn: true,
+  defaultOn: false,
   swatch: '#a4e8ff',
   feeds: ['aircraft', 'aircraft-mil'],
   describes: ['aircraft'],

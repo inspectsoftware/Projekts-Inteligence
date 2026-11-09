@@ -13,18 +13,21 @@ export const THEMES: readonly { id: ThemeChoice; label: string; hint: string }[]
   { id: 'dark', label: t('Dark'), hint: t('Dark panels and the dark tactical map') },
 ]
 
-const prefersLight = () => window.matchMedia('(prefers-color-scheme: light)')
+const prefersDark = () => window.matchMedia('(prefers-color-scheme: dark)')
 
-/** The theme in force: the reader's choice, or the device's own setting while the choice is "system". */
+/**
+ * The theme in force: the reader's choice, or the device's own setting while the choice is "system".
+ * Light unless the device asks for dark, so a device that states no preference gets the light page.
+ */
 export function useTheme(): 'light' | 'dark' {
   const choice = useUi((s) => s.theme)
   const device = useSyncExternalStore(
     (onChange) => {
-      const media = prefersLight()
+      const media = prefersDark()
       media.addEventListener('change', onChange)
       return () => media.removeEventListener('change', onChange)
     },
-    () => (prefersLight().matches ? 'light' : 'dark'),
+    () => (prefersDark().matches ? 'dark' : 'light'),
   )
   return choice === 'system' ? device : choice
 }

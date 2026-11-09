@@ -254,3 +254,14 @@ body {
     opacity: 0;
   }
 }
+
+/*
+ * Frosted panels blur the map under them on every frame it moves, which a phone pays for in
+ * dropped frames. On touch screens the panels are opaque enough to read without it.
+ */
+@media (pointer: coarse) {
+  * {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}

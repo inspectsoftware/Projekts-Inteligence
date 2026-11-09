@@ -86,7 +86,7 @@ export const shipsLayer: LayerDef = {
   group: 'sea',
   label: t('Ships'),
   hint: t('Vessels broadcasting AIS, with navy, government, sanctioned and shadow-fleet vessels marked. Without an AISStream key only the northern approaches are covered (open Finnish data); with one, all Latvian waters'),
-  defaultOn: true,
+  defaultOn: false,
   swatch: '#7ed6aa',
   feeds: ['ships'],
   describes: ['ship'],
