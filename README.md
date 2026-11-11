@@ -72,6 +72,10 @@ Requires Node 22 or newer. Everything works without configuration; a few optiona
 | `CHAT_BANNED_IDS`      | Public ids (as shown beside a message), comma-separated, of browsers that may read the chat but not write in it |
 | `CHAT_DISABLED`        | `1` shuts the chat |
 | `PROXY_HOPS`           | How many of the host's proxies stand between a visitor and the process, so request limits go by an address a caller cannot forge. `GET /api/health` reports what it sees as `forwarded`. Leave it unset when unsure |
+| `TILES_DIR`            | Where our own vector tiles are (`baltic.pmtiles`). Default `tiles/` at the project's root |
+| `VALHALLA_URL`         | A Valhalla service run apart (Docker, another host), for bus lanes. Without it the server starts one itself from `valhalla/` |
+| `VALHALLA_DIR`         | Where Valhalla's road graph is (`valhalla.json` and `tiles/`). Default `valhalla/` at the project's root |
+| `VALHALLA_BIN`         | The folder of Valhalla's executables, where they are not the ones `scripts/build-valhalla.mjs` installs |
 
 ### Deploying
 
@@ -80,6 +84,49 @@ that serves both the API and the client, started with `npm start`. Any Node 22 h
 live site runs as a Hostinger Node.js web app (type Hono, branch `main`, entry file
 `dist/index.js`), which builds and restarts on every push. `GET /api/health` reports the running
 commit.
+
+### Our own map and the navigator
+
+Two things are built by hand, about once a month, and are not in git: our own vector tiles of the
+Baltic states, and the road graph of Valhalla, the open-source navigation engine the buses are put
+in their lanes by. Both come from the same OpenStreetMap extracts.
+
+```bash
+node scripts/build-tiles.mjs      # tiles/baltic.pmtiles, ~400 MB, ~6 min; needs Java 21
+node scripts/build-valhalla.mjs   # valhalla/, ~500 MB, ~7 min; needs Python 3.12, after build-tiles
+```
+
+`build-tiles.mjs` downloads the Geofabrik extracts of Estonia, Latvia and Lithuania (kept a week in
+`scripts/.cache/osm`), merges them, and builds the tiles with Planetiler to the schema in
+`scripts/tiles/baltic.yml`. `build-valhalla.mjs` installs Valhalla (the `pyvalhalla` package, into a
+virtual environment in `scripts/.cache`) and builds its graph from the same merged extract, with the
+countries' borders, so it knows which side of the road they drive on.
+
+With `valhalla/` in place the server starts Valhalla's service itself on `127.0.0.1:8002` and puts
+every bus and trolleybus line in its lanes, as a navigator would drive it: in the right-hand lane,
+and before a turn in the lane for that turn, from OpenStreetMap's turn lanes. Each town's lines are
+saved in the cache folder and done again only when the lines or the graph change. Without it (or
+with Valhalla unreachable) the lines are put on the streets by the matcher of our own, as before;
+trams and trains always are, from streets fetched through Overpass. On a host without Python, run
+Valhalla apart (for example its Docker image) on the graph built here, and set `VALHALLA_URL`.
+
+### Streets lane by lane
+
+From zoom 16 the map draws the streets lane by lane (`src/map/streets.ts`): each lane as a shape
+coloured by what it is for (driving, bus, cycling, parking, the pavements), the junctions' own areas,
+the paint between the lanes and the arrows in them, and bridges over the roads beneath. They are built
+on the server by [osm2streets](https://github.com/a-b-street/osm2streets), A/B Street's street engine
+(the `osm2streets-js` package, WebAssembly, Apache-2.0), from OpenStreetMap: `/api/streets/15/x/y`
+fetches a z15 tile's ways through Overpass (with 100 m to spare round it), builds it, cuts it to the
+tile and keeps it in the cache folder for a month (`server/streets/detailed.ts`). The first visit to a
+tile waits for Overpass, about half a minute; after that it comes from disk. Until a tile is there, the
+map's own street lines show.
+
+The islands and the hatched areas no car may cross come from the same download: osm2streets leaves
+them out, so the server takes the closed ways mappers tagged `area:highway=traffic_island`,
+`traffic_calming=island` or `area:highway=prohibited` straight from the OSM, and the map draws them
+over the lanes (an island kerbed, green where it is grass; the hatching in the road's paint). They show
+only where someone has mapped them: some 400 islands and 90 hatched areas in Rīga, mostly in the east.
 
 ## How it is put together
 

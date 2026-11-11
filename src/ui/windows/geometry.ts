@@ -51,19 +51,23 @@ export interface SnapOptions {
   grid: number
 }
 
-/** Fixed chrome that windows keep clear of: the top bar, the taskbar along the bottom and the HUD row above it. */
-export const CHROME = { top: 40, taskbar: 44, hud: 44 }
+/**
+ * Fixed chrome that floating windows keep clear of, on the wide screens where windows float: the bars
+ * floating along the top edge and the HUD line at the bottom. (On a phone a
+ * window is a sheet, placed by its classes.)
+ */
+export const CHROME = { top: 48, bottom: 28 }
 export const MARGIN = 12
 
 const SNAP: SnapOptions = { threshold: 28, gap: 8, grid: 8 }
 
-/** The usable area: below the top bar and above the HUD and the taskbar, with a margin all round. */
+/** The usable area: below the top bars and above the HUD, with a margin all round. */
 export function usableBounds(viewport: Size): Bounds {
   return {
     left: MARGIN,
     top: CHROME.top + MARGIN,
     right: viewport.w - MARGIN,
-    bottom: viewport.h - CHROME.taskbar - CHROME.hud - MARGIN,
+    bottom: viewport.h - CHROME.bottom - MARGIN,
   }
 }
 

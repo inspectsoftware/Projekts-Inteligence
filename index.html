@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta name="theme-color" content="#f7f9fb" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#04070a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>PROJEKTS INTELIĢENCE // Latvia</title>
+    <title>PROJEKTS INTELIĢENCE // Baltic states</title>
     <!-- What a link to the site shows when it is posted: one card for every view, as the view itself is in the fragment the server never sees. -->
     <meta name="description" content="A live open-source intelligence map of Latvia and the Baltic: aircraft, ships, GPS interference, weather, news and live cameras, from public sources only." />
     <meta property="og:type" content="website" />
@@ -27,7 +27,7 @@
       body {
         margin: 0;
         height: 100%;
-        background: #e4e9ee;
+        background: #ececec;
       }
       #boot {
         position: fixed;
@@ -35,8 +35,8 @@
         z-index: 100;
         display: grid;
         place-items: center;
-        background: radial-gradient(ellipse at center, #f7f9fb 0%, #e4e9ee 70%);
-        color: #17222b;
+        background: radial-gradient(ellipse at center, #ffffff 0%, #ececec 70%);
+        color: #1c1c1c;
         font: 11px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         letter-spacing: 0.14em;
         transition:
@@ -56,112 +56,110 @@
         display: block;
         width: 100%;
         height: auto;
-        filter: drop-shadow(0 0 28px rgb(158 48 57 / 0.35));
+        filter: drop-shadow(0 0 28px rgb(242 162 36 / 0.3));
       }
-      .boot-eye,
-      .boot-iris,
-      .boot-rays {
+      .boot-gem,
+      .boot-gaze {
         transform-box: fill-box;
         transform-origin: center;
       }
-      /* 3.4 s in all: shut, open, left, right, up, centre, shut. */
-      .boot-eye {
-        animation: boot-lids 3.4s cubic-bezier(0.5, 0, 0.3, 1) both;
+      /* 3.4 s in all: the amber turns in, light runs over its facets, the eye looks left, right, up, back. */
+      .boot-gem {
+        animation: boot-gem 3.4s cubic-bezier(0.34, 1.4, 0.64, 1) both;
       }
-      .boot-iris {
+      .boot-gaze {
         animation: boot-look 3.4s ease-in-out both;
       }
-      .boot-rays {
-        animation: boot-rays 3.4s ease-out both;
+      .boot-glint {
+        animation: boot-glint 3.4s ease-in-out both;
       }
       .boot-title {
         margin-top: 22px;
         font-size: 17px;
         font-weight: 600;
         letter-spacing: 0.32em;
-        color: #04080b;
+        color: #0a0a0a;
       }
       .boot-sub {
         margin-top: 2px;
-        color: #445663;
+        color: #555555;
       }
       /* Light unless the device asks for dark, as the app itself decides (useTheme). */
       @media (prefers-color-scheme: dark) {
         html,
         body {
-          background: #04070a;
+          background: #0a0a0a;
         }
         #boot {
-          background: radial-gradient(ellipse at center, #0a1118 0%, #04070a 70%);
-          color: #d5e1ea;
+          background: radial-gradient(ellipse at center, #191919 0%, #0a0a0a 70%);
+          color: #e5e5e5;
         }
         .boot-title {
           color: #f4f6f8;
         }
         .boot-sub {
-          color: #8499a8;
+          color: #a3a3a3;
         }
       }
-      @keyframes boot-lids {
-        0%,
-        8% {
-          transform: scaleY(0.02);
+      @keyframes boot-gem {
+        0% {
+          opacity: 0;
+          transform: scale(0.55) rotate(-60deg);
         }
         22%,
-        84% {
-          transform: scaleY(1);
+        88% {
+          opacity: 1;
+          transform: scale(1) rotate(0deg);
         }
-        96%,
         100% {
-          transform: scaleY(0.02);
+          opacity: 1;
+          transform: scale(0.94) rotate(0deg);
         }
       }
+      /* In the stone's own units (it is drawn 64 wide): the eye never leaves its facets. */
       @keyframes boot-look {
         0%,
-        26% {
+        30% {
           transform: translate(0, 0);
         }
-        38%,
-        44% {
-          transform: translate(-30px, 2px);
+        40%,
+        46% {
+          transform: translate(-6px, 0.5px);
         }
-        56%,
-        62% {
-          transform: translate(30px, 2px);
+        58%,
+        64% {
+          transform: translate(6px, 0.5px);
         }
-        72%,
-        76% {
-          transform: translate(8px, -12px);
+        74%,
+        78% {
+          transform: translate(1.5px, -3.5px);
         }
-        84%,
+        88%,
         100% {
           transform: translate(0, 0);
         }
       }
-      @keyframes boot-rays {
+      @keyframes boot-glint {
         0%,
-        14% {
+        20% {
           opacity: 0;
-          transform: scale(0.7);
         }
-        30%,
-        84% {
-          opacity: 0.55;
-          transform: scale(1);
+        32% {
+          opacity: 0.7;
         }
+        48%,
         100% {
           opacity: 0;
-          transform: scale(0.85);
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        .boot-eye,
-        .boot-iris,
-        .boot-rays {
+        .boot-gem,
+        .boot-gaze,
+        .boot-glint {
           animation: none;
         }
-        .boot-rays {
-          opacity: 0.55;
+        .boot-glint {
+          opacity: 0;
         }
         #boot.done {
           transform: none;
@@ -173,36 +171,25 @@
     <div id="boot" role="status" aria-label="Loading">
       <div class="boot-box">
         <svg class="boot-logo" viewBox="0 0 400 240" aria-hidden="true">
-          <defs>
-            <clipPath id="boot-flag"><rect x="20" y="20" width="360" height="200" rx="6" /></clipPath>
-            <clipPath id="boot-ball"><path d="M96 120C128 76 164 62 200 62s72 14 104 58c-32 44-68 58-104 58s-72-14-104-58Z" /></clipPath>
-            <radialGradient id="boot-iris" cx="50%" cy="45%" r="55%">
-              <stop offset="0" stop-color="#c8414c" />
-              <stop offset="0.6" stop-color="#9e3039" />
-              <stop offset="1" stop-color="#5e1a21" />
-            </radialGradient>
-          </defs>
-          <g clip-path="url(#boot-flag)">
-            <rect x="20" y="20" width="360" height="200" fill="#9e3039" />
-            <rect x="20" y="100" width="360" height="40" fill="#f4f6f8" />
-            <g class="boot-rays" stroke="#f4f6f8" stroke-width="2.5" stroke-linecap="round">
-              <path d="M200 62V30M200 178v32M158 70l-16-28M242 70l16-28M158 170l-16 28M242 170l16 28M124 86l-30-20M276 86l30-20M124 154l-30 20M276 154l30 20" />
-            </g>
-          </g>
-          <g class="boot-eye">
-            <path d="M96 120C128 76 164 62 200 62s72 14 104 58c-32 44-68 58-104 58s-72-14-104-58Z" fill="#f4f6f8" />
-            <g clip-path="url(#boot-ball)">
-              <g class="boot-iris">
-                <circle cx="200" cy="120" r="40" fill="url(#boot-iris)" stroke="#04070a" stroke-width="5" />
-                <circle cx="200" cy="120" r="17" fill="#04070a" />
-                <circle cx="213" cy="107" r="6.5" fill="#f4f6f8" />
+          <!-- The logo (public/logo.svg): a cut piece of amber with a watching eye at its heart. -->
+          <g transform="translate(120 40) scale(2.5)">
+            <g class="boot-gem">
+              <polygon points="32,4 56,18 56,46 32,60 8,46 8,18" fill="#f2a224" />
+              <polygon points="32,4 56,18 32,32" fill="#ffc95c" />
+              <polygon points="8,18 32,4 32,32" fill="#f7b544" />
+              <polygon points="8,46 32,60 32,32" fill="#c8740f" />
+              <polygon points="56,46 32,60 32,32" fill="#a85d0b" />
+              <!-- Light running over the upper facets -->
+              <polygon class="boot-glint" points="32,4 56,18 32,32 8,18" fill="#fff4dc" opacity="0" />
+              <g class="boot-gaze">
+                <circle cx="32" cy="32" r="8" fill="#0e2a47" />
+                <circle cx="34.8" cy="29.2" r="2.2" fill="#fff4dc" />
               </g>
             </g>
-            <path d="M96 120C128 76 164 62 200 62s72 14 104 58c-32 44-68 58-104 58s-72-14-104-58Z" fill="none" stroke="#04070a" stroke-width="7" stroke-linejoin="round" />
           </g>
         </svg>
         <div class="boot-title">PROJEKTS INTELIĢENCE</div>
-        <div class="boot-sub">LATVIA // INTELLIGENCE PANEL</div>
+        <div class="boot-sub">BALTIC STATES // LIVE MAP</div>
       </div>
     </div>
     <div id="root"></div>

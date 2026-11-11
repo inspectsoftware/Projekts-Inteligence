@@ -6,20 +6,25 @@ import { useEffect, useRef } from 'react'
 import { AOI_BBOX, inBBox } from '../../shared/region'
 import { t } from '../i18n'
 import { setBorder } from '../runtime/border'
-import { useRecent, useTheme, useUi } from '../state/ui'
+import { currentMapTheme, useRecent, useTheme, useUi } from '../state/ui'
 import { whatIsHere } from '../runtime/place'
 import { finishBoot } from '../ui/boot'
 import { applyBaseMode, applyZoomCeiling, rasterId } from './baseMode'
 import { ORTHO_LITHUANIA, clampZoom, recentEnd, zoomCeiling } from './basemaps'
 import { INTRO_START, runIntro } from './camera'
 import { CITY_LAYER, addCity, setCityOpacity, setCityPhoto, setCityTheme } from './city/layer'
+import { addFurniture, setFurnitureTheme } from './furniture'
+import { addVehicles3d, setVehicles3dTheme } from './vehicles3d'
+import { addOsmTrees, setOsmTreesTheme } from './osmTrees'
+import { addStreets, setStreetsOn, setStreetsTheme } from './streets'
 import { setMap, setMapFailure, useMap, useMapFailure } from './instance'
 import { CLIP_SCHEME, TRIM_SCHEME, loadEstoniaTile, loadLatviaTile, setClipBorder } from './orthoClip'
 import { PATIENT_SCHEME, loadPatientTile } from './patientTiles'
 import { applyRelief } from './relief'
 import { prewarmFeeds, startScene } from './scene'
 import { addSpotlight } from './spotlight'
-import { applyMapTheme, buildStyle } from './style'
+import { Protocol } from 'pmtiles'
+import { addOwnTiles, applyMapTheme, buildStyle, ownTilesUrl } from './style'
 import { WORLD_SCHEME, loadWorldOrthoTile } from './worldOrtho'
 import { readUrlView, writeUrlView } from './urlView'
 import { useWalk } from './walk'
@@ -32,6 +37,11 @@ addProtocol(CLIP_SCHEME, loadLatviaTile)
 addProtocol(TRIM_SCHEME, loadEstoniaTile)
 addProtocol(PATIENT_SCHEME, loadPatientTile)
 addProtocol(WORLD_SCHEME, loadWorldOrthoTile)
+// Our own vector tiles of the Baltic states, one PMTiles file read a few kilobytes at a time.
+addProtocol('pmtiles', new Protocol().tile)
+
+/** How far the drawn map (not Sat 3D) may tilt, degrees. */
+const DRAWN_MAX_PITCH = 60
 
 export function MapView() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -64,6 +74,10 @@ export function MapView() {
     map.setLayoutProperty(CITY_LAYER, 'visibility', city || relief ? 'visible' : 'none')
     setCityOpacity(city ? 1 : 0.7)
     setCityPhoto(base === 'satellite3d')
+    // The drawn map tilts no further than 60°: a road drawn as a line keeps its width in pixels however
+    // far off it is, so steeper the far streets swell into one grey mass. Sat 3D's photographed
+    // streets keep their size with distance, and it may tilt to the horizon.
+    map.setMaxPitch(base === 'satellite3d' ? 85 : DRAWN_MAX_PITCH)
   }, [map, base, back, relief])
 
   // Last of the three: it colours what the two above have just put on the map. Over imagery the
@@ -72,6 +86,12 @@ export function MapView() {
     if (!map) return
     applyMapTheme(map, base === 'dark' ? theme : 'dark', base !== 'dark')
     setCityTheme(base === 'dark' ? theme : 'dark')
+    setFurnitureTheme(base === 'dark' ? theme : 'dark')
+    setVehicles3dTheme(base === 'dark' ? theme : 'dark')
+    setOsmTreesTheme(base === 'dark' ? theme : 'dark')
+    setStreetsTheme(base === 'dark' ? theme : 'dark')
+    // The streets lane by lane on the drawn map only: over the photos their own streets show.
+    setStreetsOn(base === 'dark')
   }, [map, base, back, relief, theme])
 
   useEffect(() => {
@@ -113,7 +133,8 @@ export function MapView() {
     let stopScene: (() => void) | undefined
     // Both on their way while the style and the first tiles load, rather than after.
     const releaseWarm = prewarmFeeds()
-    const borderRequest = fetch('/data/lv-border.json').then((res) => res.json() as Promise<FeatureCollection<Polygon | MultiPolygon>>)
+    // The three Baltic states together, lit against the rest of the map (spotlight.ts).
+    const borderRequest = fetch('/data/baltic-border.json').then((res) => res.json() as Promise<FeatureCollection<Polygon | MultiPolygon>>)
     borderRequest.catch(() => {})
     // Never leave the boot screen up if the style or tiles cannot be reached.
     const bootTimeout = setTimeout(finishBoot, 8000)
@@ -156,7 +177,25 @@ export function MapView() {
         }
         if (cancelled) return
         // Before the map is published: the base and relief effects reach the city by its layer id.
-        addCity(created, 'building-outline')
+        addCity(created, 'label-housenumber')
+        // Buses, trams and trains standing in 3D close in, in the city's depth.
+        addVehicles3d(created, 'label-housenumber')
+        // Our own tiles, where the server has them: the Baltic states' streets lane by lane.
+        void ownTilesUrl().then((url) => {
+          if (!url || cancelled) return
+          addOwnTiles(created, currentMapTheme(), url)
+          // Close in, the streets lane by lane over the map's own lines, under the tracks (map/streets.ts).
+          setStreetsTheme(useUi.getState().base === 'dark' ? currentMapTheme() : 'dark')
+          setStreetsOn(useUi.getState().base === 'dark')
+          addStreets(created, 'own-rail')
+          // Traffic lights and stops standing in 3D, read from the same tiles.
+          addFurniture(created, 'label-housenumber')
+          // OpenStreetMap's trees where the city's own survey does not reach.
+          addOsmTrees(created, 'label-housenumber')
+          setOsmTreesTheme(useUi.getState().base === 'dark' ? currentMapTheme() : 'dark')
+          setFurnitureTheme(useUi.getState().base === 'dark' ? currentMapTheme() : 'dark')
+          applyBaseMode(created, useUi.getState().base)
+        })
         setMap(created)
         stopScene = startScene(created)
         releaseWarm()
@@ -167,7 +206,7 @@ export function MapView() {
           // Walking moves the camera every frame; the link is written when the walk ends.
           if (event.walk) return
           const { lng, lat } = created.getCenter()
-          // The shade that sets Latvia apart would only darken a map of somewhere else.
+          // The shade that sets the Baltic states apart would only darken a map of somewhere else.
           if (created.getLayer('lv-mask')) created.setLayoutProperty('lv-mask', 'visibility', inBBox(lng, lat, AOI_BBOX) ? 'visible' : 'none')
           writeUrlView({ center: [lng, lat], zoom: created.getZoom(), bearing: created.getBearing(), pitch: created.getPitch() })
         })

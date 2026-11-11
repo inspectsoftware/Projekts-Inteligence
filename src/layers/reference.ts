@@ -240,7 +240,7 @@ export const aerodromesLayer = referenceLayer(
     label: t('Airfields'),
     hint: t('Airports and airfields, from the international airport down to grass strips'),
     swatch: '#9fd3ff',
-    defaultOn: true,
+    defaultOn: false,
   },
   staticLayer(
     'infrastructure',
@@ -290,7 +290,8 @@ export const portsLayer: LayerDef = {
       label: t('Ports'),
       hint: t("Latvia's ten sea ports: the three large ones (Rīga, Ventspils, Liepāja) and seven small harbours"),
       swatch: '#5fb0ff',
-      defaultOn: true,
+      // Off at first: a city map, not a shipping chart. One click in Layers brings them back.
+      defaultOn: false,
     },
     staticLayer(
       'infrastructure',

@@ -4,8 +4,10 @@ import { aircraftLayer } from './aircraft'
 import { camsLayer } from './cams'
 import { conflictsLayer, dangerLayer } from './danger'
 import { quakesLayer } from './quakes'
+import { ferriesLayer } from './ferries'
 import { firesLayer } from './fires'
 import { gpsHexLayer } from './gpsHex'
+import { landmarksLayer } from './landmarks'
 import { militarySitesLayer, seaExerciseAreasLayer } from './military'
 import { radarLayer } from './radar'
 import { rigaTransitLayer } from './rigaTransit'
@@ -42,8 +44,10 @@ export const LAYERS: readonly LayerDef[] = [
   camerasLayer,
   camsLayer,
   shipsLayer,
+  ferriesLayer,
   seaWarningsLayer,
   rigaTransitLayer,
+  landmarksLayer,
   transitLayer,
   trainsLayer,
   satellitesLayer,

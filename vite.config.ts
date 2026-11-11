@@ -16,6 +16,8 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': 'http://127.0.0.1:8787',
+      // Our own vector tiles (tiles/baltic.pmtiles), served by the API server with range requests.
+      '/tiles': 'http://127.0.0.1:8787',
     },
   },
 })

@@ -1,6 +1,7 @@
 import type { ExpressionSpecification, LayerSpecification, Map as MapLibreMap, SkySpecification, StyleSpecification } from 'maplibre-gl'
 import { TILE_ORIGINS } from '../../shared/origins'
 import { lang } from '../i18n'
+import { addOwnImages, poiTextColor, OUTSIDE_BALTIC, OWN_SOURCE, OWN_TILES_PATH, ownLayers } from './ownStyle'
 
 /**
  * Dark tactical basemap over OpenFreeMap's vector tiles (OpenMapTiles schema).
@@ -22,7 +23,7 @@ export const FIRST_LAYER_OVER_PHOTOS = 'rail'
  * Drawn shapes that a photo already shows for itself: hidden while a raster base is showing.
  * 'building-3d' is the 3D city (src/map/city/layer.ts), added once the style has loaded.
  */
-export const DARK_ONLY_LAYERS = ['aeroway-area', 'building', 'building-3d', 'building-outline'] as const
+export const DARK_ONLY_LAYERS = ['aeroway-area', 'building', 'building-3d', 'own-building'] as const
 
 const DARK = {
   land: '#0e151c',
@@ -35,11 +36,13 @@ const DARK = {
   runway: '#3a5062',
   building: '#141c25',
   buildingLine: '#1c2733',
-  buildingEdge: '#2c3d4c',
   roadMinor: '#18222c',
   roadMid: '#1f2c38',
   roadMajor: '#283847',
   motorway: '#33495b',
+  // Footways and paths: little roads, a shade off the ground (map/ownStyle.ts).
+  path: '#1c2631',
+  pathCasing: '#131b23',
   rail: '#2e3f4c',
   boundary: '#3a5468',
   label: '#93a7b6',
@@ -51,38 +54,45 @@ const DARK = {
   towerLow: '#131b24',
   towerMid: '#1b2835',
   towerHigh: '#2a3d4f',
+  // Tram tracks, red dashes as a city map draws them (map/ownStyle.ts).
+  tram: '#b8564f',
 } as const
 
 type Palette = Record<keyof typeof DARK, string>
 
-/** The same map by day: pale land, blue water, white streets, dark lettering. */
+/**
+ * The same map by day, as a city map draws it: near-white land, bright blue water, green parks and
+ * woods, beige houses, grey streets (the bigger, the darker), dark lettering.
+ */
 const LIGHT: Palette = {
-  land: '#eef1ec',
-  water: '#b7d1e6',
-  waterLine: '#9cbdd7',
-  wood: '#d2e3cd',
-  park: '#d9e9d1',
-  residential: '#e7e6df',
-  aeroway: '#dcdde3',
-  runway: '#b6bac6',
-  building: '#d9d5cd',
-  buildingLine: '#c5c0b7',
-  buildingEdge: '#a6a198',
-  roadMinor: '#ffffff',
-  roadMid: '#fdfcf7',
-  roadMajor: '#f6e6a8',
-  motorway: '#efc26f',
-  rail: '#9a9a9a',
-  boundary: '#86709c',
-  label: '#3c4953',
-  labelStrong: '#10171d',
-  labelDim: '#69767f',
-  labelWater: '#3c6c92',
-  labelPoi: '#4a6a79',
+  land: '#f6f5f2',
+  water: '#8ecbf6',
+  waterLine: '#7cbdec',
+  wood: '#d3eabd',
+  park: '#cbe8ad',
+  residential: '#efede8',
+  aeroway: '#e6e6ea',
+  runway: '#c3c7cf',
+  building: '#e8e2d8',
+  buildingLine: '#d9d1c4',
+  roadMinor: '#dadde2',
+  roadMid: '#c9cdd4',
+  roadMajor: '#b9bec7',
+  motorway: '#a7aeb9',
+  path: '#e6e8ec',
+  pathCasing: '#cfd3d9',
+  rail: '#9aa0a8',
+  boundary: '#9b7fb5',
+  label: '#3d434a',
+  labelStrong: '#15181c',
+  labelDim: '#6b737c',
+  labelWater: '#2e6ea4',
+  labelPoi: '#4a5560',
   halo: '#ffffff',
-  towerLow: '#d7d2c9',
-  towerMid: '#c3bdb3',
-  towerHigh: '#a8a197',
+  towerLow: '#ebe5db',
+  towerMid: '#e0d8cb',
+  towerHigh: '#cfc6b7',
+  tram: '#e2574c',
 }
 
 export type MapTheme = 'dark' | 'light'
@@ -97,7 +107,8 @@ const NAME: ExpressionSpecification = ['coalesce', ['get', `name:${lang}`], ['ge
 /** Every layer of the base map, and the label colours that change over imagery, drawn in one palette. */
 function styleFor(C: Palette) {
   /** Street names start dim, as one more texture, and come forward once the streets fill the screen. */
-  const STREET_NAME_COLOR: ExpressionSpecification = ['interpolate', ['linear'], ['zoom'], 15, C.labelDim, 17, C.label]
+  // Street names dark enough to read from zoom 13, as a city map has them.
+  const STREET_NAME_COLOR = C.label
 
   function widthByZoom(stops: readonly (readonly [number, number])[]): ExpressionSpecification {
     return ['interpolate', ['exponential', 1.5], ['zoom'], ...stops.flat()] as ExpressionSpecification
@@ -290,20 +301,6 @@ function styleFor(C: Palette) {
       paint: { 'line-color': C.boundary, 'line-opacity': 0.5, 'line-width': 0.8, 'line-dasharray': [4, 3] },
     },
     {
-      id: 'building-outline',
-      type: 'line',
-      source: SOURCE,
-      'source-layer': 'building',
-      minzoom: 15,
-      // Seen from above, a low block is almost the colour of the ground it stands on. The roof
-      // hides the inner half of this line, so it is twice as wide as the rim that shows.
-      paint: {
-        'line-color': C.buildingEdge,
-        'line-width': widthByZoom([[15, 0.8], [18, 2.2]]),
-        'line-opacity': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, 0.9],
-      },
-    },
-    {
       id: 'label-housenumber',
       type: 'symbol',
       source: SOURCE,
@@ -346,7 +343,9 @@ function styleFor(C: Palette) {
         'text-font': ['Noto Sans Regular'],
         'text-size': ['interpolate', ['linear'], ['zoom'], 13.5, 10, 17, 12.5],
         'symbol-placement': 'line',
-        'text-letter-spacing': 0.05,
+        // In capitals, spaced out, as a city map writes its street names.
+        'text-transform': 'uppercase',
+        'text-letter-spacing': 0.12,
       },
       paint: { 'text-color': STREET_NAME_COLOR, 'text-halo-color': C.halo, 'text-halo-width': 1.2 },
     },
@@ -393,9 +392,89 @@ function styleFor(C: Palette) {
     ['label-road', STREET_NAME_COLOR, C.labelStrong],
     ['label-housenumber', C.labelDim, C.labelStrong],
     ['label-poi', C.labelPoi, C.labelStrong],
+    ['own-label-road', STREET_NAME_COLOR, C.labelStrong],
+    ['own-label-housenumber', C.labelDim, C.labelStrong],
+    ['own-label-poi', poiTextColor(C), C.labelStrong],
   ] as const
-  return { layers, imageryText }
+  return { layers: withOwnTiles(layers, C), imageryText }
 }
+
+/** OpenFreeMap's layers that our own tiles draw instead inside the Baltic states (map/ownStyle.ts). */
+const GIVEN_WAY = new Set(['waterway', 'road-path', 'road-footpath', 'road-minor', 'road-mid', 'road-major', 'road-motorway', 'rail', 'rail-transit', 'label-housenumber', 'label-road', 'label-poi'])
+
+/**
+ * The style with our own tiles in it: OpenFreeMap's streets, rails and their names kept to outside
+ * the Baltic states, and ours drawn in the same places of the stack. Shapes cannot be told apart
+ * by place (a `within` test sees only points and lines), so their land and water are drawn over.
+ */
+function withOwnTiles(layers: LayerSpecification[], C: Palette): LayerSpecification[] {
+  const own = ownLayers(C)
+  const out: LayerSpecification[] = []
+  for (const layer of layers) {
+    if (GIVEN_WAY.has(layer.id) && 'filter' in layer) {
+      out.push({ ...layer, filter: layer.filter ? ['all', layer.filter as ExpressionSpecification, OUTSIDE_BALTIC] : OUTSIDE_BALTIC } as LayerSpecification)
+    } else if (GIVEN_WAY.has(layer.id)) {
+      out.push({ ...layer, filter: OUTSIDE_BALTIC } as LayerSpecification)
+    } else out.push(layer)
+    if (layer.id === 'water') out.push(...own.ground)
+    if (layer.id === 'road-motorway') out.push(...own.roads)
+    if (layer.id === 'label-road') out.push(...own.labels)
+  }
+  return out
+}
+
+/**
+ * Brings our own tiles into a map already showing the style without them: the source, our layers each
+ * where the full style has it, and OpenFreeMap's streets kept to outside the Baltic states. The map
+ * opens at once on OpenFreeMap and switches over as soon as the server has said it has the tiles.
+ */
+export function addOwnTiles(map: MapLibreMap, theme: MapTheme, url: string): void {
+  if (map.getSource(OWN_SOURCE)) return
+  addOwnImages(map)
+  map.addSource(OWN_SOURCE, { type: 'vector', url: `pmtiles://${url}`, attribution: '© OpenStreetMap contributors' })
+  const layers = STYLES[theme].layers
+  layers.forEach((layer, i) => {
+    if (layer.id.startsWith('own-')) {
+      // Before the next layer of the full style that the map has: imagery and the 3D city sit in between.
+      const before = layers.slice(i + 1).find((next) => !next.id.startsWith('own-') && map.getLayer(next.id))?.id
+      if (!map.getLayer(layer.id)) map.addLayer(layer, before)
+    } else if (GIVEN_WAY.has(layer.id) && map.getLayer(layer.id) && 'filter' in layer) {
+      map.setFilter(layer.id, layer.filter as ExpressionSpecification)
+    }
+  })
+}
+
+/** Whether the server has our own tiles, and their address for the pmtiles protocol. */
+export async function ownTilesUrl(): Promise<string | null> {
+  try {
+    const res = await fetch(OWN_TILES_PATH, { method: 'HEAD' })
+    if (!res.ok) return null
+    // Named by when the file was built: the browser keeps the pieces it has read for an hour, and a
+    // rebuilt file's pieces must never be mixed with the last one's.
+    const url = new URL(OWN_TILES_PATH, window.location.href)
+    const built = res.headers.get('last-modified')
+    if (built) url.searchParams.set('v', String(Date.parse(built) / 1000))
+    return url.href
+  } catch {
+    return null
+  }
+}
+
+/** The layers of a style without our own tiles: as they were before them. */
+const withoutOwnTiles = (layers: LayerSpecification[]): LayerSpecification[] =>
+  layers
+    .filter((layer) => !layer.id.startsWith('own-'))
+    .map((layer) => {
+      if (!GIVEN_WAY.has(layer.id) || !('filter' in layer) || !layer.filter) return layer
+      const filter = layer.filter as unknown[]
+      // Undone as it was done: ['all', the layer's own, OUTSIDE_BALTIC] back to the layer's own, or none.
+      if (filter === OUTSIDE_BALTIC) {
+        // A layer with no filter of its own: the key goes too, as MapLibre refuses an undefined filter.
+        const { filter: _given, ...rest } = layer as LayerSpecification & { filter?: unknown }
+        return rest as LayerSpecification
+      }
+      return { ...layer, filter: filter[1] } as LayerSpecification
+    })
 
 const STYLES: Record<MapTheme, ReturnType<typeof styleFor>> = { dark: styleFor(DARK), light: styleFor(LIGHT) }
 
@@ -404,6 +483,8 @@ const STYLES: Record<MapTheme, ReturnType<typeof styleFor>> = { dark: styleFor(D
  * is lost on a sunlit roof.
  */
 export const IMAGERY_TEXT_COLOR = STYLES.dark.imageryText
+/** The same per theme: the plain colour is the theme's own, so leaving the photos does not darken a light map's names. */
+export const IMAGERY_TEXT_COLORS: Record<MapTheme, typeof IMAGERY_TEXT_COLOR> = { dark: STYLES.dark.imageryText, light: STYLES.light.imageryText }
 
 /**
  * Place names that can be clicked, each with the scale its place is looked up at: 3 finds the
@@ -425,19 +506,23 @@ const THEMED: [string, string][] = STYLES.dark.layers.flatMap((layer, index) => 
     .map(([key]): [string, string] => [layer.id, key])
 })
 
-/** The shade that sets Latvia apart, its border, and the relief shading: layers added after the style, in each theme. */
-const EXTRAS: Record<MapTheme, [string, string, string][]> = {
+/** The shade that sets the Baltic states apart, their border, the relief shading and the landmarks' names: layers added after the style, in each theme. */
+export const MAP_EXTRAS: Record<MapTheme, [string, string, string][]> = {
   dark: [
     ['lv-mask', 'fill-color', '#04070a'],
     ['lv-border-line', 'line-color', '#dff4ff'],
     ['relief-shade', 'hillshade-shadow-color', '#000000'],
     ['relief-shade', 'hillshade-highlight-color', '#8fa9bb'],
+    ['landmarks-icon', 'text-color', '#e8edf0'],
+    ['landmarks-icon', 'text-halo-color', '#05080b'],
   ],
   light: [
     ['lv-mask', 'fill-color', '#dfe5ea'],
     ['lv-border-line', 'line-color', '#0b2a3a'],
     ['relief-shade', 'hillshade-shadow-color', '#4c5b67'],
     ['relief-shade', 'hillshade-highlight-color', '#ffffff'],
+    ['landmarks-icon', 'text-color', '#2b3540'],
+    ['landmarks-icon', 'text-halo-color', '#ffffff'],
   ],
 }
 
@@ -479,19 +564,26 @@ export function applyMapTheme(map: MapLibreMap, theme: MapTheme, overImagery: bo
   for (const [id, key] of THEMED) {
     if (!kept.has(`${id}|${key}`) && map.getLayer(id)) paint(id, key, byId.get(id)![key])
   }
-  for (const [id, key, value] of EXTRAS[theme]) if (map.getLayer(id)) paint(id, key, value)
+  for (const [id, key, value] of MAP_EXTRAS[theme]) if (map.getLayer(id)) paint(id, key, value)
   map.setSky(SKY[theme])
 }
 
-export function buildStyle(theme: MapTheme = 'dark'): StyleSpecification {
+/**
+ * The base map. `ownTiles`: the address of our own tiles (map/ownStyle.ts) when the server has them,
+ * read through the pmtiles protocol; without them, OpenFreeMap draws the Baltic states too, as before.
+ */
+export function buildStyle(theme: MapTheme = 'dark', ownTiles: string | null = null): StyleSpecification {
   const ofm = TILE_ORIGINS.openFreeMap
   return {
     version: 8,
     name: 'Projekts Inteliģence',
-    // The TileJSON resolves to a dated tile path, so always reference it rather than the tiles.
-    sources: { [SOURCE]: { type: 'vector', url: `${ofm}/planet` } },
+    sources: {
+      // The TileJSON resolves to a dated tile path, so always reference it rather than the tiles.
+      [SOURCE]: { type: 'vector', url: `${ofm}/planet` },
+      ...(ownTiles && { [OWN_SOURCE]: { type: 'vector' as const, url: `pmtiles://${ownTiles}`, attribution: '© OpenStreetMap contributors' } }),
+    },
     glyphs: `${ofm}/fonts/{fontstack}/{range}.pbf`,
     sky: SKY[theme],
-    layers: STYLES[theme].layers,
+    layers: ownTiles ? STYLES[theme].layers : withoutOwnTiles(STYLES[theme].layers),
   }
 }

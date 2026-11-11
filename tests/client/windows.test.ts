@@ -7,31 +7,31 @@ const bounds = usableBounds(viewport)
 const win = (x: number, y: number, w = 240, h = 200): Rect => ({ x, y, w, h })
 
 describe('window snapping', () => {
-  it('keeps the top bar, the taskbar and the HUD row clear', () => {
-    expect(bounds).toEqual({ left: 12, top: 52, right: 1428, bottom: 800 })
+  it('keeps the top bars and the HUD line clear', () => {
+    expect(bounds).toEqual({ left: 12, top: 60, right: 1428, bottom: 860 })
   })
 
   it('pulls a window to the edge of the usable area', () => {
     expect(snap(win(26, 404), [], bounds)).toEqual({ x: 12, y: 404, guides: [{ axis: 'x', at: 12 }] })
-    expect(snap(win(1168, 615), [], bounds)).toEqual({
+    expect(snap(win(1168, 675), [], bounds)).toEqual({
       x: 1188,
-      y: 600,
+      y: 660,
       guides: [
         { axis: 'x', at: 1428 },
-        { axis: 'y', at: 800 },
+        { axis: 'y', at: 860 },
       ],
     })
   })
 
   it('parks a window beside another one, a gap apart', () => {
-    const layers = win(12, 52, 240, 520)
-    expect(snap(win(266, 60, 288, 300), [layers], bounds)).toMatchObject({ x: 260, y: 52 })
-    expect(snap(win(16, 590, 240, 100), [layers], bounds)).toEqual({
+    const layers = win(12, 60, 240, 520)
+    expect(snap(win(266, 68, 288, 300), [layers], bounds)).toMatchObject({ x: 260, y: 60 })
+    expect(snap(win(16, 598, 240, 100), [layers], bounds)).toEqual({
       x: 12,
-      y: 580,
+      y: 588,
       guides: [
         { axis: 'x', at: 12 },
-        { axis: 'y', at: 580 },
+        { axis: 'y', at: 588 },
       ],
     })
   })
@@ -54,12 +54,12 @@ describe('window snapping', () => {
   })
 
   it('never leaves a window outside the usable area', () => {
-    expect(snap(win(-400, 2000), [], bounds)).toEqual({ x: 12, y: 600, guides: [] })
+    expect(snap(win(-400, 2000), [], bounds)).toEqual({ x: 12, y: 660, guides: [] })
     // The slot past a window that already touches the right edge is out of bounds, so it is not offered.
-    expect(snap(win(1200, 300), [win(1188, 52)], bounds).x).toBe(1188)
-    expect(clamp(win(-500, 5000), bounds)).toEqual({ x: 12, y: 600 })
+    expect(snap(win(1200, 300), [win(1188, 60)], bounds).x).toBe(1188)
+    expect(clamp(win(-500, 5000), bounds)).toEqual({ x: 12, y: 660 })
     // Too big to fit: the corner the header is in stays reachable.
-    expect(clamp(win(900, 700, 2000, 1000), bounds)).toEqual({ x: 12, y: 52 })
+    expect(clamp(win(900, 700, 2000, 1000), bounds)).toEqual({ x: 12, y: 60 })
   })
 })
 
@@ -81,9 +81,9 @@ describe('window resizing', () => {
   })
 
   it('never takes an edge past the usable area', () => {
-    // Up and left only as far as the top bar and the margin; down only to the HUD row.
-    expect(resizeRect(start, 'tl', -2000, -2000, { ...limits, max: { w: 2000, h: 2000 } }, within)).toEqual({ x: 12, y: 52, w: 688, h: 448 })
-    expect(resizeRect(start, 'br', 0, 2000, { ...limits, max: { w: 2000, h: 2000 } }, within)).toMatchObject({ y: 300, h: 500 })
+    // Up and left only as far as the top bars and the margin; down only to the HUD line.
+    expect(resizeRect(start, 'tl', -2000, -2000, { ...limits, max: { w: 2000, h: 2000 } }, within)).toEqual({ x: 12, y: 60, w: 688, h: 440 })
+    expect(resizeRect(start, 'br', 0, 2000, { ...limits, max: { w: 2000, h: 2000 } }, within)).toMatchObject({ y: 300, h: 560 })
   })
 })
 

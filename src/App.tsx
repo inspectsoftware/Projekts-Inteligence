@@ -9,7 +9,8 @@ import { MapButtons } from './ui/MapButtons'
 import { PoliticsPage } from './ui/PoliticsPage'
 import { RewindBar } from './ui/RewindBar'
 import { onPoliticsPage } from './ui/politics'
-import { TopBar } from './ui/TopBar'
+import { NavBar } from './ui/NavBar'
+import { DesktopBar, TopBar } from './ui/TopBar'
 import { WalkPanel } from './ui/WalkPanel'
 import { WindowLayer } from './ui/windows/WindowLayer'
 
@@ -25,8 +26,11 @@ export default function App() {
   return (
     <div className="relative h-full w-full overflow-hidden">
       <MapView />
+      {/* Phones get the top bar and the taskbar; a wide screen the floating bars instead. */}
       <TopBar />
+      <DesktopBar />
       <Dock />
+      <NavBar />
       <RewindBar />
       <MapButtons />
       <Hud />

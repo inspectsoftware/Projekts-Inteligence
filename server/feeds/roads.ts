@@ -1,6 +1,17 @@
 import { VectorTile } from '@mapbox/vector-tile'
 import { PbfReader } from 'pbf'
-import { type RoadRow, normaliseCameras, normaliseRoadEvents } from '../../shared/adapters/roads'
+import {
+  type EeRestriction,
+  type LtRestriction,
+  type RoadEvent,
+  type RoadRow,
+  type TallinnWork,
+  normaliseCameras,
+  normaliseEeRestrictions,
+  normaliseLtRestrictions,
+  normaliseRoadEvents,
+  normaliseTallinnWorks,
+} from '../../shared/adapters/roads'
 import type { Upstream } from '../core/upstream'
 import type { FeedDef } from './types'
 
@@ -88,23 +99,59 @@ export const camerasFeed: FeedDef = {
   },
 }
 
-/** Roadworks, closures, accidents and hazards on the state roads. */
+/** Lithuania: Via Lietuva's list of restrictions in force, one JSON array, WGS84 (CC BY 4.0 on data.gov.lt). */
+const LT_URL = 'https://restrictions.eismoinfo.lt/'
+/** Estonia: Transpordiamet's restrictions map and Tallinn's street works, as tarktee.ee shows them. */
+const TARKTEE = 'https://tarktee.ee/tarktee/rest/services/tram'
+
+/** "2026-11-09 16:00:00" in UTC: how the ArcGIS services want a date in a query. */
+const arcgisTime = (ms: number) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ')
+
+/** One ArcGIS layer's features now in force, as GeoJSON in WGS84; the services keep years of history. */
+function arcgisNow(path: string, from: string, to: string, now: number): string {
+  const at = arcgisTime(now)
+  const where = `(${from} is null or ${from} < '${at}') and (${to} is null or ${to} >= '${at}')`
+  return `${TARKTEE}/${path}/query?where=${encodeURIComponent(where)}&outFields=*&outSR=4326&f=geojson`
+}
+
+/** Roadworks, closures, accidents and hazards on the state roads of the three countries, and Tallinn's streets. */
 export const roadsFeed: FeedDef = {
   id: 'roads',
   title: 'Roadworks and incidents',
-  origins: [ORIGIN],
+  origins: [ORIGIN, new URL(LT_URL).origin, new URL(TARKTEE).origin],
   ttlMs: 5 * MINUTE,
   staleMs: 2 * 60 * MINUTE,
   timeoutMs: 45_000,
   persist: true,
-  attribution: ATTRIBUTION,
+  attribution: [
+    ...ATTRIBUTION,
+    { label: 'Via Lietuva / eismoinfo.lt (CC BY 4.0)', href: 'https://eismoinfo.lt/' },
+    { label: 'Transpordiamet / tarktee.ee', href: 'https://tarktee.ee/' },
+    { label: 'Tallinna linn', href: 'https://www.tallinn.ee/' },
+  ],
   async load({ http, now }) {
-    const rows = await readTiles(
+    const latvia = readTiles(
       http,
       'public.mvt_kafkamessages_notplannedevent_public,public.mvt_kafkamessages_plannedevent_public',
       // Dropped before any geometry is decoded: nine in ten features are maintenance job entries.
       (p) => p.status === 'ACTIVE' && p.event_enum !== 'UVIS',
-    )
-    return { shape: 'entities', entities: normaliseRoadEvents(rows, now) }
+    ).then((rows) => normaliseRoadEvents(rows, now))
+    const lithuania = http.json<LtRestriction[]>(LT_URL, { timeoutMs: 20_000, maxBytes: 16 * 1024 * 1024 }).then((list) => normaliseLtRestrictions(list, now))
+    type Points<P> = { features?: { geometry?: { coordinates?: number[] }; properties?: P }[] }
+    const estonia = http
+      .json<Points<EeRestriction>>(arcgisNow('restrictions_traffic/MapServer/0', 'date_from', 'date_to', now), { timeoutMs: 20_000 })
+      .then((body) => normaliseEeRestrictions(body.features ?? [], now))
+    const tallinn = http
+      .json<Points<TallinnWork>>(arcgisNow('restrictions_tallinn/MapServer/0', 'start_time', 'end_time', now), { timeoutMs: 20_000 })
+      .then((body) => normaliseTallinnWorks(body.features ?? [], now))
+    // Each country on its own: one authority down leaves the others on the map. All down fails the refresh.
+    const results = await Promise.allSettled([latvia, lithuania, estonia, tallinn])
+    const entities: RoadEvent[] = []
+    for (const result of results) {
+      if (result.status === 'fulfilled') entities.push(...result.value)
+      else console.warn('[pwh] roads: one source unavailable:', result.reason instanceof Error ? result.reason.message : result.reason)
+    }
+    if (results.every((result) => result.status === 'rejected')) throw (results[0] as PromiseRejectedResult).reason
+    return { shape: 'entities', entities }
   },
 }

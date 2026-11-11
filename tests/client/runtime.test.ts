@@ -116,3 +116,47 @@ describe('server clock', () => {
     expect(Math.abs(serverNow() - serverTime)).toBeLessThan(1000)
   })
 })
+
+describe('buses and trains between fixes', () => {
+  const bus = (lon: number, ts: number, trk = 90) => ({ ...aircraft('glide-bus', { spd: 8, trk }), kind: 'transit' as const, lon, lat: 57, ts })
+  const metresEast = (lon: number) => (lon - 24) * 111_320 * Math.cos((57 * Math.PI) / 180)
+
+  it('glides from where it is drawn to the new fix, and never past it', () => {
+    positionAt(bus(24, 1000), 1000)
+    // The next fix, about 60 m east.
+    const next = bus(24.001, 7000)
+    expect(positionAt(next, 7000)[0]).toBeCloseTo(24, 6)
+    expect(metresEast(positionAt(next, 10_000)[0])).toBeGreaterThan(20)
+    expect(metresEast(positionAt(next, 10_000)[0])).toBeLessThan(45)
+    // 60 m at its 8 m/s: there 7.5 s after the fix arrived.
+    expect(positionAt(next, 12_000)[0]).toBeLessThan(24.001)
+    expect(positionAt(next, 14_600)[0]).toBeCloseTo(24.001, 6)
+    expect(positionAt(next, 60_000)[0]).toBeCloseTo(24.001, 6)
+  })
+
+  it('stays put when the GPS wavers a few metres back at a stop', () => {
+    const back = bus(24.0008, 15_000)
+    expect(positionAt(back, 15_000)[0]).toBeCloseTo(24.001, 6)
+    expect(positionAt(back, 30_000)[0]).toBeCloseTo(24.001, 6)
+  })
+
+  it('appears at once where it is seen again after a long gap', () => {
+    expect(positionAt(bus(24.1, 40_000), 40_000)[0]).toBeCloseTo(24.1, 6)
+  })
+})
+
+describe('a feed that moves its vehicles only now and then', () => {
+  // No speed in the feed (as in Rīga's): the pace comes from how long the vehicle took.
+  const tram = (lon: number, ts: number) => ({ ...aircraft('slow-tram'), kind: 'transit' as const, lon, lat: 57, ts, trk: 90 })
+
+  it('takes as long over the way as the vehicle did, not the whole way in one refresh', () => {
+    positionAt(tram(24, 0), 0)
+    // The same fix for half a minute of refreshes, then 300 m on.
+    for (const ts of [6000, 12_000, 18_000, 24_000]) positionAt(tram(24, ts), ts)
+    const on = tram(24.005, 30_000)
+    positionAt(on, 30_000)
+    // Six seconds later it is nowhere near there yet; half a minute later it is.
+    expect(positionAt(on, 36_000)[0]).toBeLessThan(24.001)
+    expect(positionAt(on, 60_000)[0]).toBeCloseTo(24.005, 6)
+  })
+})

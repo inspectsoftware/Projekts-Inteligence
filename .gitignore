@@ -30,3 +30,8 @@ videos/*/renders-log.txt
 videos/*/snapshots/
 videos/*/.thumbnails/
 videos/*/.waveform-cache/
+
+# Vector tiles built by scripts/build-tiles.mjs: hundreds of megabytes, rebuilt from OpenStreetMap
+tiles/
+# Valhalla's road graph (scripts/build-valhalla.mjs).
+valhalla/

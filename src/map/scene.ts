@@ -7,6 +7,7 @@ import type { LayerContext, StaticSelection } from '../layers/types'
 import { startAlerts } from '../runtime/alertRunner'
 import { fetchFeedList } from '../runtime/api'
 import { serverNow } from '../runtime/clock'
+import { vehiclesIn3d } from './threeD'
 import { getEntity, subscribeEntities } from '../runtime/entityStore'
 import { whatIsHere } from '../runtime/place'
 import { startViewAircraft } from '../runtime/viewAircraft'
@@ -55,6 +56,10 @@ export function startScene(map: MapLibreMap): () => void {
 
   const overlay = new MapLibreOverlay({
     interleaved: false,
+    // Everything here lies flat on the map or faces the camera, drawn in order: halo, then the
+    // vehicle on it. With the depth test on, a halo and its vehicle at one height fought over each
+    // pixel once the map tilted, and the vehicles flickered black.
+    parameters: { depthCompare: 'always', depthWriteEnabled: false },
     layers: [],
     pickingRadius: 8,
     onClick: (info) => {
@@ -133,7 +138,7 @@ export function startScene(map: MapLibreMap): () => void {
   const draw = () => {
     const { visible } = useLayers.getState()
     const { selectedId, hoveredId, followId } = useSelection.getState()
-    const ctx: LayerContext = { now: serverNow(), zoom: map.getZoom(), selectedId, hoveredId, fontsReady }
+    const ctx: LayerContext = { now: serverNow(), zoom: map.getZoom(), pitch: map.getPitch(), selectedId, hoveredId, fontsReady }
 
     const followed = followId ? getEntity(followId) : undefined
     if (followed && !map.isMoving()) map.setCenter(positionAt(followed, ctx.now))
@@ -141,6 +146,8 @@ export function startScene(map: MapLibreMap): () => void {
     const shown = LAYERS.filter((layer) => isLayerOn(visible, layer.id, layer.defaultOn))
     for (const layer of shown) layer.update?.(ctx.now)
     overlay.setProps({ layers: shown.flatMap((layer) => layer.build(ctx)) })
+    // The vehicles standing in 3D are drawn by the map itself, which must then redraw as they move.
+    if (vehiclesIn3d(ctx.zoom, ctx.pitch) && shown.some((layer) => layer.id === 'transit' || layer.id === 'trains')) map.triggerRepaint()
   }
 
   const loop = (time: number) => {

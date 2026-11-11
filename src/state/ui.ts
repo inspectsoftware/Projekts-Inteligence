@@ -19,6 +19,18 @@ const prefersDark = () => window.matchMedia('(prefers-color-scheme: dark)')
  * The theme in force: the reader's choice, or the device's own setting while the choice is "system".
  * Light unless the device asks for dark, so a device that states no preference gets the light page.
  */
+/** The same, read once outside React. */
+export function currentTheme(): 'light' | 'dark' {
+  const choice = useUi.getState().theme
+  if (choice !== 'system') return choice
+  return prefersDark().matches ? 'dark' : 'light'
+}
+
+/** The palette the map is painted in now: over a photo it keeps its dark lettering, whatever the theme. */
+export function currentMapTheme(): 'light' | 'dark' {
+  return useUi.getState().base === 'dark' ? currentTheme() : 'dark'
+}
+
 export function useTheme(): 'light' | 'dark' {
   const choice = useUi((s) => s.theme)
   const device = useSyncExternalStore(

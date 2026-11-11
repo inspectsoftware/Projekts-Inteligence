@@ -8,6 +8,7 @@ import { positionAt } from '../map/motion'
 import { serverNow } from '../runtime/clock'
 import { useEntity } from '../runtime/entityStore'
 import { useSelection } from '../state/selection'
+import { TripTimeline } from './TripTimeline'
 
 const BADGE: Record<Tone, string> = {
   info: 'border-accent/50 text-accent',
@@ -86,15 +87,19 @@ export function Inspector() {
         <img src={model.image.src} alt={model.image.alt} className="block w-full shrink-0 border-b border-line bg-ink-850" />
       )}
 
-      <dl className="min-h-0 overflow-y-auto px-3 py-2 text-[11px]">
-        {model.note && <p className="border-b border-line/50 pb-2 font-sans text-xs leading-relaxed text-fg-dim">{model.note}</p>}
-        {model.rows.map((row) => (
-          <div key={row.label} className="flex justify-between gap-3 border-b border-line/50 py-1 last:border-0">
-            <dt className="shrink-0 tracking-[0.1em] text-fg-mute uppercase">{row.label}</dt>
-            <dd className="text-right text-fg tabular-nums">{row.value}</dd>
-          </div>
-        ))}
-      </dl>
+      <div className="min-h-0 overflow-y-auto">
+        <dl className="px-3 py-2 text-[11px]">
+          {model.note && <p className="border-b border-line/50 pb-2 font-sans text-xs leading-relaxed text-fg-dim">{model.note}</p>}
+          {model.rows.map((row) => (
+            <div key={row.label} className="flex justify-between gap-3 border-b border-line/50 py-1 last:border-0">
+              <dt className="shrink-0 tracking-[0.1em] text-fg-mute uppercase">{row.label}</dt>
+              <dd className="text-right text-fg tabular-nums">{row.value}</dd>
+            </div>
+          ))}
+        </dl>
+        {/* A bus, tram or train: its trip, stop by stop, under what is known about the vehicle itself. */}
+        {entity && (entity.kind === 'transit' || entity.kind === 'train') && <TripTimeline id={entity.id} />}
+      </div>
 
       <footer className="grid shrink-0 gap-2 border-t border-line p-3">
         <div className={`grid gap-px bg-line p-px ${entity ? 'grid-cols-2' : ''}`}>

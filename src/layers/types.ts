@@ -23,6 +23,8 @@ export interface LayerContext {
   /** Server-corrected time for this frame. Changes on every animation tick. */
   now: number
   zoom: number
+  /** How far the map is tilted, degrees: tilted close in, vehicles stand in 3D (map/threeD.ts). */
+  pitch: number
   selectedId: string | null
   hoveredId: string | null
   /** False until the label font has loaded; text drawn earlier would bake in a fallback font. */

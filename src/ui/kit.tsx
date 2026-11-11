@@ -24,7 +24,8 @@ interface SegmentedProps<T extends string> {
 /** One-of-many switch, laid out as equal cells. */
 export function Segmented<T extends string>({ label, value, options, onChange }: SegmentedProps<T>) {
   return (
-    <div role="radiogroup" aria-label={label} className="grid auto-cols-fr grid-flow-col gap-px bg-line p-px">
+    // Pills in a tray: the one chosen light on dark (dark on light by day), the others plain text.
+    <div role="radiogroup" aria-label={label} className="grid auto-cols-fr grid-flow-col gap-1 rounded-full bg-ink-800 p-1">
       {options.map((option) => {
         const active = option.id === value
         return (
@@ -35,8 +36,8 @@ export function Segmented<T extends string>({ label, value, options, onChange }:
             aria-checked={active}
             title={option.hint}
             onClick={() => onChange(option.id)}
-            className={`px-1 py-1.5 text-[10px] tracking-[0.16em] uppercase transition-colors ${
-              active ? 'bg-accent/15 text-accent' : 'bg-ink-850 text-fg-dim hover:bg-ink-700 hover:text-fg'
+            className={`truncate rounded-full px-2 py-1.5 font-sans text-xs font-medium transition-colors ${
+              active ? 'bg-fg-strong text-ink-900' : 'text-fg-dim hover:bg-ink-700 hover:text-fg-strong'
             }`}
           >
             {option.label}

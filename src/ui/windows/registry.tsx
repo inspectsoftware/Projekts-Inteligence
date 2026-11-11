@@ -1,4 +1,4 @@
-import { type ComponentType, lazy, useMemo, useSyncExternalStore } from 'react'
+import { type ComponentType, useMemo, useSyncExternalStore } from 'react'
 import { t } from '../../i18n'
 import { useLog } from '../../runtime/log'
 import { usePinged } from '../../runtime/presence'
@@ -15,21 +15,9 @@ import { StatusPanel } from '../StatusPanel'
 import { useChat } from './chat/store'
 import { ConsoleWindow } from './ConsoleWindow'
 import type { Placement, Size } from './geometry'
+import { CctvWindow, ChatWindow, CountryWindow, DisplayWindow, IntelWindow, MilitaryWindow, NoticesWindow, RadioWindow, SyncWindow, TransportWindow, TvWindow } from './lazy'
 import { useIntelBadge } from './intel'
 import { useMilitaryBadge } from './military/badge'
-
-// Window bodies load the first time their window opens, so the first page load carries only the map.
-const CctvWindow = lazy(() => import('./CctvWindow').then((m) => ({ default: m.CctvWindow })))
-const ChatWindow = lazy(() => import('./ChatWindow').then((m) => ({ default: m.ChatWindow })))
-const CountryWindow = lazy(() => import('./CountryWindow').then((m) => ({ default: m.CountryWindow })))
-const DisplayWindow = lazy(() => import('./DisplayWindow').then((m) => ({ default: m.DisplayWindow })))
-const IntelWindow = lazy(() => import('./IntelWindow').then((m) => ({ default: m.IntelWindow })))
-const MilitaryWindow = lazy(() => import('./MilitaryWindow').then((m) => ({ default: m.MilitaryWindow })))
-const NoticesWindow = lazy(() => import('./NoticesWindow').then((m) => ({ default: m.NoticesWindow })))
-const RadioWindow = lazy(() => import('./RadioWindow').then((m) => ({ default: m.RadioWindow })))
-const SyncWindow = lazy(() => import('./SyncWindow').then((m) => ({ default: m.SyncWindow })))
-const TransportWindow = lazy(() => import('./TransportWindow').then((m) => ({ default: m.TransportWindow })))
-const TvWindow = lazy(() => import('./TvWindow').then((m) => ({ default: m.TvWindow })))
 
 /** A count or a short flag, shown in a window's header and on its taskbar button. */
 export interface WindowBadge {
@@ -105,9 +93,9 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M8 2l6 3-6 3-6-3zM2 8l6 3 6-3M2 11l6 3 6-3',
     defaultOpen: false,
     placement: { corner: 'tl', dx: 12, dy: 52 },
-    width: 240,
+    width: 300,
     // Short enough for the View window to fit underneath above the HUD row, on a screen 900 high.
-    height: 380,
+    height: 520,
     resizable: { min: { w: 200, h: 160 }, max: { w: 420, h: 1200 } },
     component: LayerTree,
   },
@@ -119,9 +107,9 @@ export const WINDOWS: readonly WindowDef[] = [
     defaultOpen: false,
     placement: { corner: 'tl', dx: 12, dy: 440 },
     // Wide enough for every base on one row, with room for a scrollbar beside them.
-    width: 340,
+    width: 380,
     // Room for the note on where the satellite base stops being sharp, the longest of the four, and for who the reader is.
-    height: 360,
+    height: 440,
     resizable: { min: { w: 340, h: 160 }, max: { w: 520, h: 800 } },
     component: DisplayWindow,
   },
@@ -133,8 +121,8 @@ export const WINDOWS: readonly WindowDef[] = [
     defaultOpen: false,
     // Left of the map buttons, not under them.
     placement: { corner: 'tr', dx: 54, dy: 52 },
-    width: 288,
-    height: 220,
+    width: 340,
+    height: 300,
     resizable: { min: { w: 240, h: 160 }, max: { w: 480, h: 1000 } },
     component: StatusPanel,
   },
@@ -145,8 +133,8 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M8 2.5l6 10.5H2zM8 6.5v3M8 11v.5',
     defaultOpen: false,
     placement: { corner: 'tc', dx: 0, dy: 52 },
-    width: 416,
-    height: 240,
+    width: 440,
+    height: 300,
     useBadge: useAlertBadge,
     resizable: { min: { w: 280, h: 120 }, max: { w: 720, h: 1000 } },
     component: AlertStack,
@@ -176,9 +164,9 @@ export const WINDOWS: readonly WindowDef[] = [
     short: 'TV',
     icon: 'M2 4h12v8H2zM6 14h4',
     defaultOpen: false,
-    placement: { corner: 'tl', dx: 260, dy: 300 },
-    width: 420,
-    height: 320,
+    placement: { corner: 'tl', dx: 324, dy: 300 },
+    width: 520,
+    height: 380,
     // YouTube's terms ask for a player of at least 200 by 200. Any smaller than this, and the
     // channel rail and the credit lines leave it less.
     resizable: { min: { w: 360, h: 310 }, max: { w: 1280, h: 800 } },
@@ -192,8 +180,8 @@ export const WINDOWS: readonly WindowDef[] = [
     defaultOpen: false,
     // Clear of the radar strip underneath.
     placement: { corner: 'br', dx: 360, dy: 170 },
-    width: 460,
-    height: 360,
+    width: 560,
+    height: 420,
     resizable: { min: { w: 300, h: 220 }, max: { w: 1280, h: 900 } },
     component: CctvWindow,
   },
@@ -205,8 +193,8 @@ export const WINDOWS: readonly WindowDef[] = [
     defaultOpen: false,
     // Raised off the bottom edge: on wide screens the data credits fill that corner.
     placement: { corner: 'br', dx: 12, dy: 180 },
-    width: 340,
-    height: 300,
+    width: 420,
+    height: 460,
     resizable: { min: { w: 260, h: 200 }, max: { w: 640, h: 1000 } },
     useBadge: useIntelBadge,
     component: IntelWindow,
@@ -218,8 +206,8 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M4 14V2.5M4 3h8l-2 3 2 3H4',
     defaultOpen: false,
     placement: { corner: 'tc', dx: 0, dy: 300 },
-    width: 380,
-    height: 460,
+    width: 440,
+    height: 540,
     resizable: { min: { w: 300, h: 240 }, max: { w: 720, h: 1000 } },
     component: CountryWindow,
   },
@@ -230,8 +218,8 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M8 2l5 2v4c0 3-2.2 5-5 6-2.8-1-5-3-5-6V4z',
     defaultOpen: false,
     placement: { corner: 'tr', dx: 362, dy: 300 },
-    width: 340,
-    height: 400,
+    width: 400,
+    height: 500,
     resizable: { min: { w: 260, h: 200 }, max: { w: 640, h: 1000 } },
     useBadge: useMilitaryBadge,
     component: MilitaryWindow,
@@ -243,8 +231,8 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M3.5 11.5v-7a2 2 0 012-2h5a2 2 0 012 2v7zM3.5 7.5h9M5 13.5v-2M11 13.5v-2',
     defaultOpen: false,
     placement: { corner: 'tc', dx: 0, dy: 300 },
-    width: 340,
-    height: 400,
+    width: 400,
+    height: 520,
     resizable: { min: { w: 280, h: 200 }, max: { w: 640, h: 1000 } },
     component: TransportWindow,
   },
@@ -255,8 +243,8 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M8 2.5a3.5 3.5 0 00-3.5 3.5v2.5L3 11h10l-1.5-2.5V6A3.5 3.5 0 008 2.5zM6.5 13a1.5 1.5 0 003 0',
     defaultOpen: false,
     placement: { corner: 'tc', dx: 0, dy: 300 },
-    width: 360,
-    height: 380,
+    width: 420,
+    height: 460,
     resizable: { min: { w: 280, h: 200 }, max: { w: 640, h: 1000 } },
     component: NoticesWindow,
   },
@@ -279,9 +267,9 @@ export const WINDOWS: readonly WindowDef[] = [
     short: t('dock::Radio'),
     icon: 'M2.5 6h11v7.5h-11zM4.5 6l6-3.5M5.5 9.75a1.25 1.25 0 102.5 0 1.25 1.25 0 00-2.5 0M10.5 9h1.5M10.5 11h1.5',
     defaultOpen: false,
-    placement: { corner: 'tl', dx: 260, dy: 52 },
-    width: 320,
-    height: 400,
+    placement: { corner: 'tl', dx: 324, dy: 52 },
+    width: 380,
+    height: 480,
     resizable: { min: { w: 260, h: 220 }, max: { w: 560, h: 1000 } },
     component: RadioWindow,
   },
@@ -292,8 +280,8 @@ export const WINDOWS: readonly WindowDef[] = [
     icon: 'M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z',
     defaultOpen: false,
     placement: { corner: 'br', dx: 364, dy: 180 },
-    width: 320,
-    height: 380,
+    width: 380,
+    height: 480,
     resizable: { min: { w: 240, h: 220 }, max: { w: 560, h: 1000 } },
     useBadge: useChatBadge,
     component: ChatWindow,
@@ -306,8 +294,8 @@ export const WINDOWS: readonly WindowDef[] = [
     defaultOpen: false,
     developer: true,
     placement: { corner: 'bl', dx: 260, dy: 100 },
-    width: 420,
-    height: 260,
+    width: 520,
+    height: 340,
     resizable: { min: { w: 260, h: 140 }, max: { w: 900, h: 1000 } },
     useBadge: useConsoleBadge,
     component: ConsoleWindow,
@@ -322,8 +310,8 @@ export const WINDOWS: readonly WindowDef[] = [
     defaultOpen: false,
     // Under Situation, over the Intel feed's slot: off the map, and clear of the data credits.
     placement: { corner: 'br', dx: 12, dy: 180 },
-    width: 288,
-    height: 480,
+    width: 380,
+    height: 600,
     hideInDock: true,
     mode: {
       subscribe: useSelection.subscribe,
@@ -339,7 +327,8 @@ export const WINDOWS: readonly WindowDef[] = [
 ]
 
 /** Tailwind's md breakpoint. Below it there is no room to drag: one window shows at a time, as a sheet. */
-const wideScreen = () => window.matchMedia('(min-width: 48rem)')
+// The --breakpoint-md in index.css: from there the floating bars replace the taskbar and windows float.
+const wideScreen = () => window.matchMedia('(min-width: 40rem)')
 
 function subscribeScreen(onChange: () => void): () => void {
   const media = wideScreen()

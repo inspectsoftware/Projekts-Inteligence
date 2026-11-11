@@ -2,7 +2,7 @@ import { type Map, Marker } from 'maplibre-gl'
 import { t } from '../i18n'
 import { formatLat, formatLon, formatMgrs } from '../lib/coords'
 import { useSelection } from '../state/selection'
-import { prefersReducedMotion } from './camera'
+import { flyThere } from './camera'
 
 let pin: Marker | null = null
 
@@ -32,5 +32,5 @@ export function goToCoords(map: Map, lon: number, lat: number): void {
     marker.remove()
     if (pin === marker) pin = null
   })
-  map.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 13), duration: prefersReducedMotion() ? 0 : 2200, essential: true })
+  flyThere(map, [lon, lat], Math.max(map.getZoom(), 13))
 }

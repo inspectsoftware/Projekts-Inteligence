@@ -3,8 +3,7 @@ import { gzipSync } from 'node:zlib'
 import { VectorTile, classifyRings } from '@mapbox/vector-tile'
 import { PbfReader, PbfWriter } from 'pbf'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { parseColour } from '../../src/map/city/mesh'
-import { extrudeOverture, overtureTile, resolveOverture } from '../../src/map/city/overture'
+import { KIND_RGB, extrudeOverture, overtureTile, resolveOverture } from '../../src/map/city/overture'
 import { PmTiles, tileId } from '../../src/map/city/pmtiles'
 import { pitchedRoof, roofFrame } from '../../src/map/city/roofs'
 import type { ExtrudedTile } from '../../src/map/city/types'
@@ -356,29 +355,22 @@ describe('Overture tile', () => {
     expect(checked).toBeGreaterThan(70)
   })
 
-  it('colours roofs and walls as mapped, or leaves the colour to the theme and says how tall the building is', () => {
-    let roofs = 0
-    let walls = 0
+  it("colours each building by what it is where Overture says, or leaves the colour to the theme and says how tall it is", () => {
     runs.forEach((run, i) => {
       const { properties } = drawn[i]
+      const kind = KIND_RGB[String(properties.subtype ?? properties.class ?? '')]
       // The theme's height is the building's, roof and all, though a roof that could not be shaped is drawn lower.
       const theme = run.colours.find((colour) => colour[3] === 0)
       if (theme) {
+        expect(kind).toBeUndefined()
         expect(theme.slice(1)).toEqual([0, 0, 0])
         if (typeof properties.height === 'number') expect(theme[0]).toBe(Math.min(255, Math.round(properties.height)))
         expect(theme[0]).toBeGreaterThanOrEqual(Math.min(255, Math.round(heightRange(run)[1])))
       }
-      const roofRgb = parseColour(properties.roof_color)
-      const wallRgb = parseColour(properties.facade_color)
-      const roof = roofRgb ? [...roofRgb, 255] : theme
-      const wall = wallRgb ? [...wallRgb, 255] : theme
-      expect(run.colours[0]).toEqual(roof)
-      for (const colour of run.colours) expect([String(roof), String(wall)]).toContain(String(colour))
-      if (roofRgb) roofs++
-      if (wallRgb) walls++
+      const expected = kind ? [...kind, 255] : theme
+      // One colour all over, roof and walls alike.
+      for (const colour of run.colours) expect(String(colour)).toBe(String(expected))
     })
-    expect(roofs).toBeGreaterThan(10)
-    expect(walls).toBeGreaterThan(10)
   })
 })
 
@@ -406,7 +398,7 @@ describe('Overture roofs', () => {
     { rings: [box(1200, 1000)], properties: { num_floors: 2, roof_shape: 'hipped' } },
     { rings: [circle(1500, 1000, 30)], properties: { height: 20, roof_height: 8, roof_shape: 'dome' } },
     { rings: [square(1700, 1000, 40)], properties: { height: 9, roof_height: 3, roof_shape: 'skillion', roof_direction: 92 } },
-    { rings: [square(1800, 1000, 40)], properties: { height: 7, facade_color: '#336699', roof_color: '#a00' } },
+    { rings: [square(1800, 1000, 40)], properties: { height: 7, subtype: 'education', facade_color: '#336699', roof_color: '#a00' } },
     { rings: [square(1900, 1000, 40)], properties: { height: 300 } },
     { rings: [box(2000, 1000), square(2015, 1035, 10).reverse()], properties: { height: 12, roof_height: 4, roof_shape: 'gabled' } },
     // Cut by the tile's buffer at its east edge, 64 units out: no wall there, and a flat roof.
@@ -491,11 +483,9 @@ describe('Overture roofs', () => {
     expect(roof.filter((v) => Math.abs(v[0] - east) < 1e-3).every((v) => Math.abs(v[2] - 6) < 1e-3)).toBe(true)
   })
 
-  it('colours walls and roof apart as mapped, or by height for the theme', () => {
-    const roof = coloured.colours.filter((_, i) => coloured.vertices[i][2] === Math.fround(7) && i < 4)
-    expect(roof).toHaveLength(4)
-    for (const colour of roof) expect(colour).toEqual([170, 0, 0, 255])
-    expect(coloured.colours.slice(4).every((colour) => String(colour) === String([51, 102, 153, 255]))).toBe(true)
+  it("colours a building by what it is, not by its mapped roof and facade, else by height for the theme", () => {
+    // A school, its roof mapped red and its walls blue: lavender all over, as a city map draws schools.
+    expect(coloured.colours.every((colour) => String(colour) === String([...KIND_RGB.education, 255]))).toBe(true)
     expect(tall.colours.every((colour) => String(colour) === String([255, 0, 0, 0]))).toBe(true)
   })
 

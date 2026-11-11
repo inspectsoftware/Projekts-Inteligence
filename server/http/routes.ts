@@ -19,6 +19,10 @@ import { RadioBusy, createRadioSearch } from './radio'
 import { clientAddress, forwardedChain, forwardedShape, proxyHops, rateLimit } from './ratelimit'
 import { type Room, bannedFrom, createRoom, ownerFrom } from './room'
 import { ViewBusy, createViewAircraft } from './viewAircraft'
+import type { VehicleFix } from '../transit/match'
+import { tripService } from '../transit/service'
+import { STREETS_TILE_ZOOM, streetTile, tileBounds } from '../streets/detailed'
+import { BALTIC_BBOX } from '../../shared/region'
 
 export interface ApiDeps {
   build: BuildInfo
@@ -68,6 +72,48 @@ export function apiRoutes(deps: ApiDeps): Hono {
   const limit = (perMinute: number) => rateLimit(perMinute, Date.now, hops)
   const radio = createRadioSearch()
   const history = deps.history ?? new History()
+  const trips = tripService
+
+  /**
+   * The timetable trip of one live bus, tram or train (?id=transit:vilnius:4509, ?id=train:874):
+   * its stops with their times, how far along it is and the line it follows. 204 when its network
+   * has no timetable here or no trip fits.
+   */
+  api.get('/trip', limit(60), async (c) => {
+    const id = c.req.query('id') ?? ''
+    const feed = id.startsWith('transit:') ? deps.feeds.transit : id.startsWith('train:') ? deps.feeds.trains : undefined
+    if (!feed || id.length > 80) return c.json({ error: 'bad_request' }, 400)
+    let entities
+    try {
+      const { payload } = (await deps.cache.get(feed)).snapshot
+      entities = payload.shape === 'entities' ? payload.entities : []
+    } catch {
+      return c.json({ error: 'unavailable' }, 503)
+    }
+    const vehicle = entities.find((entity) => entity.id === id)
+    if (!vehicle) return c.json({ error: 'not_found' }, 404)
+    const props = vehicle.props as Record<string, unknown>
+    const network = feed === deps.feeds.trains ? (props.operator === 'elron' ? 'elron' : 'trains') : id.split(':')[1]
+    const number = typeof props.number === 'string' ? props.number : undefined
+    const fix: VehicleFix = {
+      lon: vehicle.lon,
+      lat: vehicle.lat,
+      // A train's route is its line's name; Elron's line is its number (E35), which its timetable knows it by.
+      route: network === 'elron' ? (number ?? null) : typeof props.route === 'string' && network !== 'trains' ? props.route : null,
+      mode: network === 'trains' || network === 'elron' ? 'rail' : String(props.mode),
+      trip: typeof props.trip === 'string' ? props.trip : number,
+      start: typeof props.start === 'number' ? props.start : undefined,
+    }
+    let answer
+    try {
+      answer = await trips.answer(network, fix)
+    } catch (err) {
+      console.warn(`[pwh] timetable for ${network} unavailable:`, err instanceof Error ? err.message : err)
+      return c.json({ error: 'unavailable' }, 503)
+    }
+    c.header('Cache-Control', 'no-store')
+    return answer ? c.json(answer) : c.body(null, 204)
+  })
 
   api.get('/health', (c) => {
     c.header('Cache-Control', 'no-store')
@@ -152,6 +198,31 @@ export function apiRoutes(deps: ApiDeps): Hono {
     if (!/gzip/.test(c.req.header('accept-encoding') ?? '')) return c.body(new Uint8Array(gunzipSync(frame.gzip)))
     c.header('Content-Encoding', 'gzip')
     return c.body(new Uint8Array(frame.gzip))
+  })
+
+  /**
+   * One tile of streets lane by lane (/streets/15/x/y; server/streets/detailed.ts), in the Baltic
+   * states only: built from OpenStreetMap the first time it is asked for, then from disk.
+   */
+  api.get('/streets/:z/:x/:y', limit(120), async (c) => {
+    const [z, x, y] = ['z', 'x', 'y'].map((k) => Number(c.req.param(k)))
+    if (z !== STREETS_TILE_ZOOM || !Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= 2 ** z || y >= 2 ** z) return c.json({ error: 'bad_request' }, 400)
+    const [w, s, e, n] = tileBounds(z, x, y)
+    const [bw, bs, be, bn] = BALTIC_BBOX
+    if (e < bw || w > be || n < bs || s > bn) return c.json({ error: 'not_found' }, 404)
+    let gz: Buffer
+    try {
+      gz = await streetTile(z, x, y)
+    } catch {
+      return c.json({ error: 'unavailable' }, 503)
+    }
+    // Streets change slowly: a browser keeps a tile a day.
+    c.header('Cache-Control', 'public, max-age=86400')
+    c.header('Content-Type', 'application/json; charset=utf-8')
+    c.header('Vary', 'Accept-Encoding')
+    if (!/gzip/.test(c.req.header('accept-encoding') ?? '')) return c.body(new Uint8Array(gunzipSync(gz)))
+    c.header('Content-Encoding', 'gzip')
+    return c.body(new Uint8Array(gz))
   })
 
   /** Latest still from one road camera. The frames arrive inside the cameras feed and are kept in memory. */

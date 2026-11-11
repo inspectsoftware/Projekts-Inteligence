@@ -4,6 +4,8 @@
 export type BBox = readonly [number, number, number, number]
 
 export const LATVIA_BBOX: BBox = [20.95, 55.67, 28.25, 58.09]
+/** Estonia, Latvia and Lithuania, islands included: the home view. */
+export const BALTIC_BBOX: BBox = [20.9, 53.85, 28.25, 59.7]
 
 /** Centre for radius queries: every corner of the bounding box is within about 142 nm of it. */
 export const LATVIA_CENTER = { lon: 24.6, lat: 56.88 } as const

@@ -12,6 +12,9 @@ uniform vec2 u_fog;
 uniform float u_opacity;
 uniform float u_ambient;
 uniform float u_diffuse;
+// How much darker a wall is than a roof under the open sky, and the street's shade at its foot: deep
+// at night, slight by day, as a city map draws its houses, soft and pale.
+uniform float u_shade;
 
 in vec3 v_pos;
 in float v_w;
@@ -25,7 +28,7 @@ vec3 faceNormal() {
 
 vec3 lit(vec3 base, vec3 n) {
   // Sky from above, the sun from one side, a little bounce from the ground for faces turned away.
-  float sky = 0.6 + 0.4 * n.z;
+  float sky = 1.0 - u_shade * (1.0 - n.z);
   float sun = max(dot(n, u_sun), 0.0);
   return base * (u_ambient * sky + u_diffuse * sun);
 }
@@ -137,7 +140,7 @@ void main() {
     }
   }
   // Darker where walls meet the ground: it reads as the street's own shade and seats each block.
-  color *= mix(0.72, 1.0, smoothstep(0.0, 5.0, v_pos.z));
+  color *= mix(1.0 - 0.7 * u_shade, 1.0, smoothstep(0.0, 5.0, v_pos.z));
 
   if (abs(n.z) < 0.25 && v_pos.z > 0.5) {
     // Storeys and windows, drawn into the walls: a pane every 2.8 m along, a storey every 3.2 m up.
@@ -207,19 +210,61 @@ export const TREE_VERTEX = `#version 300 es
 precision highp float;
 uniform mat4 u_matrix;
 in vec4 a_shape;
+in vec3 a_normal;
 in vec3 a_tree;
 in float a_ground;
 out vec3 v_pos;
 out float v_crown;
 out float v_seed;
+out vec3 v_normal;
 out float v_w;
 
+// Two numbers of its own for each tree, from where it stands: no two crowns alike.
+vec2 seeds;
+
+// A point of a one-metre tree's crown, by the angle round it and how far up it (0 to 1): a soft
+// cloud, its profile egg-like, round or tall, and its side bulging in a few lobes, as on a city map.
+vec3 crownAt(float angle, float up) {
+  const float PI = 3.14159265;
+  float widest = mix(0.85, 1.6, seeds.y);
+  float width = mix(0.82, 1.22, seeds.x);
+  // Never below 0: at the very top sin(π) comes out a hair under it, and its root would be no number.
+  float r = 0.23 * width * sqrt(max(sin(PI * pow(up, widest)), 0.0));
+  float lobes = 1.0
+    + 0.14 * sin(3.0 * angle + seeds.x * 6.2832) * sin(PI * up)
+    + 0.09 * sin(5.0 * angle + seeds.y * 6.2832) * sin(2.0 * PI * up + seeds.x * 3.0)
+    + 0.06 * sin(2.0 * angle + seeds.y * 9.0) * sin(3.0 * PI * up);
+  // The leaves' edge: soft swells, none alike from tree to tree, no sharper than the crown's own lobes.
+  float rough = 1.0
+    + 0.018 * sin(9.0 * angle + seeds.y * 17.0) * sin(7.0 * PI * up + seeds.x * 11.0)
+    + 0.012 * sin(6.0 * angle - seeds.x * 13.0 + 9.0 * PI * up);
+  float rise = 0.035 * sin(2.0 * angle + seeds.y * 6.0) * sin(PI * up);
+  float k = lobes * rough;
+  return vec3(cos(angle) * r * k, sin(angle) * r * k, 0.26 + 0.74 * up + rise + 0.004 * sin(9.0 * angle + seeds.x * 7.0) * sin(PI * up));
+}
+
 void main() {
-  // The unit tree is one metre tall; its crown is as wide as the tree is tall times 0.62.
-  float h = a_tree.z;
-  v_pos = vec3(a_tree.xy + a_shape.xy * h, a_shape.z * h);
-  v_crown = a_shape.w;
   v_seed = fract(a_tree.x * 0.37 + a_tree.y * 0.61);
+  seeds = vec2(v_seed, fract(a_tree.x * 0.53 + a_tree.y * 0.29 + 0.5));
+  vec3 shape = a_shape.xyz;
+  v_normal = a_normal;
+  if (a_shape.w > 0.5) {
+    // The crown comes as angle and height; its shape and its smooth normal are worked out here.
+    float angle = a_shape.x;
+    float up = a_shape.y;
+    shape = crownAt(angle, up);
+    if (up < 0.001) v_normal = vec3(0.0, 0.0, -1.0);
+    else if (up > 0.999) v_normal = vec3(0.0, 0.0, 1.0);
+    else {
+      float u = clamp(up, 0.03, 0.97);
+      vec3 p = crownAt(angle, u);
+      v_normal = normalize(cross(crownAt(angle + 0.01, u) - p, crownAt(angle, u + 0.01) - p));
+    }
+  }
+  // The unit tree is one metre tall.
+  float h = a_tree.z;
+  v_pos = vec3(a_tree.xy + shape.xy * h, shape.z * h);
+  v_crown = a_shape.w;
   gl_Position = u_matrix * vec4(v_pos.xy, v_pos.z + a_ground, 1.0);
   v_w = gl_Position.w;
 }
@@ -231,12 +276,14 @@ uniform vec3 u_leaf;
 uniform vec3 u_bark;
 in float v_crown;
 in float v_seed;
+in vec3 v_normal;
 ${SHADING}
 
 void main() {
-  vec3 n = faceNormal();
+  // Smooth: the shape's own normal, not the face's.
+  vec3 n = normalize(v_normal);
   // No two trees quite the same green.
-  vec3 leaf = u_leaf * (0.82 + 0.36 * v_seed);
+  vec3 leaf = u_leaf * (0.93 + 0.14 * v_seed);
   finish(lit(v_crown > 0.5 ? leaf : u_bark, n));
 }
 `

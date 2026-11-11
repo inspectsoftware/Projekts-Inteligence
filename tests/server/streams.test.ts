@@ -5,7 +5,7 @@ import type { DiskStore, StoredSnapshot } from '../../server/core/disk'
 import { LazyStream, type SocketLike } from '../../server/core/stream'
 import type { FeedDef } from '../../server/feeds/types'
 import { mergeElements, normaliseElements } from '../../shared/adapters/satellites'
-import { type RawTrain, type TrainFixes, normaliseTrains } from '../../shared/adapters/trains'
+import { type RawTrain, type TrainFixes, normaliseElronTrains, normaliseTrains } from '../../shared/adapters/trains'
 import { normaliseGpsTxt } from '../../shared/adapters/transit'
 import type { FeedPayload } from '../../shared/feeds'
 
@@ -359,5 +359,29 @@ describe('normaliseGpsTxt', () => {
     const [idle] = normaliseGpsTxt('2,,24100000,56950000,0,0,,', network, T0)
     expect(idle).toMatchObject({ label: undefined, spd: 0 })
     expect(idle.props.route).toBeNull()
+  })
+})
+
+describe('normaliseElronTrains', () => {
+  const HEAD = 'id,lat,lon,bearing,speed,type,route_id,route_short_name,route_long_name,route_color,route_text_color,trip_id,headsign,displayed_icon,icons,accessible,make_model,ts,block_trips,label,carriages'
+  const row = (lat: number, lon: number, at: number) =>
+    `"elron_Ida,_Lõuna-Mo-80ab-A-OB-1825",${lat},${lon},,,Train,ee-80ab,E35,Tallinn - Tartu / Valga,ff711d,FFFFFF,"ee-Ida,_Lõuna-Mo-80ab-A-OB-1825",Valga,,,,,${Math.round(at / 1000)},,,`
+  const T0 = Date.UTC(2026, 10, 9, 16)
+
+  it('reads Elron’s trains from the Baltic list, leaving everything else, and works out a heading from where each was', () => {
+    const fixes: TrainFixes = new Map()
+    const bus = `tartu-ridango_1,58.37,26.72,10,20,Bus,ee-1,2,Lõunakeskus,de2c42,FFFFFF,ee-x,Nõlvaku,,,,,${Math.round(T0 / 1000)},,1,`
+    const first = normaliseElronTrains([HEAD, row(58.0, 26.0, T0), bus].join('\n'), T0, fixes)
+    expect(first).toMatchObject([
+      { kind: 'train', lat: 58, lon: 26, props: { number: 'E35', route: 'Tallinn - Tartu / Valga', destination: 'Valga', operator: 'elron', trip: 'Ida,_Lõuna-Mo-80ab-A-OB-1825', gps: true } },
+    ])
+    expect(first[0].id).toMatch(/^train:ee[0-9a-z]+$/)
+    expect(first[0].trk).toBeUndefined()
+    // Ten seconds on, 200 m further north: heading north, the same train.
+    const later = normaliseElronTrains([HEAD, row(58.0018, 26.0, T0 + 10_000)].join('\n'), T0 + 10_000, fixes)
+    expect(later[0].id).toBe(first[0].id)
+    expect(later[0].trk).toBeCloseTo(0, 0)
+    // A row an hour old is a train that stopped reporting.
+    expect(normaliseElronTrains([HEAD, row(58.0, 26.0, T0)].join('\n'), T0 + 3600_000, new Map())).toEqual([])
   })
 })

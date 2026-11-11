@@ -12,8 +12,8 @@ import type { FeedDef } from './types'
 
 const HOUR = 60 * 60 * 1000
 
-/** Latvian waters and their approaches: the Gulf of Rīga, the Irbe Strait and the open coast. */
-const SEA_BBOX: BBox = [18.5, 55.3, 25.6, 59.7]
+/** The eastern Baltic: the Gulf of Rīga, the Irbe Strait, the open coast down to Klaipėda, and the Gulf of Finland to Helsinki and past Tallinn. */
+const SEA_BBOX: BBox = [18.5, 55.3, 26.5, 60.3]
 
 const OPEN_SANCTIONS = { label: 'OpenSanctions (CC BY-NC)', href: 'https://www.opensanctions.org/datasets/maritime/' }
 
@@ -42,6 +42,8 @@ export const sanctionsFeed: FeedDef = {
 const DIGITRAFFIC = 'https://meri.digitraffic.fi/api/ais/v1'
 // Digitraffic asks callers to name themselves in this header.
 const DIGITRAFFIC_HEADERS = { 'Digitraffic-User': 'ProjektsInteligence' }
+/** Circles asked for positions, km: the Gulf of Rīga and Latvia's coast, and the Gulf of Finland. */
+const DIGITRAFFIC_AREAS = ['latitude=57.6&longitude=22.2&radius=260', 'latitude=59.6&longitude=24.6&radius=150']
 /** Ship names and types change rarely; the whole list is small, so it is simply re-read now and then. */
 const STATIC_REFRESH_MS = 6 * HOUR
 
@@ -50,6 +52,8 @@ const KEY_NAME = 'AISSTREAM_API_KEY'
 
 const table = new VesselTable()
 let staticLoadedAt = 0
+/** The names and types Digitraffic last listed, by MMSI. */
+const knownVessels = new Map<number, ReturnType<typeof parseDigitrafficVessels>[number]>()
 let apiKey = ''
 
 const [west, south, east, north] = SEA_BBOX
@@ -109,25 +113,33 @@ export const shipsFeed: FeedDef = {
     // Never fatal: with the socket still connecting (or no key at all) the open data alone is served.
     if (apiKey) await aisStream.ready(1500).catch(() => undefined)
 
-    const positions = await http
-      .json(`${DIGITRAFFIC}/locations?latitude=57.6&longitude=22.2&radius=260`, { headers: DIGITRAFFIC_HEADERS, timeoutMs: 8000 })
-      .then((data) => parseDigitrafficLocations(data as Parameters<typeof parseDigitrafficLocations>[0], Date.now()))
-      .catch((err: unknown) => {
-        // Without a key this is the only source, so its failure is the feed's failure.
-        if (!apiKey) throw err
-        return []
-      })
-    for (const position of positions) table.position(position)
+    // Two circles: the Gulf of Rīga and its approaches, and the Gulf of Finland, where the Tallinn–Helsinki ferries run.
+    const asked = await Promise.allSettled(
+      DIGITRAFFIC_AREAS.map((area) =>
+        http
+          .json(`${DIGITRAFFIC}/locations?${area}`, { headers: DIGITRAFFIC_HEADERS, timeoutMs: 8000 })
+          .then((data) => parseDigitrafficLocations(data as Parameters<typeof parseDigitrafficLocations>[0], Date.now())),
+      ),
+    )
+    // Without a key this is the only source, so both failing is the feed's failure.
+    const failed = asked.find((result) => result.status === 'rejected')
+    if (!apiKey && failed && asked.every((result) => result.status === 'rejected')) throw failed.reason
+    for (const result of asked) if (result.status === 'fulfilled') for (const position of result.value) table.position(position)
 
     if (now - staticLoadedAt > STATIC_REFRESH_MS) {
       const vessels = await http
         .json(`${DIGITRAFFIC}/vessels`, { headers: DIGITRAFFIC_HEADERS, timeoutMs: 8000 })
-        .catch(() => null)
+        .catch((err: unknown) => {
+          console.warn('[pwh] ships: Digitraffic vessel list unavailable:', err instanceof Error ? err.message : err)
+          return null
+        })
       if (Array.isArray(vessels)) {
-        for (const update of parseDigitrafficVessels(vessels)) table.describe(update)
+        for (const update of parseDigitrafficVessels(vessels)) knownVessels.set(update.mmsi, update)
         staticLoadedAt = now
       }
     }
+    // Every time, not only when the list arrives: a ship that came into range since is named too.
+    for (const update of knownVessels.values()) table.describe(update)
     table.prune(now)
 
     // Without the list (or with a copy kept from before it carried the shadow fleet) nothing is flagged.

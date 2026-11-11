@@ -65,8 +65,9 @@ export function Hud() {
 
   const label = 'text-fg-mute'
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-14 z-10 flex justify-center px-3">
-      <Panel className="flex items-center gap-x-4 gap-y-1 px-3 py-1.5 font-mono text-[10.5px] tracking-[0.1em] whitespace-nowrap text-fg tabular-nums max-md:flex-wrap max-md:justify-center">
+    // On a wide screen a quiet line in the bottom left corner; on a phone a row above the taskbar.
+    <div className="pointer-events-none absolute inset-x-0 bottom-14 z-10 flex justify-center px-3 md:right-auto md:bottom-2 md:left-3 md:px-0">
+      <Panel className="flex items-center gap-x-4 gap-y-1 px-3 py-1.5 font-mono text-[10.5px] tracking-[0.1em] whitespace-nowrap text-fg tabular-nums max-md:flex-wrap max-md:justify-center md:gap-x-3 md:rounded-lg md:bg-ink-900/80 md:px-2.5 md:py-1 md:text-[10px] md:tracking-normal md:text-fg-dim">
         <span>
           <span ref={modeRef} className={`mr-2 ${label}`}>
             CTR
@@ -77,19 +78,19 @@ export function Hud() {
           <span className={`mr-2 ${label}`}>MGRS</span>
           <span ref={mgrsRef}>—</span>
         </span>
-        <span className="max-sm:hidden">
+        <span className="max-sm:hidden md:hidden">
           <span className={`mr-2 ${label}`}>Z</span>
           <span ref={zoomRef}>—</span>
         </span>
-        <span className="max-sm:hidden">
+        <span className="max-sm:hidden md:hidden">
           <span className={`mr-2 ${label}`}>BRG</span>
           <span ref={bearingRef}>—</span>
         </span>
-        <span className="max-sm:hidden">
+        <span className="max-sm:hidden md:hidden">
           <span className={`mr-2 ${label}`}>TILT</span>
           <span ref={pitchRef}>—</span>
         </span>
-        <span className="flex items-center gap-2 max-lg:hidden">
+        <span className="flex items-center gap-2 max-md:hidden">
           <span ref={scaleBarRef} className="block h-1.5 border-x border-b border-fg-dim" />
           <span ref={scaleLabelRef} className={label}>
             —
