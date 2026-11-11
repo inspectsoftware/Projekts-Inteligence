@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { NewsSource, RawNews } from '../../shared/adapters/news'
-import { normaliseGpsTxt } from '../../shared/adapters/transit'
+import { normaliseGpsFull, normaliseGpsTxt, normalisePieturasCsv, normaliseRigaGps } from '../../shared/adapters/transit'
 import { advisoryLevel } from '../../server/feeds/advisories'
 import { candidateVersions } from '../../server/feeds/conflicts'
 import { pickNotices } from '../../server/feeds/notices'
@@ -58,6 +58,47 @@ describe('public transport positions', () => {
     expect(tallinn).toMatchObject([{ id: 'transit:tallinn:98', lon: 24.66904, lat: 59.46132, trk: 316, props: { mode: 'tram', route: 'T1' } }])
     const vilnius = normaliseGpsTxt('1,2,25283620,54670325,15,58,1565,-1,45,', { id: 'vilnius', name: 'Vilnius' }, NOW)
     expect(vilnius).toMatchObject([{ props: { mode: 'trolleybus', route: '2', network: 'Vilnius' } }])
+  })
+
+  it('reads the gps_full.txt that Kaunas and Alytus publish, header row and all', () => {
+    const text = [
+      'Transportas,Marsrutas,Grafikas,MasinosNumeris,Ilguma,Platuma,Greitis,Azimutas,ReisoPradziaMinutemis,NuokrypisSekundemis,SekanciosStotelesNum,AtvykimoLaikasSekundemis,KryptiesPavadinimas,',
+      'Troleibusai,2,2-01,105,23940015,54931407,52,94,787,0,505,49440,Islandijos pl.,',
+      'Autobusai Druskininkai,1,600301501,60.735,24010202,54412781,0,236,901,0,56058,,',
+      'Autobusai,7,7-03,,0,0,0,0,,,,,Garbage,',
+    ].join('\n')
+    const vehicles = normaliseGpsFull(text, { id: 'kaunas', name: 'Kaunas' }, NOW)
+    expect(vehicles).toMatchObject([
+      { id: 'transit:kaunas:105', lon: 23.940015, lat: 54.931407, trk: 94, props: { mode: 'trolleybus', route: '2', vehicle: '105' } },
+      { props: { mode: 'bus', route: '1' } },
+    ])
+    expect(normaliseGpsFull('0', { id: 'alytus', name: 'Alytus' }, NOW)).toEqual([])
+  })
+
+  it('reads Rīga’s position file, with its fleet number and the minute its trip set out', () => {
+    const text = '1,15,24213103,56897075,,58,L,16305,b1-b,898,0,\n3,7,24120947,56943215,,230,L,30612,a-b,,0,\n'
+    expect(normaliseRigaGps(text, { id: 'riga', name: 'Rīga' }, NOW)).toMatchObject([
+      { id: 'transit:riga:16305', lon: 24.213103, lat: 56.897075, trk: 58, props: { mode: 'trolleybus', route: '15', vehicle: '16305', start: 898 } },
+      { id: 'transit:riga:30612', props: { mode: 'tram', route: '7', vehicle: '30612' } },
+    ])
+    expect(normaliseRigaGps(text, { id: 'riga', name: 'Rīga' }, NOW)[1].props.start).toBeUndefined()
+  })
+
+  it('reads the towns pieturas.lv gathers, and leaves out trains, the networks read at source and stale rows', () => {
+    const at = Math.round(NOW / 1000)
+    const text = [
+      'id,lat,lon,bearing,speed,type,route_id,route_short_name,route_long_name,route_color,route_text_color,trip_id,headsign,displayed_icon,icons,accessible,make_model,ts,block_trips,label,carriages',
+      `tartu-ridango_368TNS,58.3773,26.7281,53,36,Bus,ee-3ef8,2,"Lõunakeskus - Kannikese, Nõlvaku",de2c42,FFFFFF,ee-Talv_26/27-MoWeTh-3ef8-A-A--1805,Nõlvaku,,,,,${at},,368TNS,`,
+      `jurmala-diais_138,56.961093,23.616944,,,Bus,js-5,5,Bulduri - Ķemeru stacija,E7232E,FFFFFF,,,,,,,${at},,138,`,
+      `elron_E35,59.42,24.72,,,Train,ee-80ab,E35,Tallinn - Tartu,ff711d,FFFFFF,,,,,,,${at},,,`,
+      `rs_1234,56.95,24.1,10,20,Bus,rs-19,19,Pētersala,,,,,,,,,${at},,1234,`,
+      `marijampoles_2301,54.436309,23.402921,329,,Bus,m-16,16,Mokolai,,,,,,,,,${at - 3600},,2301,`,
+    ].join('\n')
+    expect(normalisePieturasCsv(text, NOW)).toMatchObject([
+      { id: 'transit:tartu:368TNS', lon: 26.7281, lat: 58.3773, trk: 53, spd: 10, label: '2', props: { network: 'Tartu', mode: 'bus', route: '2', vehicle: '368TNS', trip: 'Talv_26/27-MoWeTh-3ef8-A-A--1805' } },
+      { id: 'transit:jurmala:138', spd: 0, props: { network: 'Jūrmala', route: '5' } },
+    ])
+    expect(normalisePieturasCsv(text, NOW)[1].trk).toBeUndefined()
   })
 })
 

@@ -1,20 +1,35 @@
 import type { Color } from '@deck.gl/core'
-import { TextLayer } from '@deck.gl/layers'
-import { type Camera, type RoadEvent, type RoadEventCategory, plainWords } from '../../shared/adapters/roads'
+import { IconLayer, TextLayer } from '@deck.gl/layers'
+import { type Camera, type RoadEvent, type RoadEventCategory, type RoadSource, plainWords } from '../../shared/adapters/roads'
 import { locale, t } from '../i18n'
 import { formatLat, formatLon } from '../lib/coords'
 import { formatAge } from '../lib/format'
 import { getEntities } from '../runtime/entityStore'
-import { LABEL_FONT, OUTLINE, dots, memoLast } from './common'
+import { getSignAtlas } from '../map/signs'
+import { LABEL_FONT, OUTLINE, dots, iconScale, memoLast, selectionRing } from './common'
 import type { InspectorModel, LayerDef } from './types'
 
-/** Two layers so that the few urgent dots are never buried under the many roadworks. */
+/** Two layers so that the few urgent signs are never buried under the many roadworks. */
 const splitRoads = memoLast((data: RoadEvent[]) => ({
   urgent: data.filter((event) => event.props.category !== 'roadworks'),
   works: data.filter((event) => event.props.category === 'roadworks'),
 }))
 
+/** The events drawn at this zoom, worked out again only when the events, the selection or which kinds show change. */
+const shownOnly = (events: RoadEvent[], zoom: number, selectedId: string | null) => events.filter((event) => event.id === selectedId || zoom >= fromZoom(event))
+// One for each list: a single one, asked for the two in turn, would make both again every frame.
+const shownWorks = memoLast(shownOnly)
+const shownUrgent = memoLast(shownOnly)
+
 const SOURCE_LINK = [{ label: 'transportdata.gov.lv', href: 'https://map.transportdata.gov.lv/' }]
+
+/** Where each country's reports come from, to read more. */
+const REPORTED_BY: Record<RoadSource, { label: string; href: string }[]> = {
+  lv: SOURCE_LINK,
+  lt: [{ label: 'eismoinfo.lt', href: 'https://eismoinfo.lt/' }],
+  ee: [{ label: 'tarktee.ee', href: 'https://tarktee.ee/' }],
+  tallinn: [{ label: 'tallinn.ee', href: 'https://www.tallinn.ee/' }],
+}
 
 const CAMERA: Color = [120, 220, 255]
 
@@ -23,7 +38,7 @@ export const camerasLayer: LayerDef = {
   group: 'land',
   label: t('Road cameras'),
   hint: t("The road authority's roadside cameras on the main roads around Rīga: a still every few minutes"),
-  defaultOn: true,
+  defaultOn: false,
   swatch: '#78dcff',
   feeds: ['cameras'],
   describes: ['camera'],
@@ -77,13 +92,22 @@ const CATEGORY: Record<RoadEventCategory, { label: string; color: Color; radius:
   roadworks: { label: t('Roadworks'), color: [255, 204, 102], radius: 3.5 },
 }
 
+/**
+ * From these zooms in each kind of sign is drawn: none with the whole Baltic on screen, closures and
+ * accidents once a region is, hazards a little closer, the many roadworks only in town.
+ */
+const URGENT_ZOOM = 8.5
+const HAZARD_ZOOM = 9.5
+const WORKS_ZOOM = 10.5
+const fromZoom = (event: RoadEvent) => (event.props.category === 'roadworks' ? WORKS_ZOOM : event.props.category === 'hazard' ? HAZARD_ZOOM : URGENT_ZOOM)
+
 const DAY = new Intl.DateTimeFormat(locale, { timeZone: 'Europe/Riga', day: 'numeric', month: 'short', year: 'numeric' })
 
 export const roadEventsLayer: LayerDef = {
   id: 'road-events',
   group: 'land',
   label: t('Roadworks and incidents'),
-  hint: t('Accidents, hazards, closures and roadworks on the state roads, as the road authority reports them'),
+  hint: t('Accidents, hazards, closures and roadworks on the roads of Estonia, Latvia and Lithuania and on the streets of Tallinn, as their road authorities report them'),
   defaultOn: true,
   swatch: '#ffcc66',
   feeds: ['roads'],
@@ -108,7 +132,8 @@ export const roadEventsLayer: LayerDef = {
       subtitle: props.place ?? undefined,
       badges: props.category === 'accident' ? [{ text: t('Accident'), tone: 'danger' }] : [],
       rows,
-      links: SOURCE_LINK,
+      // Tallinn's permit page where there is one, else the authority's map.
+      links: props.url ? [{ label: 'opinfo.tallinn.ee', href: props.url }] : REPORTED_BY[props.source ?? 'lv'],
     }
   },
 
@@ -122,9 +147,29 @@ export const roadEventsLayer: LayerDef = {
 
   build(ctx) {
     const { urgent, works } = splitRoads(getEntities('roads') as RoadEvent[])
+    const { canvas, mapping } = getSignAtlas()
+    const scale = iconScale(ctx.zoom)
+    // Which kinds show, as the zoom reaches each one's: a step, so the lists are not made again every frame. The one picked stays.
+    const step = ctx.zoom >= WORKS_ZOOM ? WORKS_ZOOM : ctx.zoom >= HAZARD_ZOOM ? HAZARD_ZOOM : ctx.zoom >= URGENT_ZOOM ? URGENT_ZOOM : 0
+    // Each event as the sign a driver would see: the roadworks sign smaller, being so many.
+    const signs = (id: string, data: RoadEvent[], size: number) =>
+      new IconLayer<RoadEvent>({
+        id,
+        data,
+        pickable: true,
+        iconAtlas: canvas as unknown as string,
+        iconMapping: mapping,
+        getIcon: (event) => event.props.category,
+        getPosition: (event) => [event.lon, event.lat],
+        getSize: (event) => (event.id === ctx.selectedId || event.id === ctx.hoveredId ? size * 1.3 : size),
+        sizeUnits: 'pixels',
+        sizeScale: scale,
+        updateTriggers: { getSize: `${ctx.selectedId}|${ctx.hoveredId}` },
+      })
     return [
-      ...dots('road-works', works, () => CATEGORY.roadworks.color, CATEGORY.roadworks.radius, ctx),
-      ...dots('road-incidents', urgent, (event) => CATEGORY[event.props.category].color, 5.5, ctx),
+      signs('road-works', ctx.zoom >= WORKS_ZOOM ? works : shownWorks(works, step, ctx.selectedId), 15),
+      signs('road-incidents', ctx.zoom >= HAZARD_ZOOM ? urgent : shownUrgent(urgent, step, ctx.selectedId), 20),
+      selectionRing('road-selection', [...works, ...urgent].filter((event) => event.id === ctx.selectedId), ctx.now, 14, scale),
     ]
   },
 }

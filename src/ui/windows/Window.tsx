@@ -1,4 +1,4 @@
-import { type KeyboardEvent, type PointerEvent as ReactPointerEvent, useLayoutEffect, useRef } from 'react'
+import { type KeyboardEvent, type PointerEvent as ReactPointerEvent, Suspense, useLayoutEffect, useRef } from 'react'
 import { t } from '../../i18n'
 import { prefersReducedMotion } from '../../map/camera'
 import { useWindows } from '../../state/windows'
@@ -26,7 +26,7 @@ const SPRING: KeyframeAnimationOptions = { duration: 260, easing: 'cubic-bezier(
 
 /** No window is ever bigger than the usable area. */
 const MAX_WIDTH = `calc(100% - ${2 * MARGIN}px)`
-const MAX_HEIGHT = `calc(100% - ${CHROME.top + CHROME.taskbar + CHROME.hud + 2 * MARGIN}px)`
+const MAX_HEIGHT = `calc(100% - ${CHROME.top + CHROME.bottom + 2 * MARGIN}px)`
 
 const ARROWS: Record<string, readonly [number, number] | undefined> = {
   ArrowLeft: [-1, 0],
@@ -38,7 +38,7 @@ const ARROWS: Record<string, readonly [number, number] | undefined> = {
 /** The same anchor, measured from the top edge instead of the bottom one. */
 const FROM_TOP: Partial<Record<Placement['corner'], Placement['corner']>> = { bl: 'tl', br: 'tr', bc: 'tc' }
 
-const HEADER_BUTTON = 'grid h-6 w-6 shrink-0 place-items-center text-sm leading-none text-fg-mute transition-colors hover:text-fg'
+const HEADER_BUTTON = 'grid h-6 w-6 shrink-0 place-items-center text-sm leading-none text-fg-mute transition-colors hover:text-fg md:mr-1 md:h-7 md:w-7 md:rounded-lg md:text-base md:hover:bg-ink-700'
 
 const viewport = (): Size => ({ w: window.innerWidth, h: window.innerHeight })
 
@@ -289,7 +289,7 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
       aria-label={def.title}
       data-window={def.id}
       onPointerDownCapture={() => focus(def.id)}
-      className={`window absolute flex flex-col font-mono ${sheet ? 'inset-x-0 bottom-29 max-h-[60%]' : ''}`}
+      className={`window absolute flex flex-col font-mono md:rounded-2xl md:font-sans md:bg-ink-900 md:shadow-[0_8px_30px_rgb(0_0_0/0.16)] ${sheet ? 'inset-x-0 bottom-29 max-h-[60%]' : ''}`}
       style={
         sheet
           ? undefined
@@ -308,11 +308,11 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
         tabIndex={sheet ? undefined : 0}
         onPointerDown={startDrag}
         onKeyDown={nudge}
-        className={`flex h-7 shrink-0 items-center pl-3 select-none focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent ${
+        className={`flex h-7 shrink-0 items-center pl-3 select-none md:h-10 md:pl-4 focus-visible:outline-1 focus-visible:-outline-offset-1 focus-visible:outline-accent ${
           sheet ? '' : 'cursor-grab touch-none'
         }`}
       >
-        <h2 className="min-w-0 flex-1 truncate text-[10px] font-medium tracking-[0.22em] text-fg-mute uppercase">
+        <h2 className="min-w-0 flex-1 truncate text-[10px] font-medium tracking-[0.22em] text-fg-mute uppercase md:font-sans md:text-[13px] md:font-semibold md:tracking-normal md:text-fg-strong md:normal-case">
           {def.title}
         </h2>
         {badge && (
@@ -344,7 +344,9 @@ export function Window({ def, sheet }: { def: WindowDef; sheet: boolean }) {
       </header>
       {/* Hidden rather than unmounted when collapsed, so a body keeps its tab, its scroll and its stream. */}
       <div hidden={collapsed} className="flex min-h-0 flex-1 flex-col overflow-y-auto border-t border-line">
-        <Body />
+        <Suspense fallback={null}>
+          <Body />
+        </Suspense>
       </div>
       {!sheet &&
         !collapsed &&

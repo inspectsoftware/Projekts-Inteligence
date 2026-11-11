@@ -1,20 +1,20 @@
 @import 'tailwindcss';
 
 @theme {
-  /* Surfaces, darkest first */
-  --color-ink-950: #04070a;
-  --color-ink-900: #070b10;
-  --color-ink-850: #0a1016;
-  --color-ink-800: #0e151c;
-  --color-ink-700: #152029;
-  --color-line: #1b2a35;
-  --color-line-strong: #2a3f4e;
+  /* Surfaces, darkest first: plain greys, no tint, so the map keeps all the colour */
+  --color-ink-950: #0a0a0a;
+  --color-ink-900: #141414;
+  --color-ink-850: #191919;
+  --color-ink-800: #1f1f1f;
+  --color-ink-700: #2a2a2a;
+  --color-line: #2a2a2a;
+  --color-line-strong: #3d3d3d;
 
   /* Text */
   --color-fg-strong: #ffffff;
-  --color-fg: #d5e1ea;
-  --color-fg-dim: #8499a8;
-  --color-fg-mute: #566a78;
+  --color-fg: #e5e5e5;
+  --color-fg-dim: #a3a3a3;
+  --color-fg-mute: #737373;
 
   /* Signal colours */
   --color-accent: #4fd6ff;
@@ -27,22 +27,25 @@
 
   --font-sans: 'Inter Variable', ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* The wide layout (floating bars, floating windows) starts here, not at 48rem: a browser pane beside an editor is often 650-760px wide. */
+  --breakpoint-md: 40rem;
 }
 
 /* The same names by day. Signal colours are darkened until they read on a pale surface. */
 :root[data-theme='light'] {
-  --color-ink-950: #e4e9ee;
-  --color-ink-900: #f7f9fb;
-  --color-ink-850: #eef2f5;
-  --color-ink-800: #e4eaef;
-  --color-ink-700: #d6dfe6;
-  --color-line: #c3ced8;
-  --color-line-strong: #9aabb8;
+  --color-ink-950: #ececec;
+  --color-ink-900: #ffffff;
+  --color-ink-850: #f6f6f6;
+  --color-ink-800: #efefef;
+  --color-ink-700: #e6e6e6;
+  --color-line: #e3e3e3;
+  --color-line-strong: #cccccc;
 
-  --color-fg-strong: #04080b;
-  --color-fg: #17222b;
-  --color-fg-dim: #445663;
-  --color-fg-mute: #6a7c89;
+  --color-fg-strong: #0a0a0a;
+  --color-fg: #1c1c1c;
+  --color-fg-dim: #555555;
+  --color-fg-mute: #8a8a8a;
 
   --color-accent: #006e9c;
   --color-ok: #0b8052;
@@ -253,4 +256,36 @@ body {
     animation: none;
     opacity: 0;
   }
+}
+
+/*
+ * Frosted panels blur the map under them on every frame it moves, which a phone pays for in
+ * dropped frames. On touch screens the panels are opaque enough to read without it.
+ */
+@media (pointer: coarse) {
+  * {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/*
+ * Inside windows on a wide screen: plain sentence case, no wide letter-spacing. The bodies were
+ * written for a terminal look (capitals spaced out, in a monospace face); this turns them into the
+ * calm, readable text of the rest of the chrome without touching each one. Phones keep the old look
+ * until they get their own pass.
+ */
+@media (width >= 40rem) {
+  .window .uppercase {
+    text-transform: none;
+  }
+  .window [class*='tracking-'] {
+    letter-spacing: normal;
+  }
+}
+
+/* Thin, quiet scrollbars, in the theme's colours rather than the system's white ones. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-line-strong) transparent;
 }

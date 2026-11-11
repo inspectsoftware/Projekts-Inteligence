@@ -6,7 +6,7 @@
  */
 import { VectorTile, classifyRings } from '@mapbox/vector-tile'
 import { PbfReader } from 'pbf'
-import { metreScale, parseColour } from './mesh'
+import { metreScale } from './mesh'
 import { PmTiles } from './pmtiles'
 import { flatRoof, pitchedRoof, ringShape, roofFrame, wallTop } from './roofs'
 import type { ExtrudedTile } from './types'
@@ -102,10 +102,22 @@ function heightsOf(properties: Record<string, unknown>, halfWidth: number, pitch
 /**
  * The buildings of one Overture tile (the decompressed vector tile) as solids, on the same terms as
  * mesh.ts's extrudeTile: placed at the tile's north-west corner, one contiguous run of triangles
- * per polygon, roof first. Walls take the facade's colour and roofs the roof's, where mapped. A
+ * per polygon, roof first. Each takes the colour of what it is for (KIND_RGB), where Overture says. A
  * building drawn in parts has its outline left out and its parts drawn instead, as OpenStreetMap's
  * Simple 3D Buildings has it.
  */
+/** What a building is for, by Overture's subtype, as the colour a city map gives it; homes keep the theme's. */
+export const KIND_RGB: Record<string, [number, number, number]> = {
+  education: [216, 212, 240],
+  medical: [242, 214, 214],
+  commercial: [218, 221, 228],
+  industrial: [214, 214, 210],
+  religious: [236, 226, 204],
+  civic: [222, 227, 236],
+  transportation: [212, 219, 227],
+  entertainment: [234, 220, 236],
+}
+
 export function extrudeOverture(data: Uint8Array, z: number, x: number, y: number): ExtrudedTile {
   const origin: [number, number] = [x / 2 ** z, y / 2 ** z]
   const scale = metreScale(latitudeOf(origin[1]))
@@ -133,8 +145,9 @@ export function extrudeOverture(data: Uint8Array, z: number, x: number, y: numbe
       const properties = feature.properties
       if (properties.has_parts === true || properties.is_underground === true || feature.type !== 3) continue
       const shape = typeof properties.roof_shape === 'string' && properties.roof_shape !== 'flat' ? properties.roof_shape : null
-      const roofRgb = parseColour(properties.roof_color)
-      const wallRgb = parseColour(properties.facade_color)
+      // Coloured by what it is, as a city map does (a school lavender, a shop grey), not by the
+      // roof and facade colours mapped for it: those make a patchwork the map's reader cannot read.
+      const kindRgb = KIND_RGB[String(properties.subtype ?? properties.class ?? '')]
       for (const polygon of classifyRings(feature.loadGeometry())) {
         // Rings arrive closed, their first point repeated at the end.
         const rings = polygon.map((ring) => (ring.length > 1 && ring[0].equals(ring[ring.length - 1]) ? ring.slice(0, -1) : ring))
@@ -166,12 +179,12 @@ export function extrudeOverture(data: Uint8Array, z: number, x: number, y: numbe
 
         const firstVertex = positions.length / 3
         const firstIndex = indices.length
-        colour = roofRgb ? [...roofRgb, 255] : theme
+        colour = kindRgb ? [...kindRgb, 255] : theme
         for (let i = 0; i < roof.positions.length; i += 3) vertex(roof.positions[i], roof.positions[i + 1], roof.positions[i + 2])
         for (const t of roof.triangles) indices.push(firstVertex + t)
 
         // Walls get corners of their own, apart from the roof's, so each face can be shaded flat.
-        colour = wallRgb ? [...wallRgb, 255] : theme
+        colour = kindRgb ? [...kindRgb, 255] : theme
         let start = 0
         for (let r = 0; r < rings.length; r++) {
           const ring = rings[r]

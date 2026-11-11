@@ -9,8 +9,8 @@ import { proxyHops, rateLimit } from './http/ratelimit'
 import type { Room } from './http/room'
 import { apiRoutes } from './http/routes'
 import { securityHeaders } from './http/security'
-import { mountClient } from './http/static'
-import { findClientDir } from './paths'
+import { mountClient, mountTiles } from './http/static'
+import { findClientDir, findTilesDir } from './paths'
 
 export interface AppOptions {
   /** Built client directory. Defaults to auto-discovery; null serves the API only. */
@@ -59,6 +59,7 @@ export function createApp(options: AppOptions = {}): Hono {
       room: options.room,
     }),
   )
+  mountTiles(app, findTilesDir(env))
   mountClient(app, options.clientDir === undefined ? findClientDir() : options.clientDir)
 
   app.onError((err, c) => {

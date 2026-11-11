@@ -7,7 +7,7 @@ import { formatLat, formatLon, formatMgrs } from '../lib/coords'
 import { formatInt } from '../lib/format'
 import { ADVISORY_LABEL } from '../layers/danger'
 import { fold } from '../lib/search'
-import { prefersReducedMotion } from '../map/camera'
+import { flyThere, prefersReducedMotion } from '../map/camera'
 import { useCountry } from '../state/country'
 import { useSelection } from '../state/selection'
 import { useWindows } from '../state/windows'
@@ -110,7 +110,7 @@ export function searchWorld(map: Map, query: string): void {
     useSelection.getState().selectFeature({ lon: place.lon, lat: place.lat, model: asked })
     const options = { duration: prefersReducedMotion() ? 0 : 2200, essential: true }
     if (place.bbox) map.fitBounds(place.bbox, { ...options, padding: 80, maxZoom: 14 })
-    else map.flyTo({ ...options, center: [place.lon, place.lat], zoom: 11 })
+    else flyThere(map, [place.lon, place.lat], 11)
     return model
   })
   showWhen(asked, lng, lat, answer)

@@ -132,7 +132,7 @@ export function RewindBar() {
     <div
       role="group"
       aria-label={t('Rewind')}
-      className="pointer-events-auto absolute inset-x-0 bottom-11 z-20 flex h-12 items-center gap-3 border-t border-line bg-ink-900/90 px-4 font-mono text-xs backdrop-blur-md"
+      className="pointer-events-auto absolute inset-x-0 bottom-11 z-20 flex h-12 items-center md:bottom-0 gap-3 border-t border-line bg-ink-900/90 px-4 font-mono text-xs backdrop-blur-md"
     >
       <button
         type="button"

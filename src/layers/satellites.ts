@@ -121,7 +121,7 @@ export const satellitesLayer: LayerDef = {
   group: 'space',
   label: t('Satellites'),
   hint: t('Stations, weather, Earth-observation, military and navigation satellites passing over the region, computed live from orbital elements'),
-  defaultOn: true,
+  defaultOn: false,
   swatch: '#b78cff',
   feeds: ['satellites'],
   describes: ['satellite'],

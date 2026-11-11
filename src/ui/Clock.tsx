@@ -13,8 +13,8 @@ const RIGA_DATE = new Intl.DateTimeFormat(locale, {
   year: 'numeric',
 })
 
-/** Local (Rīga) and Zulu time, ticking once a second. */
-export function Clock() {
+/** Local (Rīga) and Zulu time, ticking once a second. `compact`: Rīga time alone. */
+export function Clock({ compact = false }: { compact?: boolean }) {
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -24,15 +24,17 @@ export function Clock() {
 
   return (
     <div className="flex items-center gap-4 tabular-nums">
-      <span className="hidden text-fg-mute lg:inline">{RIGA_DATE.format(now)}</span>
+      {!compact && <span className="hidden text-fg-mute lg:inline">{RIGA_DATE.format(now)}</span>}
       <span>
         <span className="mr-1.5 text-fg-mute">Rīga</span>
         <span className="text-fg">{RIGA_TIME.format(now)}</span>
       </span>
-      <span className="max-sm:hidden">
-        <span className="mr-1.5 text-fg-mute">UTC</span>
-        <span className="text-fg">{UTC_TIME.format(now)}Z</span>
-      </span>
+      {!compact && (
+        <span className="max-sm:hidden">
+          <span className="mr-1.5 text-fg-mute">UTC</span>
+          <span className="text-fg">{UTC_TIME.format(now)}Z</span>
+        </span>
+      )}
     </div>
   )
 }

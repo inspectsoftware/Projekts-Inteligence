@@ -30,7 +30,7 @@ export const gpsHexLayer: LayerDef = {
   group: 'signals',
   label: t('GPS interference'),
   hint: t('Where aircraft reported degraded or lost GPS in the last 90 minutes. Red: more than 10 % of traffic affected, amber: more than 2 %, green: clean'),
-  defaultOn: true,
+  defaultOn: false,
   swatch: '#ff4d5e',
   feeds: ['gps-hex'],
 

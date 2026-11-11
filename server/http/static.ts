@@ -13,6 +13,20 @@ function cacheControlFor(urlPath: string): string {
   return 'public, max-age=3600'
 }
 
+/**
+ * Serves our own vector tiles, a PMTiles file the map reads a few kilobytes at a time with HTTP
+ * range requests (serveStatic answers those). Rebuilt weekly at most, so an hour's caching is safe;
+ * the client asks for it by a version in the URL when it changes.
+ */
+export function mountTiles(app: Hono, tilesDir: string | null): void {
+  if (!tilesDir) return
+  const files = serveStatic({ root: tilesDir, rewriteRequestPath: (path) => path.replace(/^\/tiles/, '') })
+  app.use('/tiles/*', (c, next) => {
+    c.header('Cache-Control', 'public, max-age=3600')
+    return files(c, next)
+  })
+}
+
 /** Serves the built client and falls back to index.html for app routes. */
 export function mountClient(app: Hono, clientDir: string | null): void {
   if (!clientDir) {

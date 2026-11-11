@@ -26,6 +26,7 @@ import {
 import { PATIENT_SCHEME, patientUrl } from '../../src/map/patientTiles'
 import { DEM_TILES } from '../../src/map/relief'
 import { localTime } from '../../src/layers/timezones'
+import { haloPx, labelled, transitIconPx } from '../../src/layers/transit'
 import { buildMask } from '../../src/map/spotlight'
 import { WORLD_ORTHOS, WORLD_SCHEME, worldOrthoUrl } from '../../src/map/worldOrtho'
 import { FIRST_LAYER_OVER_PHOTOS, FIRST_OVERLAY_LAYER, IMAGERY_TEXT_COLOR, buildStyle } from '../../src/map/style'
@@ -126,7 +127,8 @@ describe('basemaps', () => {
 })
 
 describe('street-level style', () => {
-  const layers = buildStyle().layers
+  // With our own tiles: every layer either style can have is in it.
+  const layers = buildStyle('dark', 'https://example.test/tiles/baltic.pmtiles').layers
 
   it('starts house numbers and places at level 16, where stretched tiles still carry them', () => {
     for (const id of ['label-housenumber', 'label-poi']) expect(layers.find((layer) => layer.id === id)?.minzoom, id).toBe(16)
@@ -388,6 +390,68 @@ describe('spotlight mask', () => {
     // World ring plus one hole: the lake inside the country must not become a second hole.
     expect(mask.geometry.coordinates).toHaveLength(2)
     expect(mask.geometry.coordinates[0][0]).toEqual([-180, -85])
-    expect(mask.geometry.coordinates[1]).toBe(ring)
+    // The country's ring, turned to run clockwise against the world's anticlockwise ring, as a hole must.
+    expect(mask.geometry.coordinates[1]).toEqual([...ring].reverse())
+  })
+})
+
+describe('public transport icon size', () => {
+  it('is a small marker from afar, a marker in town and the bus itself, to scale, on a street', () => {
+    expect(transitIconPx(8)).toBeLessThan(4)
+    // A city seen whole: a coloured dot with a hairline edge, not a black-ringed blot.
+    expect(transitIconPx(11.5)).toBeLessThan(13)
+    expect(haloPx(transitIconPx(11.5))).toBeLessThanOrEqual(1.5)
+    expect(haloPx(transitIconPx(18))).toBe(4)
+    expect(transitIconPx(14)).toBeCloseTo(21, 0)
+    // About 12 m of bus at zoom 18 near 56.5° N: roughly 70 px of outline, 84 px of icon.
+    expect(transitIconPx(18)).toBeGreaterThan(75)
+    expect(transitIconPx(18)).toBeLessThan(95)
+    expect(transitIconPx(18)).toBeCloseTo(2 * transitIconPx(17), 0)
+  })
+})
+
+describe('route numbers on vehicles', () => {
+  const bus = (id: string, lon: number, lat: number) =>
+    ({ id, kind: 'transit', lon, lat, label: id, ts: 0, flags: 0, props: { network: 'Vilnius', mode: 'bus', route: id, vehicle: null } }) as Parameters<typeof labelled>[0][number]
+  // Two buses a few metres apart at a stop, and one a kilometre away.
+  const buses = [bus('2', 25.28, 54.687), bus('3G', 25.28005, 54.68702), bus('53', 25.295, 54.687)]
+
+  it('gives none further out than the city, except to the bus picked or pointed at', () => {
+    expect(labelled(buses, 12, [null, null])).toEqual([])
+    expect(labelled(buses, 12, ['53', null]).map((b) => b.id)).toEqual(['53'])
+  })
+
+  it('never stacks two tags on one spot, and lets the picked bus win it', () => {
+    expect(labelled(buses, 15, [null, null]).map((b) => b.id)).toEqual(['2', '53'])
+    expect(labelled(buses, 15, ['3G', null]).map((b) => b.id)).toEqual(['3G', '53'])
+    // Close enough in, the two at the stop part and both keep their tags.
+    expect(labelled(buses, 19, [null, null]).map((b) => b.id)).toEqual(['2', '3G', '53'])
+  })
+})
+
+describe('our own tiles in the style', () => {
+  it('without them, is the style as it was: no layer of ours, and OpenFreeMap’s streets everywhere', () => {
+    const plain = buildStyle('light').layers
+    expect(plain.some((layer) => layer.id.startsWith('own-'))).toBe(false)
+    expect(JSON.stringify(plain.find((layer) => layer.id === 'road-minor'))).not.toContain('within')
+    expect(buildStyle('light').sources).not.toHaveProperty('baltic')
+  })
+
+  it('with them, reads them through pmtiles and keeps OpenFreeMap’s streets to outside the Baltic states', () => {
+    const style = buildStyle('light', 'https://example.test/tiles/baltic.pmtiles')
+    expect(style.sources.baltic).toMatchObject({ type: 'vector', url: 'pmtiles://https://example.test/tiles/baltic.pmtiles' })
+    const ids = style.layers.map((layer) => layer.id)
+    // Ours where OpenFreeMap's would be: streets after its motorways, names after its street names.
+    expect(ids.indexOf('own-road-minor')).toBeGreaterThan(ids.indexOf('road-motorway'))
+    expect(ids.indexOf('own-road-minor')).toBeLessThan(ids.indexOf('rail'))
+    expect(ids.indexOf('own-label-road')).toBeGreaterThan(ids.indexOf('label-road'))
+    expect(ids.indexOf('own-label-road')).toBeLessThan(ids.indexOf('label-poi'))
+    expect(JSON.stringify(style.layers.find((layer) => layer.id === 'road-minor'))).toContain('within')
+  })
+})
+
+describe('the style without our own tiles', () => {
+  it('leaves no layer with an undefined filter, which MapLibre refuses', () => {
+    for (const layer of buildStyle('dark').layers) if ('filter' in layer) expect(layer.filter, layer.id).toBeDefined()
   })
 })

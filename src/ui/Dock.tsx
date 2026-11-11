@@ -74,7 +74,7 @@ export function Dock() {
   return (
     <nav
       aria-label={t('Windows')}
-      className="pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-11 border-t border-line bg-ink-900/90 font-mono backdrop-blur-md"
+      className="pointer-events-auto absolute inset-x-0 bottom-0 z-20 flex h-11 border-t border-line bg-ink-900/90 font-mono backdrop-blur-md md:hidden"
     >
       <div className="flex min-w-0 flex-1 justify-center-safe overflow-x-auto [scrollbar-width:none]">
         {listed.map(button)}

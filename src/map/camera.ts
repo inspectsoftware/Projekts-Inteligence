@@ -1,5 +1,6 @@
 import type { Map, PaddingOptions } from 'maplibre-gl'
-import { LATVIA_BBOX } from '../../shared/region'
+import { haversine } from '../../shared/geo/sphere'
+import { BALTIC_BBOX } from '../../shared/region'
 import { t } from '../i18n'
 
 export interface View {
@@ -31,23 +32,37 @@ export function prefersReducedMotion(): boolean {
 }
 
 /**
- * Room for the fixed chrome, so "all of Latvia" means the visible part of the map. The page opens
+ * Room for the fixed chrome, so "all of the Baltic" means the visible part of the map. The page opens
  * with no windows, and those opened later are deliberately not followed.
  */
 function chromePadding(map: Map): PaddingOptions {
-  // The taskbar and the HUD row above it take the bottom edge, and the map buttons the right one.
-  const wide = map.getContainer().clientWidth >= 768
-  return { top: 70, bottom: 110, left: wide ? 70 : 30, right: wide ? 70 : 30 }
+  // Wide (the --breakpoint-md in index.css): the floating bars take the top edge and
+  // the map buttons the right. Narrow: the taskbar and the HUD row above it take the bottom edge.
+  const wide = map.getContainer().clientWidth >= 640
+  return wide ? { top: 80, bottom: 50, left: 50, right: 70 } : { top: 70, bottom: 110, left: 30, right: 30 }
 }
 
 export function flyHome(map: Map, duration = 1800): void {
-  map.fitBounds([LATVIA_BBOX[0], LATVIA_BBOX[1], LATVIA_BBOX[2], LATVIA_BBOX[3]], {
+  map.fitBounds([BALTIC_BBOX[0], BALTIC_BBOX[1], BALTIC_BBOX[2], BALTIC_BBOX[3]], {
     padding: chromePadding(map),
     pitch: 0,
     bearing: 0,
     duration: prefersReducedMotion() ? 0 : duration,
     essential: true,
   })
+}
+
+/**
+ * The flight to something found by search, as a game's camera makes it: up, across, and down onto
+ * it. How high it rises follows how far it goes, so the next street over barely lifts the camera
+ * and the other end of the country pulls it up to see both. Never lower than either end.
+ */
+export function flyThere(map: Map, center: [number, number], zoom: number): void {
+  if (prefersReducedMotion()) return void map.jumpTo({ center, zoom })
+  const from = map.getCenter()
+  const km = haversine(from.lng, from.lat, center[0], center[1]) / 1000
+  const peak = Math.max(4.5, Math.min(map.getZoom() - 1, zoom - 1.5, 12.5 - Math.log2(Math.max(1, km))))
+  map.flyTo({ center, zoom, minZoom: peak, duration: 2200 + Math.min(1800, km * 12), essential: true })
 }
 
 export function flyToView(map: Map, view: View): void {

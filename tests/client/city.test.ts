@@ -54,7 +54,8 @@ describe('city placement', () => {
   })
 })
 
-describe('extruded tile', () => {
+// Each test builds every building of a real tile: seconds of work, which a loaded machine can push past the 5 s default.
+describe('extruded tile', { timeout: 20_000 }, () => {
   // OpenFreeMap 14/9289/5023, Rīga's old town: its whole building layer, the tile's other layers left out.
   const bytes = new Uint8Array(fixture('city.openfreemap.pbf'))
   const tile = extrudeTile(bytes, 14, 9289, 5023)

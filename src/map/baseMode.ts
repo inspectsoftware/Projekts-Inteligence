@@ -1,7 +1,8 @@
 import type { Map } from 'maplibre-gl'
 import { type BaseMode, RASTER_BASES } from './basemaps'
 import { prefersReducedMotion } from './camera'
-import { DARK_ONLY_LAYERS, FIRST_LAYER_OVER_PHOTOS, FIRST_OVERLAY_LAYER, IMAGERY_TEXT_COLOR } from './style'
+import { currentMapTheme } from '../state/ui'
+import { DARK_ONLY_LAYERS, FIRST_LAYER_OVER_PHOTOS, FIRST_OVERLAY_LAYER, IMAGERY_TEXT_COLORS } from './style'
 
 /** Map source and layer id for one imagery source. */
 export function rasterId(id: string): string {
@@ -14,8 +15,9 @@ const shown = new WeakMap<Map, string>()
 /** Swaps the raster imagery under the roads and labels, or removes it for the dark base. */
 export function applyBaseMode(map: Map, mode: BaseMode, now = new Date()): void {
   const raster = mode !== 'dark'
-  for (const id of DARK_ONLY_LAYERS) map.setLayoutProperty(id, 'visibility', raster ? 'none' : 'visible')
-  for (const [id, dark, imagery] of IMAGERY_TEXT_COLOR) map.setPaintProperty(id, 'text-color', raster ? imagery : dark)
+  // Some are there only with our own tiles (map/ownStyle.ts), which may not be.
+  for (const id of DARK_ONLY_LAYERS) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', raster ? 'none' : 'visible')
+  for (const [id, plain, imagery] of IMAGERY_TEXT_COLORS[currentMapTheme()]) if (map.getLayer(id)) map.setPaintProperty(id, 'text-color', raster ? imagery : plain)
 
   // Sat and Sat 3D show the very same photos: going from one to the other keeps the tiles already in.
   const next = mode === 'dark' ? null : RASTER_BASES[mode]

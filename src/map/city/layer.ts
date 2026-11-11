@@ -105,6 +105,8 @@ interface Look {
   glow: number
   ambient: number
   diffuse: number
+  /** How much darker walls are than roofs, and the street's shade at their foot (shaders.ts). */
+  shade: number
   leaf: string
   bark: string
   /** What far buildings fade into: the colour of the land, so they sink into the ground, not into a wall of haze. */
@@ -121,22 +123,27 @@ const LOOKS: Record<MapTheme | 'photo', Look> = {
     glow: 0.22,
     ambient: 0.74,
     diffuse: 0.46,
+    shade: 0.4,
     leaf: '#1b332d',
     bark: '#2a2520',
     fog: '#0e151c',
   },
+  // As a city map draws a town by day: pale, warm, plain blocks, no windows, soft light, low contrast.
   light: {
-    low: '#d9d4cb',
-    high: '#b3ab9f',
-    roof: '#c7b3a1',
-    tagMix: 0.6,
-    glass: 0.84,
+    low: '#e9e0d8',
+    high: '#ddd2c8',
+    // Near the flat buildings' colour (style.ts), so the city does not darken, then lighten, as it
+    // turns 2D on the way out; a mapped colour (building:colour) only just tints it.
+    roof: '#efe8e1',
+    tagMix: 0.75,
+    glass: 1,
     glow: 0,
-    ambient: 0.74,
-    diffuse: 0.42,
-    leaf: '#88ad80',
-    bark: '#7f6b57',
-    fog: '#eef1ec',
+    ambient: 0.93,
+    diffuse: 0.18,
+    shade: 0.18,
+    leaf: '#bfe6a6',
+    bark: '#d9b8a5',
+    fog: '#f6f5f2',
   },
   // Sat 3D: roofs come from the air photo; walls are a plain plaster tone, tinted by the photo round them.
   photo: {
@@ -148,10 +155,17 @@ const LOOKS: Record<MapTheme | 'photo', Look> = {
     glow: 0,
     ambient: 0.66,
     diffuse: 0.5,
+    shade: 0.4,
     leaf: '#2c4632',
     bark: '#3d352c',
     fog: '#39434a',
   },
+}
+
+/** How the trees look in a theme, for trees drawn beside the city (map/osmTrees.ts). */
+export function treeLook(theme: MapTheme): Pick<Look, 'leaf' | 'bark' | 'ambient' | 'diffuse' | 'shade'> {
+  const { leaf, bark, ambient, diffuse, shade } = LOOKS[theme]
+  return { leaf, bark, ambient, diffuse, shade }
 }
 
 /** Towards the sun: from the south-south-west, 35° up, fixed to the ground so the light does not swing as the map turns. */
@@ -166,31 +180,40 @@ function rgb(hex: string): [number, number, number] {
   return [((value >> 16) & 255) / 255, ((value >> 8) & 255) / 255, (value & 255) / 255]
 }
 
-/** A one-metre tree: a three-sided trunk and a seven-sided crown, x, y, z and whether it is crown. */
-const UNIT_TREE = (() => {
-  const out: number[] = []
-  const ring = (sides: number, radius: number, z: number) =>
-    Array.from({ length: sides }, (_, i) => [Math.cos((i / sides) * 2 * Math.PI) * radius, Math.sin((i / sides) * 2 * Math.PI) * radius, z])
-  const tri = (a: number[], b: number[], c: number[], crown: number) => out.push(...a, crown, ...b, crown, ...c, crown)
-  const trunkLow = ring(3, 0.035, 0)
-  const trunkHigh = ring(3, 0.03, 0.4)
-  for (let i = 0; i < 3; i++) {
-    const j = (i + 1) % 3
-    tri(trunkLow[i], trunkLow[j], trunkHigh[j], 0)
-    tri(trunkLow[i], trunkHigh[j], trunkHigh[i], 0)
+/**
+ * A one-metre tree, as a city map draws one: a slender trunk narrowing upwards under a leafy
+ * crown, a soft cloud with a rough edge. Seven numbers a corner: for the trunk x, y, z, 0 and its
+ * normal; for the crown the angle round it, the height up it (0 to 1) and 1, each tree's crown
+ * worked out from those by the shader (shaders.ts, crownAt), with its normal. Drawn by index, so a
+ * corner shared by six triangles is worked out once.
+ */
+export const TREE_STRIDE = 7
+export const { UNIT_TREE, TREE_INDICES } = (() => {
+  const corners: number[] = []
+  const indices: number[] = []
+  // A band of rings round the axis, `around` corners each, joined ring to ring; the seam shares its corners.
+  const band = (rings: number, around: number, corner: (i: number, k: number) => number[]) => {
+    const first = corners.length / TREE_STRIDE
+    for (let k = 0; k < rings; k++) for (let i = 0; i < around; i++) corners.push(...corner(i, k))
+    for (let k = 0; k + 1 < rings; k++) {
+      for (let i = 0; i < around; i++) {
+        const [a, b] = [first + k * around + i, first + k * around + ((i + 1) % around)]
+        const [c, d] = [a + around, b + around]
+        indices.push(a, b, d, a, d, c)
+      }
+    }
   }
-  const bottom = [0, 0, 0.3]
-  const top = [0, 0, 1]
-  const low = ring(7, 0.31, 0.5)
-  const high = ring(7, 0.24, 0.78)
-  for (let i = 0; i < 7; i++) {
-    const j = (i + 1) % 7
-    tri(bottom, low[j], low[i], 1)
-    tri(low[i], low[j], high[j], 1)
-    tri(low[i], high[j], high[i], 1)
-    tri(high[i], high[j], top, 1)
-  }
-  return new Float32Array(out)
+  const TRUNK: [number, number][] = [[0.034, 0], [0.026, 0.18], [0.017, 0.38]]
+  band(TRUNK.length, 8, (i, k) => {
+    const angle = (i / 8) * 2 * Math.PI
+    const [radius, z] = TRUNK[k]
+    const n = Math.hypot(1, 0.045)
+    return [Math.cos(angle) * radius, Math.sin(angle) * radius, z, 0, Math.cos(angle) / n, Math.sin(angle) / n, 0.045 / n]
+  })
+  const RINGS = 22
+  const AROUND = 36
+  band(RINGS + 1, AROUND, (i, k) => [(i / AROUND) * 2 * Math.PI, k / RINGS, 1, 1, 0, 0, 0])
+  return { UNIT_TREE: new Float32Array(corners), TREE_INDICES: new Uint16Array(indices) }
 })()
 
 type Kind = ChunkMesh['kind']
@@ -280,7 +303,7 @@ function compile(gl: WebGL2RenderingContext, vertex: string, fragment: string, a
   }
 }
 
-const SHARED_UNIFORMS = ['u_matrix', 'u_sun', 'u_fogColor', 'u_fog', 'u_opacity', 'u_ambient', 'u_diffuse']
+const SHARED_UNIFORMS = ['u_matrix', 'u_sun', 'u_fogColor', 'u_fog', 'u_opacity', 'u_ambient', 'u_diffuse', 'u_shade']
 
 /** column-major 4×4: a · b */
 function multiply(a: ArrayLike<number>, b: ArrayLike<number>): Float64Array {
@@ -482,6 +505,7 @@ class CityLayer implements CustomLayerInterface {
   private meshProgram: Program | null = null
   private anisotropy: { ext: EXT_texture_filter_anisotropic; max: number } | null = null
   private unitTree: WebGLBuffer | null = null
+  private unitTreeIndex: WebGLBuffer | null = null
   private workers: Worker[] = []
   private chunks = new Map<string, Chunk>()
   private drawn: Chunk[] = []
@@ -535,10 +559,15 @@ class CityLayer implements CustomLayerInterface {
       'u_photoSize',
       'u_photoOn',
     ])
-    this.treeProgram = compile(gl, TREE_VERTEX, TREE_FRAGMENT, ['a_shape', 'a_tree', 'a_ground'], [...SHARED_UNIFORMS, 'u_leaf', 'u_bark'])
+    this.treeProgram = compile(gl, TREE_VERTEX, TREE_FRAGMENT, ['a_shape', 'a_normal', 'a_tree', 'a_ground'], [...SHARED_UNIFORMS, 'u_leaf', 'u_bark'])
     this.meshProgram = compile(gl, MESH_VERTEX, MESH_FRAGMENT, ['a_pos', 'a_uv', 'a_ground'], [...SHARED_UNIFORMS, 'u_relief', 'u_photo', 'u_eye', 'u_push'])
     const anisotropy = gl.getExtension('EXT_texture_filter_anisotropic')
     if (anisotropy) this.anisotropy = { ext: anisotropy, max: Math.min(8, gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT) as number) }
+    // Out of any vertex array the map may have bound, which would otherwise take this index buffer as its own.
+    gl.bindVertexArray(null)
+    this.unitTreeIndex = gl.createBuffer()
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.unitTreeIndex)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, TREE_INDICES, gl.STATIC_DRAW)
     this.unitTree = gl.createBuffer()
     gl.bindBuffer(gl.ARRAY_BUFFER, this.unitTree)
     gl.bufferData(gl.ARRAY_BUFFER, UNIT_TREE, gl.STATIC_DRAW)
@@ -578,6 +607,7 @@ class CityLayer implements CustomLayerInterface {
     this.photo = null
     for (const program of [this.buildingProgram, this.treeProgram, this.meshProgram]) if (program) gl.deleteProgram(program.program)
     gl.deleteBuffer(this.unitTree)
+    gl.deleteBuffer(this.unitTreeIndex)
     this.map = null
     this.gl = null
   }
@@ -1032,10 +1062,14 @@ class CityLayer implements CustomLayerInterface {
 
     if (mesh.kind === 'trees') {
       const { attributes } = this.treeProgram!
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.unitTreeIndex)
       gl.bindBuffer(gl.ARRAY_BUFFER, this.unitTree)
       gl.enableVertexAttribArray(attributes.a_shape)
-      gl.vertexAttribPointer(attributes.a_shape, 4, gl.FLOAT, false, 0, 0)
+      gl.vertexAttribPointer(attributes.a_shape, 4, gl.FLOAT, false, TREE_STRIDE * 4, 0)
       gl.vertexAttribDivisor(attributes.a_shape, 0)
+      gl.enableVertexAttribArray(attributes.a_normal)
+      gl.vertexAttribPointer(attributes.a_normal, 3, gl.FLOAT, false, TREE_STRIDE * 4, 16)
+      gl.vertexAttribDivisor(attributes.a_normal, 0)
       attribute(mesh.trees, attributes.a_tree, 3, gl.FLOAT, false, 1)
       chunk.trees = mesh.trees
       chunk.count = mesh.trees.length / 3
@@ -1314,6 +1348,7 @@ class CityLayer implements CustomLayerInterface {
       gl.uniform1f(u.u_opacity, this.opacity)
       gl.uniform1f(u.u_ambient, look.ambient)
       gl.uniform1f(u.u_diffuse, look.diffuse)
+      gl.uniform1f(u.u_shade, look.shade)
     }
     const matrixFor = (chunk: Chunk) => multiply(main, [chunk.scale, 0, 0, 0, 0, -chunk.scale, 0, 0, 0, 0, chunk.scale, 0, chunk.origin[0], chunk.origin[1], 0, 1])
 
@@ -1400,7 +1435,7 @@ class CityLayer implements CustomLayerInterface {
         gl.bindVertexArray(chunk.vao)
         this.hideMeshedTrees(chunk)
         this.lift(chunk, trees.attributes.a_ground, 1)
-        gl.drawArraysInstanced(gl.TRIANGLES, 0, UNIT_TREE.length / 4, chunk.count)
+        gl.drawElementsInstanced(gl.TRIANGLES, TREE_INDICES.length, gl.UNSIGNED_SHORT, 0, chunk.count)
       }
       gl.bindVertexArray(null)
     }
@@ -1518,6 +1553,10 @@ function modelColours(mesh: ModelNode): Uint8Array {
 let layer: CityLayer | null = null
 
 /** Puts the city on the map, where the extruded buildings were, under the outlines and labels. */
+// The map holds this module's layer: swapped in place while developing, the module would lose hold
+// of it (theme and opacity would no longer reach it), so a change reloads the page instead.
+import.meta.hot?.accept(() => window.location.reload())
+
 export function addCity(map: MapLibreMap, before: string): void {
   layer = new CityLayer()
   map.addLayer(layer, map.getLayer(before) ? before : undefined)
