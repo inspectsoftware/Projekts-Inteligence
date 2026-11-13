@@ -77,6 +77,7 @@ Requires Node 22 or newer. Everything works without configuration; a few optiona
 | `VALHALLA_DIR`         | Where Valhalla's road graph is (`valhalla.json` and `tiles/`). Default `valhalla/` at the project's root |
 | `VALHALLA_BIN`         | The folder of Valhalla's executables, where they are not the ones `scripts/build-valhalla.mjs` installs |
 | `STREETS_BUILDER`      | `photo` draws the streets with the prototype that also reads the LĢIA orthophoto (Latvia only); unset, by the rules alone |
+| `STREETS_PAINT`        | `1` fits the islands where roads part and join to the white lines on the LĢIA orthophoto (Latvia; off by default, still being tuned) |
 | `ROADS_DIR`            | Where the roads the streets are drawn lane by lane from are (`scripts/extract-roads.mjs`). Default `roads/` at the project's root |
 
 ### Deploying

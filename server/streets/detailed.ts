@@ -1,10 +1,11 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { gunzipSync, gzipSync } from 'node:zlib'
-import type { Feature, FeatureCollection, Position } from 'geojson'
+import type { Feature, FeatureCollection, Polygon, Position } from 'geojson'
 import { CACHE_DIR } from '../core/disk'
 import { FIXES_STAMP } from './fixes'
 import { buildRoads } from './lanes.mjs'
+import { paintNear } from './paint.mjs'
 import { type BBox, findRoadsDir, roadsIn, roadsStamp } from './roads'
 
 /**
@@ -13,6 +14,8 @@ import { type BBox, findRoadsDir, roadsIn, roadsStamp } from './roads'
  * kerbs and tell chevrons, grass and islands apart. STREETS_BUILDER=photo turns the prototype on.
  */
 const BUILDER = process.env.STREETS_BUILDER === 'photo' ? 'photo' : 'rules'
+/** Whether the rules builder puts its islands' edges on the paint the LĢIA orthophoto shows (Latvia). Off until it is reliable: STREETS_PAINT=1 turns it on. */
+const PAINT = process.env.STREETS_PAINT === '1' && !process.env.VITEST
 
 /**
  * Streets as they lie on the ground, lane by lane, built by our lane builder (lanes.mjs) from the
@@ -28,7 +31,7 @@ export const STREETS_TILE_ZOOM = 15
 /** Room round a tile, degrees of longitude (about 300 m at Rīga; half as many of latitude). */
 const MARGIN = 0.005
 /** Raised when what a tile holds changes, so tiles kept from before are built afresh. */
-const FORMAT = 10
+const FORMAT = 24
 /** Kept apart from the transit lines' streets (server/transit/streets.ts), which share the folder above. */
 const DIR = join(CACHE_DIR, 'streets', 'lanes')
 
@@ -64,7 +67,23 @@ export async function buildTile(dir: string, z: number, x: number, y: number): P
     const extra = await proto.extra(bounds)
     fc = proto.buildRoads([...ways, ...(extra.ways ?? [])], nodes, bounds)
     if (extra.features) fc.features.push(...extra.features)
-  } else fc = buildRoads(ways, nodes, bounds)
+  } else {
+    fc = buildRoads(ways, nodes, bounds)
+    // Then again with the photo's paint round the islands where roads part and join, their edges put on the
+    // lines painted there (Latvia; STREETS_PAINT=1 turns it on).
+    if (PAINT) {
+      const M = 0.0007
+      const boxes = fc.features
+        .filter((f) => f.properties?.kind === 'gore' && f.geometry.type === 'Polygon')
+        .map((f) => {
+          const ring = (f.geometry as Polygon).coordinates[0]
+          const xs = ring.map((p) => p[0]), ys = ring.map((p) => p[1])
+          return [Math.min(...xs) - M, Math.min(...ys) - M / 2, Math.max(...xs) + M, Math.max(...ys) + M / 2] as [number, number, number, number]
+        })
+      const paint = boxes.length ? await paintNear(boxes) : null
+      if (paint) fc = buildRoads(ways, nodes, bounds, { paint })
+    }
+  }
   // West and south edges in, east and north out: each feature in exactly one tile.
   fc.features = fc.features.filter((f) => {
     const [lon, lat] = anchor(f)
@@ -75,7 +94,7 @@ export async function buildTile(dir: string, z: number, x: number, y: number): P
 
 /** What a tile is built from: the builder's format, the roads, the fixes. Null where no roads have been built. */
 export function streetsVersion(roadsDir = findRoadsDir()): string | null {
-  return roadsDir ? `${FORMAT}-${roadsStamp(roadsDir)}-${FIXES_STAMP}${BUILDER === 'photo' ? '-photo' : ''}` : null
+  return roadsDir ? `${FORMAT}-${roadsStamp(roadsDir)}-${FIXES_STAMP}${BUILDER === 'photo' ? '-photo' : ''}${PAINT ? '-paint' : ''}` : null
 }
 
 /** Tiles being built now, so two visitors asking for one tile wait for the same build. */

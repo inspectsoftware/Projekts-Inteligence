@@ -147,7 +147,12 @@ for (const [x, y] of keys) {
   }
   if (ways.size) {
     try {
-      checkDrawn(buildRoads([...ways.values()], [...nodes.values()], box), box)
+      const fc = buildRoads([...ways.values()], [...nodes.values()], box, { laneGraph: true })
+      checkDrawn(fc, box)
+      // Where the lanes as a navigator links them break, and where the kerbs step.
+      const inBox = (p) => p[0] >= box[0] && p[0] < box[2] && p[1] >= box[1] && p[1] < box[3]
+      for (const b of fc.laneGraph.broken) if (inBox(b.at) && !/^(service|living_street|track|pedestrian)$/.test(b.highway)) add(`lane-${b.what.replace(' ', '-')}`, b.at, `${b.way} lane ${b.lane + 1} of ${b.of} (${b.highway})`)
+      for (const st of fc.steps) if (inBox(st.at)) add(st.what.startsWith('width') ? 'width-jump' : 'kerb-step', st.at, `${st.what}: ${st.d} m`)
     } catch (err) {
       add('build-failed', [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2], String(err?.message ?? err))
     }

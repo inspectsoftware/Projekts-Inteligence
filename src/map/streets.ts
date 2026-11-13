@@ -102,9 +102,10 @@ export function streetsLayers(theme: MapTheme): LayerSpecification[] {
       ...(above
         ? []
         : ([
-            // Where a slip road leaves or joins: a light wedge between the two, edged in paint.
-            { id: 'streets-gore', type: 'fill', ...asphalt, filter: kind('gore'), paint: { 'fill-color': ['case', ['get', 'paved'], C.asphalt, C.island] } },
-            { id: 'streets-gore-edge', type: 'line', ...paint, filter: all(kind('gore'), ['!', ['get', 'paved']]), layout: { 'line-join': 'round' }, paint: { 'line-color': C.paint, 'line-width': metres(0.15, 0.8) } },
+            // Where a slip road leaves or joins: the wedge between the two, asphalt edged in paint, its chevrons
+            // drawn with the paint (just asphalt where mappers drew the hatching or island there themselves).
+            { id: 'streets-gore', type: 'fill', ...asphalt, filter: kind('gore'), paint: { 'fill-color': C.asphalt } },
+            { id: 'streets-gore-edge', type: 'line', ...paint, filter: all(kind('gore'), ['!', ['get', 'paved']], ['!=', ['get', 'open'], true]), layout: { 'line-join': 'round' }, paint: { 'line-color': C.paint, 'line-width': metres(0.15, 0.8) } },
             // Where no car may go: the hatching inside a painted outline; the islands, kerbed (green where grass).
             { id: 'streets-hatch', type: 'fill', ...asphalt, filter: kind('hatch'), paint: { 'fill-pattern': `streets-hatch-${theme}` } },
             { id: 'streets-hatch-edge', type: 'line', ...paint, filter: kind('hatch'), layout: { 'line-join': 'round' }, paint: { 'line-color': C.paint, 'line-width': metres(0.15, 0.8) } },
@@ -123,6 +124,8 @@ export function streetsLayers(theme: MapTheme): LayerSpecification[] {
       { id: `streets-parapet${sfx}`, type: 'line', ...asphalt, filter: all(at, kind('parapet')), layout: { 'line-cap': 'round' }, paint: { 'line-color': C.parapet, 'line-width': metres(0.5, 1.2) } } as LayerSpecification,
       lines('guide', kind('guide'), metres(0.12, 0.7), [5, 12], 0.7),
       lines('stop', kind('stop-line'), metres(0.4, 1.5)),
+      // The chevrons in a gore and the stripes across an island where a lane opens or closes.
+      lines('chevron', kind('chevron'), metres(0.5, 1.2)),
       { id: `streets-zebra${sfx}`, type: 'fill', ...paint, filter: all(at, kind('zebra')), paint: { 'fill-color': C.paint, 'fill-opacity': 0.9 } } as LayerSpecification,
       // Turn arrows painted 5 m long, turned the way their lane goes; one image per set of turns (arrowImage).
       {

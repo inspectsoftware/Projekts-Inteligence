@@ -92,9 +92,11 @@ export function render(fc, bbox, PX = 1600) {
     for (const f of [...at('carriageway'), ...at('junction')]) fill(rings(f), solid(lv > 0 ? C.bridge : C.asphalt))
     if (lv === 0) {
       for (const f of F.filter((f) => f.properties.kind === 'gore')) {
-        fill(rings(f), solid(f.properties.paved ? C.asphalt : C.island))
-        if (!f.properties.paved) for (const r of rings(f)) stroke([...r, r[0]], lw(0.15, 1.5), C.paint, 0.9)
+        // Asphalt, edged in paint where unpaved; its chevrons come with the paint.
+        fill(rings(f), solid(C.asphalt))
+        if (!f.properties.paved && !f.properties.open) for (const r of rings(f)) stroke([...r, r[0]], lw(0.15, 1.5), C.paint, 0.9)
       }
+      for (const f of F.filter((f) => f.properties.kind === 'chevron')) stroke(f.geometry.coordinates.map(P), lw(0.5, 2), C.paint, 0.9)
       for (const f of F.filter((f) => f.properties.kind === 'hatch')) {
         const step = Math.max(m(1.8), 5), band = Math.max(m(0.4), 1.5)
         fill(rings(f), (x, y) => [((x + y) % step) < band ? C.paint : C.asphalt, 1])

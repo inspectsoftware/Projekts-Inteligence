@@ -15,6 +15,7 @@ export interface RoadNode {
 }
 
 /** The roads of a region, lane by lane, as GeoJSON features in lon/lat. */
-export function buildRoads(ways: RoadWay[], nodes: RoadNode[], bbox: [number, number, number, number]): FeatureCollection
+/** With paint(lon, lat): the islands where roads part and join have their edges put on the lines painted there. */
+export function buildRoads(ways: RoadWay[], nodes: RoadNode[], bbox: [number, number, number, number], opts?: { paint?: (lon: number, lat: number) => boolean }): FeatureCollection
 /** The arrow image name for a lane's turn:lanes directions. */
 export function arrowIcon(dirs: string[]): string

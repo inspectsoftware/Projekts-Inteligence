@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { gunzipSync } from 'node:zlib'
+import { paintNear } from '../../../server/streets/paint.mjs'
 import { render } from './render.mjs'
 
 const require = createRequire(import.meta.url)
@@ -97,7 +98,9 @@ for (const [name, bbox] of Object.entries(PLACES)) {
   if (only && !only.split(',').includes(name)) continue
   const { ways, nodes } = roads(bbox)
   const extra = mod.extra ? await mod.extra(bbox) : {}
-  const fc = mod.buildRoads([...ways, ...(extra.ways ?? [])], nodes, bbox)
+  const paint = process.env.PAINT === '1' ? await paintNear([[bbox[0] - 0.002, bbox[1] - 0.001, bbox[2] + 0.002, bbox[3] + 0.001]]) : undefined
+  const fc = mod.buildRoads([...ways, ...(extra.ways ?? [])], nodes, bbox, { paint, laneGraph: true })
+  if (fc.laneGraph) console.log(name, 'lane links', fc.laneGraph.links, 'from or to nowhere', fc.laneGraph.broken.length, JSON.stringify(fc.laneGraph.broken.slice(0, 6).map((b) => `${b.what} ${b.way} lane ${b.lane}/${b.of} ${b.highway}`)))
   if (extra.features) fc.features.push(...extra.features)
   writeFileSync(join(outDir, `${name}.geojson`), JSON.stringify(fc))
   const { png, W, H } = render(fc, bbox, 1600)

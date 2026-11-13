@@ -55,9 +55,9 @@ describe('streets lane by lane', () => {
       way(11, [2, 3], [[24.11, 56.95], [24.12, 56.95]], { highway: 'trunk', oneway: 'yes', lanes: '2' }),
       way(12, [4, 2], [[24.104, 56.9496], [24.11, 56.95]], { highway: 'trunk_link', oneway: 'yes', lanes: '1' }),
     ]
-    const gores = buildRoads(ways, [], BOX).features.filter((f) => f.properties?.kind === 'gore')
-    expect(gores.length).toBe(1)
-    expect(middle(gores[0])[1]).toBeLessThan(56.95)
+    const slip = buildRoads(ways, [], BOX).features.filter((f) => f.properties?.kind === 'carriageway' && f.properties?.highway === 'trunk_link')
+    expect(slip.length).toBe(1)
+    expect(middle(slip[0])[1]).toBeLessThan(56.95)
   })
 
   it('keeps the islands mappers drew, grass or paved', () => {
