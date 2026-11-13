@@ -37,7 +37,6 @@
     "hono": "^4.13.13",
     "maplibre-gl": "6.12.0",
     "mgrs": "^2.2.0",
-    "osm2streets-js": "^0.1.4",
     "pbf": "^5.1.2",
     "pmtiles": "4.5.0",
     "react": "^19.3.0",
@@ -52,8 +51,10 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "jpeg-js": "^0.4.4",
     "mapshaper": "^0.7.78",
     "oxlint": "^1.85.0",
+    "pngjs": "^7.0.0",
     "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "vitest": "^5.0.3"
