@@ -12,6 +12,15 @@ export function rasterId(id: string): string {
 /** The tile addresses of the imagery each map shows now, so the same imagery is not laid again. */
 const shown = new WeakMap<Map, string>()
 
+/**
+ * Where a photo that shows the streets for itself goes in: over the map's own street lines, under our
+ * streets lane by lane (map/streets.ts) and the tracks. Our own tiles may come in after the photo, so
+ * the answer changes once they have.
+ */
+function photoAnchor(map: Map): string {
+  return ['streets-tunnel', 'own-rail', FIRST_LAYER_OVER_PHOTOS].find((id) => map.getLayer(id)) ?? FIRST_LAYER_OVER_PHOTOS
+}
+
 /** Swaps the raster imagery under the roads and labels, or removes it for the dark base. */
 export function applyBaseMode(map: Map, mode: BaseMode, now = new Date()): void {
   const raster = mode !== 'dark'
@@ -22,7 +31,11 @@ export function applyBaseMode(map: Map, mode: BaseMode, now = new Date()): void 
   // Sat and Sat 3D show the very same photos: going from one to the other keeps the tiles already in.
   const next = mode === 'dark' ? null : RASTER_BASES[mode]
   const wanted = next ? next.sources.map((source) => source.tiles(now)).join('|') : ''
-  if (next && shown.get(map) === wanted && next.sources.every((source) => map.getLayer(rasterId(source.id)))) return
+  if (next && shown.get(map) === wanted && next.sources.every((source) => map.getLayer(rasterId(source.id)))) {
+    // Same photos; only put them back where they belong, should our own layers have come in over them.
+    for (const source of next.sources) if (source.coversStreets) map.moveLayer(rasterId(source.id), photoAnchor(map))
+    return
+  }
   shown.set(map, wanted)
 
   for (const { sources } of Object.values(RASTER_BASES)) {
@@ -57,7 +70,7 @@ export function applyBaseMode(map: Map, mode: BaseMode, now = new Date()): void 
           'raster-fade-duration': 200,
         },
       },
-      source.coversStreets ? FIRST_LAYER_OVER_PHOTOS : FIRST_OVERLAY_LAYER,
+      source.coversStreets ? photoAnchor(map) : FIRST_OVERLAY_LAYER,
     )
   }
 }

@@ -55,9 +55,9 @@ describe('streets lane by lane', () => {
       way(11, [2, 3], [[24.11, 56.95], [24.12, 56.95]], { highway: 'trunk', oneway: 'yes', lanes: '2' }),
       way(12, [4, 2], [[24.104, 56.9496], [24.11, 56.95]], { highway: 'trunk_link', oneway: 'yes', lanes: '1' }),
     ]
-    const gores = buildRoads(ways, [], BOX).features.filter((f) => f.properties?.kind === 'gore')
-    expect(gores.length).toBe(1)
-    expect(middle(gores[0])[1]).toBeLessThan(56.95)
+    const slip = buildRoads(ways, [], BOX).features.filter((f) => f.properties?.kind === 'carriageway' && f.properties?.highway === 'trunk_link')
+    expect(slip.length).toBe(1)
+    expect(middle(slip[0])[1]).toBeLessThan(56.95)
   })
 
   it('keeps the islands mappers drew, grass or paved', () => {
@@ -66,20 +66,15 @@ describe('streets lane by lane', () => {
     expect(found.map((f) => f.properties?.grass)).toEqual([true])
   })
 
-  it('lays pavements where the road has them, and puts a tunnel under the ground', () => {
+  it('lays no pavements beside the road, and puts a tunnel under the ground', () => {
     const ways = [
       way(30, [1, 2], [[24.1, 56.95], [24.11, 56.95]], { highway: 'residential', sidewalk: 'both' }),
       way(31, [3, 4], [[24.1, 56.952], [24.11, 56.952]], { highway: 'residential', oneway: 'yes', 'sidewalk:right': 'yes' }),
       way(32, [5, 6], [[24.1, 56.954], [24.11, 56.954]], { highway: 'primary', lanes: '2', tunnel: 'yes', sidewalk: 'both' }),
     ]
     const fs = buildRoads(ways, [], BOX).features
-    const sidewalks = fs.filter((f) => f.properties?.kind === 'sidewalk')
-    // Both sides of the two-way street, the right of the one-way one, none in the tunnel.
-    expect(sidewalks.length).toBe(3)
-    // The one-way street runs east: its right is the south side.
-    const lat = (f: Feature) => middle(f)[1]
-    expect(sidewalks.filter((f) => lat(f) > 56.9515 && lat(f) < 56.952).length).toBe(1)
-    expect(sidewalks.filter((f) => lat(f) > 56.952 && lat(f) < 56.9525).length).toBe(0)
+    // Tagged with pavements all the same: beside the road they read as a second road.
+    expect(fs.filter((f) => f.properties?.kind === 'sidewalk')).toEqual([])
     expect(fs.filter((f) => f.properties?.kind === 'carriageway' && f.properties.layer === -1).length).toBeGreaterThan(0)
   })
 

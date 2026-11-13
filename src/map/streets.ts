@@ -92,9 +92,6 @@ export function streetsLayers(theme: MapTheme): LayerSpecification[] {
     const lines = (id: string, filter: Ex, width: Ex, dasharray?: number[], opacity = 0.9): LayerSpecification =>
       ({ id: `streets-${id}${sfx}`, type: 'line', ...paint, filter: all(at, filter), paint: { 'line-color': C.paint, 'line-width': width, 'line-opacity': opacity, ...(dasharray ? { 'line-dasharray': dasharray } : {}) } }) as LayerSpecification
     return [
-      // The pavements beside the carriageways, under the asphalt's edge, with a kerb line.
-      { id: `streets-sidewalk${sfx}`, type: 'fill', ...asphalt, filter: all(at, kind('sidewalk')), paint: { 'fill-color': C.pavement } } as LayerSpecification,
-      { id: `streets-sidewalk-kerb${sfx}`, type: 'line', ...paint, filter: all(at, kind('sidewalk')), paint: { 'line-color': C.kerbLine, 'line-width': metres(0.15, 0.5) } } as LayerSpecification,
       // The shade a bridge casts on what runs under it: soft, wide, off to one side.
       ...(above ? [{ id: 'streets-bridge-shade', type: 'line', ...asphalt, filter: all(at, kind('carriageway')), paint: { 'line-color': C.shadow, 'line-width': metres(8, 4), 'line-blur': metres(6, 3), 'line-translate': ['literal', [3, 4]], 'line-translate-anchor': 'map' } } as LayerSpecification] : []),
       ...(above ? [{ id: 'streets-bridge-shadow', type: 'fill', ...asphalt, filter: all(at, kind('carriageway')), paint: { 'fill-color': C.shadow, 'fill-translate': ['interpolate', ['exponential', 2], ['zoom'], 16, ['literal', [1, 1.5]], 20, ['literal', [10, 14]]], 'fill-translate-anchor': 'map' } } as LayerSpecification] : []),
@@ -102,9 +99,10 @@ export function streetsLayers(theme: MapTheme): LayerSpecification[] {
       ...(above
         ? []
         : ([
-            // Where a slip road leaves or joins: a light wedge between the two, edged in paint.
-            { id: 'streets-gore', type: 'fill', ...asphalt, filter: kind('gore'), paint: { 'fill-color': ['case', ['get', 'paved'], C.asphalt, C.island] } },
-            { id: 'streets-gore-edge', type: 'line', ...paint, filter: all(kind('gore'), ['!', ['get', 'paved']]), layout: { 'line-join': 'round' }, paint: { 'line-color': C.paint, 'line-width': metres(0.15, 0.8) } },
+            // Where a slip road leaves or joins: the wedge between the two, asphalt edged in paint, its chevrons
+            // drawn with the paint (just asphalt where mappers drew the hatching or island there themselves).
+            { id: 'streets-gore', type: 'fill', ...asphalt, filter: kind('gore'), paint: { 'fill-color': C.asphalt } },
+            { id: 'streets-gore-edge', type: 'line', ...paint, filter: all(kind('gore'), ['!', ['get', 'paved']], ['!=', ['get', 'open'], true]), layout: { 'line-join': 'round' }, paint: { 'line-color': C.paint, 'line-width': metres(0.15, 0.8) } },
             // Where no car may go: the hatching inside a painted outline; the islands, kerbed (green where grass).
             { id: 'streets-hatch', type: 'fill', ...asphalt, filter: kind('hatch'), paint: { 'fill-pattern': `streets-hatch-${theme}` } },
             { id: 'streets-hatch-edge', type: 'line', ...paint, filter: kind('hatch'), layout: { 'line-join': 'round' }, paint: { 'line-color': C.paint, 'line-width': metres(0.15, 0.8) } },
@@ -123,6 +121,8 @@ export function streetsLayers(theme: MapTheme): LayerSpecification[] {
       { id: `streets-parapet${sfx}`, type: 'line', ...asphalt, filter: all(at, kind('parapet')), layout: { 'line-cap': 'round' }, paint: { 'line-color': C.parapet, 'line-width': metres(0.5, 1.2) } } as LayerSpecification,
       lines('guide', kind('guide'), metres(0.12, 0.7), [5, 12], 0.7),
       lines('stop', kind('stop-line'), metres(0.4, 1.5)),
+      // The chevrons in a gore and the stripes across an island where a lane opens or closes.
+      lines('chevron', kind('chevron'), metres(0.5, 1.2)),
       { id: `streets-zebra${sfx}`, type: 'fill', ...paint, filter: all(at, kind('zebra')), paint: { 'fill-color': C.paint, 'fill-opacity': 0.9 } } as LayerSpecification,
       // Turn arrows painted 5 m long, turned the way their lane goes; one image per set of turns (arrowImage).
       {
@@ -276,7 +276,24 @@ export function setStreetsTheme(next: MapTheme): void {
   hideBaseRoads()
 }
 
-/** On the drawn map only: over the photos their own streets show. */
+/** Over a photo the streets lane by lane come in from this zoom, so further out the photo is left clear. */
+export const PHOTO_STREETS_ZOOM = 17
+
+/**
+ * Over a photo: the streets from PHOTO_STREETS_ZOOM in, so the lanes and the lines between them (the
+ * oncoming side's too) read on the photo. Their asphalt stays solid: see-through, the photo's own paint
+ * would show a little beside ours, and pieces overlapping at junctions would show their seams.
+ */
+export function setStreetsOverPhoto(photo: boolean): void {
+  if (!map) return
+  for (const layer of streetsLayers(theme)) {
+    if (!map.getLayer(layer.id)) continue
+    const min = layer.minzoom ?? 0
+    map.setLayerZoomRange(layer.id, photo ? Math.max(min, PHOTO_STREETS_ZOOM) : min, 24)
+  }
+}
+
+/** Whether the streets lane by lane are drawn at all. */
 export function setStreetsOn(next: boolean): void {
   on = next
   if (!map) return

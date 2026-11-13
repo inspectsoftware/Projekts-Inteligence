@@ -108,27 +108,3 @@ describe('street furniture, kept tidy', () => {
     expect(placed).toHaveLength(2)
   })
 })
-
-describe('zebra crossings', () => {
-  const half = halfWidth({ class: 'secondary' })
-  const street = [{ ax: -100, ay: 0, bx: 100, by: 0, half }]
-
-  it('paints stripes along the street from kerb to kerb where a crossing is on it', () => {
-    const [zebra] = placeFurniture([], [], street, [{ x: 10, y: 0.5 }])
-    expect(zebra.x).toBeCloseTo(10)
-    expect(zebra.y).toBeCloseTo(0)
-    // Every stripe within the road, half a metre wide, a metre apart, 3 m long along it.
-    for (const [x0, x1, y0, y1] of zebra.boxes) {
-      expect([x0, x1]).toEqual([-1.5, 1.5])
-      expect(y1 - y0).toBeCloseTo(0.5)
-      expect(Math.abs(y0)).toBeLessThan(half)
-      expect(Math.abs(y1)).toBeLessThan(half)
-    }
-    expect(zebra.boxes.length).toBe(Math.floor((2 * (half - 0.3) - 0.5) / 1) + 1)
-  })
-
-  it('paints none off the road, and one for a crossing mapped twice', () => {
-    expect(placeFurniture([], [], street, [{ x: 0, y: 9 }])).toEqual([])
-    expect(placeFurniture([], [], street, [{ x: 0, y: 0 }, { x: 2, y: 0 }])).toHaveLength(1)
-  })
-})
