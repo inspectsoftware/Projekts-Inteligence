@@ -31,7 +31,7 @@ export const STREETS_TILE_ZOOM = 15
 /** Room round a tile, degrees of longitude (about 300 m at Rīga; half as many of latitude). */
 const MARGIN = 0.005
 /** Raised when what a tile holds changes, so tiles kept from before are built afresh. */
-const FORMAT = 24
+const FORMAT = 29
 /** Kept apart from the transit lines' streets (server/transit/streets.ts), which share the folder above. */
 const DIR = join(CACHE_DIR, 'streets', 'lanes')
 

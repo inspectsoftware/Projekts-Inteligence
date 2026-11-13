@@ -9,8 +9,8 @@ import type { MapTheme } from './style'
  * and a pole with the stop's plate. Read from our own tiles (layers traffic_signal, stop and road,
  * scripts/tiles/baltic.yml), each set along the nearest street. Drawn by the map itself, in the same
  * depth as the city, so a house hides what stands behind it. At street level everything is its own
- * size; further out it is drawn larger, else it would be a speck. Where a crossing is mapped on a
- * street, a zebra is painted across it.
+ * size; further out it is drawn larger, else it would be a speck. Zebras are painted by the streets
+ * lane by lane (map/streets.ts), across the carriageway as it is built.
  *
  * The lamps are shown in their colours, all three: no traffic light's state is published.
  */
@@ -38,7 +38,6 @@ const FRAME = hex('#66707b')
 const ROOF = hex('#55616d')
 const GLASS = hex('#b4d4ea', 110)
 const BENCH = hex('#9c7c5b')
-const ZEBRA = hex('#f4f6f8')
 const PLATE: Record<string, Rgba> = { bus: hex('#1a73d7'), tram: hex('#d6372b') }
 
 /** A box in a part's own frame, metres: x along where it faces, y to its left, z up. */
@@ -207,22 +206,8 @@ export function placeFurniture(
   signals: readonly { x: number; y: number; kind: string; direction: string }[],
   stops: readonly { x: number; y: number; mode: string; shelter: string; name?: string }[],
   segments: readonly Segment[],
-  crossings: readonly { x: number; y: number }[] = [],
 ): Placement[] {
   const out: Placement[] = []
-  // A zebra across the street where a crossing is mapped on it: stripes along the street, 3 m long
-  // and half a metre wide, a metre apart, from kerb to kerb.
-  const zebras: { x: number; y: number }[] = []
-  for (const crossing of crossings) {
-    const near = nearest(segments, crossing.x, crossing.y)
-    if (!near || near.distance > 2 || zebras.some((z) => Math.hypot(z.x - crossing.x, z.y - crossing.y) < 4)) continue
-    zebras.push(crossing)
-    const { segment } = near
-    const half = segment.half - 0.3
-    const boxes: Box[] = []
-    for (let y = -half; y + 0.5 <= half; y += 1) boxes.push([-1.5, 1.5, y, y + 0.5, 0.02, 0.05, ZEBRA, FLAT])
-    out.push({ x: near.px, y: near.py, z: 0, facing: Math.atan2(segment.by - segment.ay, segment.bx - segment.ax), boxes })
-  }
   for (const signal of signals) {
     const arms = signal.kind === 'crossing' ? [] : armsAt(segments, signal.x, signal.y)
     if (arms.length >= 3) {
@@ -469,11 +454,7 @@ class FurnitureLayer implements CustomLayerInterface {
       const [x, y] = toMetres((f.geometry as GeoJSON.Point).coordinates)
       return { x, y, mode: String(f.properties.mode ?? 'bus'), shelter: String(f.properties.shelter ?? ''), name: String(f.properties.name ?? '') }
     })
-    const crossings = points('crossing').map((f) => {
-      const [x, y] = toMetres((f.geometry as GeoJSON.Point).coordinates)
-      return { x, y }
-    })
-    const placements = placeFurniture(signals, stops, segments, crossings)
+    const placements = placeFurniture(signals, stops, segments)
     // Stood on the ground the relief raises, where it is on.
     if (map.getTerrain()) {
       for (const p of placements) {

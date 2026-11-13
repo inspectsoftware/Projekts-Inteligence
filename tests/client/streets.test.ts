@@ -18,7 +18,7 @@ describe('streets lane by lane on the map', () => {
     const ids = streetsLayers('light').map((l) => l.id)
     const at = (id: string) => ids.indexOf(id)
     expect(at('streets-tunnel')).toBe(0)
-    expect(at('streets-sidewalk')).toBeLessThan(at('streets-asphalt'))
+    expect(ids.some((id) => id.startsWith('streets-sidewalk'))).toBe(false)
     expect(at('streets-island')).toBeGreaterThan(at('streets-asphalt'))
     expect(at('streets-lane-short')).toBeGreaterThan(at('streets-island'))
     expect(at('streets-arrows')).toBeGreaterThan(at('streets-lane-short'))

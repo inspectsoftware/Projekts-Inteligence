@@ -184,7 +184,7 @@ const LANES: ExpressionSpecification = ['+', FORWARD, BACKWARD]
  * A road's width: the class's from afar, its lanes' in metres close in, at every zoom the wider of
  * the two, so it grows evenly as the map zooms rather than jumping where one takes over.
  */
-function roadWidth(stops: readonly (readonly [number, number])[]): ExpressionSpecification {
+function roadWidth(stops: readonly (readonly [number, number])[], lanes: ExpressionSpecification | number = LANES): ExpressionSpecification {
   // The class's width at zoom z, between its stops as the map interpolates them; the last one past them.
   const classAt = (z: number): number => {
     const next = stops.findIndex(([at]) => at >= z)
@@ -194,7 +194,7 @@ function roadWidth(stops: readonly (readonly [number, number])[]): ExpressionSpe
     return w0 + ((w1 - w0) * (2 ** (z - z0) - 1)) / (2 ** (z1 - z0) - 1)
   }
   const zooms = [...new Set([...stops.map(([z]) => z), 12, 13, 14, 15, LANES_ZOOM, 22])].filter((z) => z >= stops[0][0]).sort((a, b) => a - b)
-  const metric = (z: number): ExpressionSpecification => ['*', ['+', ['*', LANES, LANE_M], 0.8], PX(z)]
+  const metric = (z: number): ExpressionSpecification => ['*', ['+', ['*', lanes, LANE_M], 0.8], PX(z)]
   return ['interpolate', ['exponential', 2], ['zoom'], ...zooms.flatMap((z) => [z, z < 12 ? classAt(z) : ['max', classAt(z), metric(z)]])] as ExpressionSpecification
 }
 
@@ -204,7 +204,7 @@ const NAME: ExpressionSpecification = ['coalesce', ['get', `name_${lang}`], ['ge
 
 export function ownLayers(C: OwnPalette): { ground: LayerSpecification[]; roads: LayerSpecification[]; labels: LayerSpecification[] } {
   const src = { source: OWN_SOURCE } as const
-  const road = (id: string, classes: string[], minzoom: number, color: string, stops: readonly (readonly [number, number])[]): LayerSpecification => ({
+  const road = (id: string, classes: string[], minzoom: number, color: string, stops: readonly (readonly [number, number])[], lanes?: number): LayerSpecification => ({
     id,
     type: 'line',
     ...src,
@@ -212,7 +212,7 @@ export function ownLayers(C: OwnPalette): { ground: LayerSpecification[]; roads:
     minzoom,
     filter: ['all', cls(...classes), notTunnel],
     layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': color, 'line-width': roadWidth(stops) },
+    paint: { 'line-color': color, 'line-width': roadWidth(stops, lanes) },
   })
 
   const ground: LayerSpecification[] = [
@@ -238,7 +238,8 @@ export function ownLayers(C: OwnPalette): { ground: LayerSpecification[]; roads:
   ]
 
   const roads: LayerSpecification[] = [
-    road('own-road-path', ['service', 'track'], 14, C.roadMinor, [[14, 0.4], [15, 1.5]]),
+    // Yard drives and tracks are one lane wide, untagged as most are: two would swell them into blobs.
+    road('own-road-path', ['service', 'track'], 14, C.roadMinor, [[14, 0.4], [15, 1.5]], 1),
     // Footways, paths, cycle tracks and steps as little roads of their own: light grey, edged a shade
     // darker so they read on bare ground and on grass alike.
     {
@@ -303,7 +304,7 @@ export function ownLayers(C: OwnPalette): { ground: LayerSpecification[]; roads:
     minzoom: 15.5,
     paint: { 'circle-radius': 1, 'circle-opacity': 0 },
   })
-  roads.push(kept('traffic_signal'), kept('stop'), kept('crossing'), kept('tree'))
+  roads.push(kept('traffic_signal'), kept('stop'), kept('tree'))
 
   const labels: LayerSpecification[] = [
     {

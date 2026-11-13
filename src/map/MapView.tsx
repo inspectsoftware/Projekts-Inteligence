@@ -16,7 +16,7 @@ import { CITY_LAYER, addCity, setCityOpacity, setCityPhoto, setCityTheme } from 
 import { addFurniture, setFurnitureTheme } from './furniture'
 import { addVehicles3d, setVehicles3dTheme } from './vehicles3d'
 import { addOsmTrees, setOsmTreesTheme } from './osmTrees'
-import { addStreets, setStreetsOn, setStreetsTheme } from './streets'
+import { addStreets, setStreetsOverPhoto, setStreetsTheme } from './streets'
 import { setMap, setMapFailure, useMap, useMapFailure } from './instance'
 import { CLIP_SCHEME, TRIM_SCHEME, loadEstoniaTile, loadLatviaTile, setClipBorder } from './orthoClip'
 import { PATIENT_SCHEME, loadPatientTile } from './patientTiles'
@@ -90,8 +90,8 @@ export function MapView() {
     setVehicles3dTheme(base === 'dark' ? theme : 'dark')
     setOsmTreesTheme(base === 'dark' ? theme : 'dark')
     setStreetsTheme(base === 'dark' ? theme : 'dark')
-    // The streets lane by lane on the drawn map only: over the photos their own streets show.
-    setStreetsOn(base === 'dark')
+    // The streets lane by lane, over the photos only close in and see-through (map/streets.ts).
+    setStreetsOverPhoto(base !== 'dark')
   }, [map, base, back, relief, theme])
 
   useEffect(() => {
@@ -186,8 +186,8 @@ export function MapView() {
           addOwnTiles(created, currentMapTheme(), url)
           // Close in, the streets lane by lane over the map's own lines, under the tracks (map/streets.ts).
           setStreetsTheme(useUi.getState().base === 'dark' ? currentMapTheme() : 'dark')
-          setStreetsOn(useUi.getState().base === 'dark')
           addStreets(created, 'own-rail')
+          setStreetsOverPhoto(useUi.getState().base !== 'dark')
           // Traffic lights and stops standing in 3D, read from the same tiles.
           addFurniture(created, 'label-housenumber')
           // OpenStreetMap's trees where the city's own survey does not reach.

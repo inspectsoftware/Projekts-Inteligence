@@ -368,11 +368,30 @@ function rules(halves, nodeTags) {
         continue
       }
     }
+    // A two-way road parting into two one-way carriageways (or two joining into one): each direction goes on.
+    const parts = segs.size === 3 && cont.length === 2 && cont.every((p) => p.a.twoWay !== p.b.twoWay)
     // A road going on with more or fewer lanes: one edge straight, the lane opens or closes on the other.
-    if (!sharp && cont.length && segs.size === 2) {
+    if (!sharp && cont.length && (segs.size === 2 || parts)) {
       for (const { a, b } of cont) {
-        if (a.twoWay === b.twoWay) conts.push({ a, b })
-        if (a.n === b.n || a.twoWay !== b.twoWay) continue
+        conts.push({ a, b })
+        if (a.twoWay !== b.twoWay) {
+          // The carriageway starts (or ends) where the two-way road's half is, its outer kerb held there while its
+          // own line moves out from under it to the carriageway's middle (`frac`: how far it has, at each sample).
+          const [h, o] = a.twoWay ? [a, b] : [b, a]
+          const need = Math.abs(h.mid + h.width / 2 - (o.mid + o.width / 2)) || 1
+          const n = o.sm.p.length, C = o.sm.p[a.twoWay ? 0 : n - 1], t = a.twoWay ? h.sm.t[h.sm.t.length - 1] : h.sm.t[0]
+          const frac = new Array(n)
+          for (let k = 0, most = 0; k < n; k++) {
+            const i = a.twoWay ? k : n - 1 - k, d = sub(o.sm.p[i], C)
+            most = Math.max(most, Math.abs(d[0] * t[1] - d[1] * t[0]))
+            frac[i] = Math.min(1, most / need)
+          }
+          o[a.twoWay ? 'start' : 'end'] = { left: h.mid - h.width / 2, width: h.width, anchor: 1, frac }
+          // Its cross-sections at the node are the two-way road's, so a line bent there does not fold its outer kerb.
+          alignTo(o, t, a.twoWay ? 'start' : 'end')
+          continue
+        }
+        if (a.n === b.n) continue
         const [La, Ra] = edgesAt(a)
         // Which side the change is on: the wider piece's turn lanes (a turn lane opens on its side; a lane
         // marked to merge left ends on the right, and the mirror); else, on a slip road, its gore's side;
@@ -487,12 +506,12 @@ function profile(h) {
     if (h.start) {
       const held = h.start.anchor < 0 ? h.start.left : h.start.left + h.start.width
       const own = h.start.anchor < 0 ? base.left : base.left + base.width
-      edgeS = { anchor: h.start.anchor, at: own + (held - own) * (1 - smooth(sS / settleS)) }
+      edgeS = { anchor: h.start.anchor, at: own + (held - own) * (1 - Math.max(smooth(sS / settleS), (!h.start.from && h.start.frac?.[i]) || 0)) }
     }
     if (h.end) {
       const held = h.end.anchor < 0 ? h.end.left : h.end.left + h.end.width
       const own = h.end.anchor < 0 ? base.left : base.left + base.width
-      edgeE = { anchor: h.end.anchor, at: own + (held - own) * (1 - smooth(sE / settleE)) }
+      edgeE = { anchor: h.end.anchor, at: own + (held - own) * (1 - Math.max(smooth(sE / settleE), (!h.end.from && h.end.frac?.[i]) || 0)) }
     }
     const fromEdge = (e) => (e.anchor < 0 ? e.at : e.at - W)
     let l
@@ -775,6 +794,22 @@ function laneGraph(halves, gores, conts) {
   return { links, broken }
 }
 
+/** The convex hull of a few points, anticlockwise (Andrew's monotone chain). */
+function hull(pts) {
+  const p = [...pts].sort((a, b) => a[0] - b[0] || a[1] - b[1])
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+  const half = (list) => {
+    const out = []
+    for (const q of list) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], q) <= 0) out.pop()
+      out.push(q)
+    }
+    out.pop()
+    return out
+  }
+  return [...half(p), ...half([...p].reverse())]
+}
+
 export function buildRoads(ways, nodeTagsList, bbox, opts = {}) {
   const P = projector(bbox)
   for (const w of ways) w.xy = w.coords.map(P.to)
@@ -849,22 +884,13 @@ export function buildRoads(ways, nodeTagsList, bbox, opts = {}) {
     const major = MAJOR.test(h.tags.highway)
     // The asphalt.
     feat('carriageway', poly(h.ring), { layer: lv, highway: h.tags.highway })
-    // The pavement beside it, where OSM says the road has one on that side: 2 m wide, at the kerb.
-    // A bridge's parapets: along its outer edges, beyond its pavements (not down the middle of a two-way bridge).
+    // No pavements are drawn: beside the road they read as a second road. A bridge's parapets: along its
+    // outer edges, 2 m out where OSM says it has a pavement (not down the middle of a two-way bridge).
     if (lv > 0) {
       for (const side of h.twoWay ? ['right'] : ['right', 'left']) {
         const walk = sidewalkOn(h, side) ? 2 : 0
         feat('parapet', line(polyline(sm, i0, i1, (i) => (side === 'right' ? h.left[i] + h.W[i] + walk : h.left[i] - walk))), { layer: lv })
       }
-    }
-    // (A one-way road's left kerb is its own too; a two-way road's is the middle of the road.)
-    for (const side of h.twoWay ? ['right'] : ['right', 'left']) {
-      if (lv < 0 || !sidewalkOn(h, side)) continue
-      const at = (i) => (side === 'right' ? h.left[i] + h.W[i] : h.left[i])
-      const away = side === 'right' ? 2 : -2
-      const kerb = polyline(sm, i0, i1, at)
-      const out = polyline(sm, i0, i1, (i) => at(i) + away)
-      feat('sidewalk', poly([...kerb, ...out.reverse()]), { layer: lv })
     }
     // Lane lines, measured from the held edge so the lane that opens or closes is the one that narrows.
     const nMax = Math.max(h.n, Math.round(Math.max(...h.W.slice(i0, i1 + 1)) / h.w))
@@ -872,11 +898,14 @@ export function buildRoads(ways, nodeTagsList, bbox, opts = {}) {
     const solidFrom = h.trim1 > 0 && (h.turns || signals) ? sm.length - h.trim1 - 25 : Infinity
     // Where a lane that leaves or joins with a slip road runs beside the others: behind a block line.
     const blockSpan = h.block ? (h.block.at === 'end' ? [sm.length - 150, Infinity] : [-Infinity, 150]) : null
+    // Lanes the piece already has where it starts; a line beyond them is one that opens on the way.
+    const nStart = Math.round(h.W[i0] / h.w)
     for (let k = 1; h.known && k < nMax; k++) {
       const kLeft = h.anchorSide < 0 ? k : nMax - k
       const off = (i) => (h.anchorSide < 0 ? h.left[i] + k * h.w : h.left[i] + h.W[i] - k * h.w)
       const inside = (i) => off(i) > h.left[i] + 0.4 && off(i) < h.left[i] + h.W[i] - 0.4 && !covered(right(sm, i, off(i)), h)
-      const dashAt = (s) => (blockSpan && h.block.kLeft === kLeft && s >= blockSpan[0] && s <= blockSpan[1] ? 'block' : s >= solidFrom ? 'solid' : major ? 'long' : 'short')
+      // Solid before the junction only between lanes there all along: the line of a lane opening stays dashed.
+      const dashAt = (s) => (blockSpan && h.block.kLeft === kLeft && s >= blockSpan[0] && s <= blockSpan[1] ? 'block' : s >= solidFrom && k < nStart ? 'solid' : major ? 'long' : 'short')
       let run = []
       const flush = () => {
         if (run.length > 1) feat('lane-line', line(run.map((i) => right(sm, i, off(i)))), { layer: lv, dash: dashAt(sm.s[run[0]]) })
@@ -959,7 +988,7 @@ export function buildRoads(ways, nodeTagsList, bbox, opts = {}) {
       const d = [g.d[0] / l, g.d[1] / l], n = [-d[1], d[0]]
       const side = (p) => (p[0] - C[0]) * n[0] + (p[1] - C[1]) * n[1]
       const byside = [...g.pts].sort((p, q) => side(p) - side(q))
-      return { d, right: byside[0], left: byside[byside.length - 1], ang: Math.atan2(d[1], d[0]) }
+      return { d, right: byside[0], left: byside[byside.length - 1], cut: g.pts, ang: Math.atan2(d[1], d[0]) }
     }).sort((a, b) => a.ang - b.ang)
     // Round the kerb from one road to the next, as a junction's corners are built.
     const ring = []
@@ -981,6 +1010,8 @@ export function buildRoads(ways, nodeTagsList, bbox, opts = {}) {
       }
     })
     feat('junction', poly(ring), { layer: 0 })
+    // Where a road's halves are cut back unevenly, the ring's straight edge across it leaves a sliver: paved too.
+    for (const a of arms) if (a.cut.length > 2) feat('junction', poly(hull(a.cut)), { layer: 0 })
     // Dotted guides carrying the lanes of a road straight across the junction to where it goes on.
     for (const { a, b } of j.cont ?? []) {
       if (!a.known || !b.known || a.trim1 <= 0 || b.trim0 <= 0) continue
