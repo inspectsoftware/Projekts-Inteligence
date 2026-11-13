@@ -35,3 +35,8 @@ videos/*/.waveform-cache/
 tiles/
 # Valhalla's road graph (scripts/build-valhalla.mjs).
 valhalla/
+# The roads lane by lane are built from (scripts/extract-roads.mjs), cut into squares.
+/roads/
+
+# The mark the edit hook leaves for the check at the end of a turn (.claude/hooks).
+.claude/.edited

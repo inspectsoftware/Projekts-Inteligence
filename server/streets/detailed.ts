@@ -1,36 +1,36 @@
-import { readFileSync } from 'node:fs'
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
-import { createRequire } from 'node:module'
-import { dirname, join } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { gunzipSync, gzipSync } from 'node:zlib'
-import type { Feature, FeatureCollection, Geometry } from 'geojson'
+import type { Feature, FeatureCollection, Position } from 'geojson'
 import { CACHE_DIR } from '../core/disk'
-import { USER_AGENT } from '../core/upstream'
-import { OVERPASS } from '../transit/streets'
+import { FIXES_STAMP } from './fixes'
+import { buildRoads } from './lanes.mjs'
+import { type BBox, findRoadsDir, roadsIn, roadsStamp } from './roads'
 
 /**
- * Streets as they are on the ground, lane by lane, built by osm2streets (A/B Street's street engine,
- * open source) from OpenStreetMap: every carriageway's lanes (driving, bus, cycle, parking, the
- * pavements) as shapes, the paint between them and the arrows in them, and the junctions' own
- * areas, so streets meet as they do on the ground. With them, the islands and the hatched areas no
- * car may cross, where mappers have drawn them (osm2streets leaves those out). A tile at a time
- * (z15, about 670 m square): its OSM fetched through Overpass with 100 m to spare round it, so a
- * junction on its edge is whole, the result cut to the tile and kept on disk for a month.
+ * Which builder draws the streets: 'rules' (lanes.mjs, the default) or 'photo', the prototype in
+ * prototype/lanes-photo.mjs, which also reads the LĢIA orthophoto of each tile (Latvia only) to fit
+ * kerbs and tell chevrons, grass and islands apart. STREETS_BUILDER=photo turns the prototype on.
+ */
+const BUILDER = process.env.STREETS_BUILDER === 'photo' ? 'photo' : 'rules'
+
+/**
+ * Streets as they lie on the ground, lane by lane, built by our lane builder (lanes.mjs) from the
+ * roads of the Baltic states in roads/ (scripts/extract-roads.mjs): every carriageway as wide as its
+ * lanes, the paint on it, junctions paved across with their kerbs rounded, slip roads leaving and
+ * joining on their own side, arrows, stop lines, zebras, and the islands mappers drew. A tile at a
+ * time (z15, about 670 m square), built from the roads 300 m round it so a junction on its edge is
+ * whole, and kept on disk until the roads are built again.
  */
 
 /** The zoom the streets are cut and kept at. */
 export const STREETS_TILE_ZOOM = 15
-/** OSM changes slowly; a month-old tile is good enough and keeps the load on Overpass low. */
-const FRESH_MS = 30 * 24 * 3600_000
-/** Room round a tile, degrees (about 100 m), so a junction on its edge is built whole. */
-const MARGIN = 0.0015
-/** Kept apart from the transit lines' streets (server/transit/streets.ts), which share the folder above. */
-const DIR = join(CACHE_DIR, 'streets', 'tiles')
+/** Room round a tile, degrees of longitude (about 300 m at Rīga; half as many of latitude). */
+const MARGIN = 0.005
 /** Raised when what a tile holds changes, so tiles kept from before are built afresh. */
-const FORMAT = 2
-
-export type BBox = [number, number, number, number]
+const FORMAT = 10
+/** Kept apart from the transit lines' streets (server/transit/streets.ts), which share the folder above. */
+const DIR = join(CACHE_DIR, 'streets', 'lanes')
 
 /** A tile's bounds: west, south, east, north. */
 export function tileBounds(z: number, x: number, y: number): BBox {
@@ -39,153 +39,67 @@ export function tileBounds(z: number, x: number, y: number): BBox {
   return [lon(x), lat(y + 1), lon(x + 1), lat(y)]
 }
 
-/** Everything a street is made of, as Overpass gives it to osm2streets: the ways and their nodes. */
-export function overpassQuery([w, s, e, n]: BBox): string {
-  const bbox = `${s - MARGIN / 2},${w - MARGIN},${n + MARGIN / 2},${e + MARGIN}`
-  return `[out:xml][timeout:90];(way["highway"](${bbox});way["area:highway"](${bbox});way["traffic_calming"="island"](${bbox}););(._;>;);out body;`
-}
-
-interface StreetNetwork {
-  toLanePolygonsGeojson(): string
-  toLaneMarkingsGeojson(): string
-  toIntersectionMarkingsGeojson(): string
-  toGeojsonPlain(): string
-  free(): void
-}
-type Engine = { JsStreetNetwork: new (xml: string, clip: string, options: object) => StreetNetwork }
-
-let engine: Promise<Engine> | null = null
-/** osm2streets, compiled to WebAssembly, loaded once: its glue is written for the browser, so the module is handed its bytes. */
-function load(): Promise<Engine> {
-  engine ??= (async () => {
-    const dir = dirname(createRequire(import.meta.url).resolve('osm2streets-js/package.json'))
-    const mod = (await import(pathToFileURL(join(dir, 'osm2streets_js.js')).href)) as Engine & { initSync(bytes: Buffer): unknown }
-    mod.initSync(readFileSync(join(dir, 'osm2streets_js_bg.wasm')))
-    return mod
-  })()
-  return engine
-}
-
-const round = (c: unknown): unknown => (typeof (c as number[])[0] === 'number' ? [Math.round((c as number[])[0] * 1e7) / 1e7, Math.round((c as number[])[1] * 1e7) / 1e7] : (c as unknown[]).map(round))
-const shaped = (kind: string, f: Feature): Feature => ({
-  type: 'Feature',
-  properties: { kind, type: (f.properties?.type as string) ?? kind, layer: Number(f.properties?.layer ?? 0) },
-  geometry: { ...f.geometry, coordinates: round((f.geometry as Exclude<Geometry, { type: 'GeometryCollection' }>).coordinates) } as Geometry,
-})
-
-const attrs = (s: string): Record<string, string> => Object.fromEntries([...s.matchAll(/([\w:]+)="([^"]*)"/g)].map(([, k, v]) => [k, v]))
-
-/**
- * The islands ('island': 'grass' or 'paved') and hatched areas ('hatch') in OSM XML, as mappers draw
- * them: closed ways tagged `area:highway=traffic_island`, `traffic_calming=island` or
- * `area:highway=prohibited`. Each goes to the tile its middle is in, so none is drawn twice.
- */
-export function islands(xml: string, [w, s, e, n]: BBox): Feature[] {
-  const nodes = new Map<string, [number, number]>()
-  for (const [, a] of xml.matchAll(/<node\b([^>]*)>/g)) {
-    const { id, lat, lon } = attrs(a)
-    nodes.set(id, [Number(lon), Number(lat)])
+/** Where a feature belongs: the middle of its outline, so a road two tiles both build is kept by one. */
+function anchor(f: Feature): Position {
+  const g = f.geometry
+  const pts: Position[] = g.type === 'Point' ? [g.coordinates] : g.type === 'LineString' ? g.coordinates : g.type === 'Polygon' ? g.coordinates[0] : []
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
+  for (const [x, y] of pts) {
+    x0 = Math.min(x0, x)
+    x1 = Math.max(x1, x)
+    y0 = Math.min(y0, y)
+    y1 = Math.max(y1, y)
   }
-  const out: Feature[] = []
-  for (const [, body] of xml.matchAll(/<way\b[^>]*>([\s\S]*?)<\/way>/g)) {
-    const tags = Object.fromEntries([...body.matchAll(/<tag\b([^>]*)>/g)].map(([, a]) => attrs(a)).map(({ k, v }) => [k, v]))
-    const hatch = tags['area:highway'] === 'prohibited'
-    if (!hatch && tags['area:highway'] !== 'traffic_island' && tags.traffic_calming !== 'island') continue
-    const refs = [...body.matchAll(/<nd ref="(\d+)"/g)].map(([, ref]) => ref)
-    const ring = refs.map((ref) => nodes.get(ref))
-    if (refs.length < 4 || refs[0] !== refs[refs.length - 1] || ring.some((p) => !p)) continue
-    const corners = (ring as [number, number][]).slice(0, -1)
-    const x = corners.reduce((sum, p) => sum + p[0], 0) / corners.length
-    const y = corners.reduce((sum, p) => sum + p[1], 0) / corners.length
-    if (x < w || x >= e || y < s || y >= n) continue
-    const grass = tags.surface === 'grass' || tags.landuse === 'grass'
-    out.push({ type: 'Feature', properties: { kind: hatch ? 'hatch' : 'island', type: hatch ? 'prohibited' : grass ? 'grass' : 'paved', layer: 0 }, geometry: { type: 'Polygon', coordinates: round([ring]) as [number, number][][] } })
-  }
-  return out
+  return [(x0 + x1) / 2, (y0 + y1) / 2]
 }
 
-/**
- * A tile's streets from OSM XML: lanes ('lane', by type), paint ('mark': lane separators, centre
- * lines, arrows, stop lines), pavement corners ('corner') and junction areas ('junction'), each
- * with its level ('layer': 1 a bridge, -1 a tunnel), and the islands and hatched areas mapped in
- * OSM ('island', 'hatch'). Cut to `bounds`.
- */
-export async function buildStreets(xml: string, bounds: BBox): Promise<FeatureCollection> {
-  const { JsStreetNetwork } = await load()
+/** A tile's streets, from the roads in `dir`. */
+export async function buildTile(dir: string, z: number, x: number, y: number): Promise<FeatureCollection> {
+  const bounds = tileBounds(z, x, y)
   const [w, s, e, n] = bounds
-  const clip = JSON.stringify({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[w, s], [e, s], [e, n], [w, n], [w, s]]] } }] })
-  const net = new JsStreetNetwork(xml, clip, { debug_each_step: false, dual_carriageway_experiment: false, sidepath_zipping_experiment: false, inferred_sidewalks: true, osm2lanes: false })
-  try {
-    const parse = (json: string) => (JSON.parse(json) as FeatureCollection).features
-    const features = [
-      ...parse(net.toGeojsonPlain()).filter((f) => f.properties?.type === 'intersection').map((f) => shaped('junction', f)),
-      ...parse(net.toLanePolygonsGeojson()).map((f) => shaped('lane', f)),
-      ...parse(net.toIntersectionMarkingsGeojson()).map((f) => shaped('corner', f)),
-      ...parse(net.toLaneMarkingsGeojson()).map((f) => shaped('mark', f)),
-      ...islands(xml, bounds),
-    ]
-    return { type: 'FeatureCollection', features }
-  } finally {
-    net.free()
-  }
+  const { ways, nodes } = await roadsIn(dir, [w - MARGIN, s - MARGIN / 2, e + MARGIN, n + MARGIN / 2])
+  let fc: FeatureCollection
+  if (BUILDER === 'photo') {
+    const proto = await import('./prototype/lanes-photo.mjs')
+    const extra = await proto.extra(bounds)
+    fc = proto.buildRoads([...ways, ...(extra.ways ?? [])], nodes, bounds)
+    if (extra.features) fc.features.push(...extra.features)
+  } else fc = buildRoads(ways, nodes, bounds)
+  // West and south edges in, east and north out: each feature in exactly one tile.
+  fc.features = fc.features.filter((f) => {
+    const [lon, lat] = anchor(f)
+    return lon >= w && lon < e && lat >= s && lat < n
+  })
+  return fc
 }
 
-/** The main Overpass server first: the others time out on an XML answer this size. */
-const SERVERS = [OVERPASS.find((s) => s.includes('overpass-api.de')) ?? OVERPASS[0], ...OVERPASS.filter((s) => !s.includes('overpass-api.de'))]
-
-/** One Overpass request at a time: the public servers ask callers for that. */
-let turn: Promise<unknown> = Promise.resolve()
-async function overpassXml(bounds: BBox, fetchImpl: typeof fetch): Promise<string> {
-  const body = `data=${encodeURIComponent(overpassQuery(bounds))}`
-  const ask = async () => {
-    for (const [attempt, server] of SERVERS.entries()) {
-      try {
-        const res = await fetchImpl(server, { method: 'POST', headers: { 'User-Agent': USER_AGENT, 'Content-Type': 'application/x-www-form-urlencoded' }, body, signal: AbortSignal.timeout(90_000) })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const xml = await res.text()
-        if (!xml.includes('<osm')) throw new Error('not OSM XML')
-        return xml
-      } catch (err) {
-        console.warn(`[pwh] detailed streets: ${new URL(server).host} failed (${err instanceof Error ? err.message : err})`)
-        await new Promise((resolve) => setTimeout(resolve, 3000 * (attempt + 1)))
-      }
-    }
-    throw new Error('no Overpass server answered')
-  }
-  const mine = turn.then(ask)
-  turn = mine.catch(() => undefined)
-  return mine
+/** What a tile is built from: the builder's format, the roads, the fixes. Null where no roads have been built. */
+export function streetsVersion(roadsDir = findRoadsDir()): string | null {
+  return roadsDir ? `${FORMAT}-${roadsStamp(roadsDir)}-${FIXES_STAMP}${BUILDER === 'photo' ? '-photo' : ''}` : null
 }
 
 /** Tiles being built now, so two visitors asking for one tile wait for the same build. */
-const building = new Map<string, Promise<Buffer>>()
+const building = new Map<string, Promise<Buffer | null>>()
 
-/** A tile's streets as gzipped GeoJSON: from disk while fresh, else built (and kept). */
-export async function streetTile(z: number, x: number, y: number, fetchImpl: typeof fetch = fetch, dir = DIR): Promise<Buffer> {
-  const key = `${z}-${x}-${y}`
-  const file = join(dir, `${key}-v${FORMAT}.json.gz`)
-  const fresh = await stat(file).then((s) => Date.now() - s.mtimeMs < FRESH_MS).catch(() => false)
-  if (fresh) return readFile(file)
-  const pending = building.get(key)
+/** A tile's streets as gzipped GeoJSON: from disk when built from these roads, else built (and kept). Null where no roads have been built. */
+export async function streetTile(z: number, x: number, y: number, roadsDir = findRoadsDir(), dir = DIR): Promise<Buffer | null> {
+  if (!roadsDir) return null
+  const file = join(dir, `${z}-${x}-${y}-v${streetsVersion(roadsDir)}.json.gz`)
+  const kept = await readFile(file).catch(() => null)
+  if (kept) return kept
+  const pending = building.get(file)
   if (pending) return pending
   const job = (async () => {
     try {
-      const bounds = tileBounds(z, x, y)
-      const fc = await buildStreets(await overpassXml(bounds, fetchImpl), bounds)
-      const gz = gzipSync(JSON.stringify(fc))
+      const gz = gzipSync(JSON.stringify(await buildTile(roadsDir, z, x, y)))
       await mkdir(dir, { recursive: true })
       await writeFile(file, gz).catch(() => undefined)
       return gz
-    } catch (err) {
-      // An old copy beats none while Overpass is busy.
-      const old = await readFile(file).catch(() => null)
-      if (old) return old
-      throw err
     } finally {
-      building.delete(key)
+      building.delete(file)
     }
   })()
-  building.set(key, job)
+  building.set(file, job)
   return job
 }
 

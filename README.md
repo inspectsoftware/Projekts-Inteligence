@@ -76,6 +76,8 @@ Requires Node 22 or newer. Everything works without configuration; a few optiona
 | `VALHALLA_URL`         | A Valhalla service run apart (Docker, another host), for bus lanes. Without it the server starts one itself from `valhalla/` |
 | `VALHALLA_DIR`         | Where Valhalla's road graph is (`valhalla.json` and `tiles/`). Default `valhalla/` at the project's root |
 | `VALHALLA_BIN`         | The folder of Valhalla's executables, where they are not the ones `scripts/build-valhalla.mjs` installs |
+| `STREETS_BUILDER`      | `photo` draws the streets with the prototype that also reads the LĢIA orthophoto (Latvia only); unset, by the rules alone |
+| `ROADS_DIR`            | Where the roads the streets are drawn lane by lane from are (`scripts/extract-roads.mjs`). Default `roads/` at the project's root |
 
 ### Deploying
 
@@ -112,21 +114,49 @@ Valhalla apart (for example its Docker image) on the graph built here, and set `
 
 ### Streets lane by lane
 
-From zoom 16 the map draws the streets lane by lane (`src/map/streets.ts`): each lane as a shape
-coloured by what it is for (driving, bus, cycling, parking, the pavements), the junctions' own areas,
-the paint between the lanes and the arrows in them, and bridges over the roads beneath. They are built
-on the server by [osm2streets](https://github.com/a-b-street/osm2streets), A/B Street's street engine
-(the `osm2streets-js` package, WebAssembly, Apache-2.0), from OpenStreetMap: `/api/streets/15/x/y`
-fetches a z15 tile's ways through Overpass (with 100 m to spare round it), builds it, cuts it to the
-tile and keeps it in the cache folder for a month (`server/streets/detailed.ts`). The first visit to a
-tile waits for Overpass, about half a minute; after that it comes from disk. Until a tile is there, the
-map's own street lines show.
+From zoom 16 the map draws the streets as they lie on the ground (`src/map/streets.ts`), as a detailed
+city map does: each carriageway as wide as its lanes in one grey, and from zoom 17 the paint on it —
+lane lines, a block line beside a lane that leaves or joins with a slip road, double centre lines on
+wide roads, stop lines at signals, zebras at crossings, turn arrows before a junction — with junctions
+paved across, their kerbs rounded and dotted guides carrying the lanes over them, a light wedge where
+a slip road leaves or joins, the islands and hatched areas mappers drew, and bridges with their
+shadows. A road OpenStreetMap gives no lanes for is drawn plain, as wide as such a street is.
 
-The islands and the hatched areas no car may cross come from the same download: osm2streets leaves
-them out, so the server takes the closed ways mappers tagged `area:highway=traffic_island`,
-`traffic_calming=island` or `area:highway=prohibited` straight from the OSM, and the map draws them
-over the lanes (an island kerbed, green where it is grass; the hatching in the road's paint). They show
-only where someone has mapped them: some 400 islands and 90 hatched areas in Rīga, mostly in the east.
+They are built on the server by our lane builder (`server/streets/lanes.mjs`) from the roads in
+`roads/`, by the rules a road is laid out by: a carriageway keeps one edge straight where a lane is
+added or ends, and the lane opens or closes on the other side over a taper (the side the turn lanes
+say, else the right); a slip road leaves and joins on its own side. `/api/streets/15/x/y` builds a z15
+tile from the roads 300 m round it, in a fraction of a second, and keeps it in the cache folder until
+the roads are built again (`server/streets/detailed.ts`). Without `roads/` the map's own street lines
+show.
+
+`roads/` is built by hand from the same merged OSM extract as the tiles, and is not in git:
+
+```bash
+node scripts/extract-roads.mjs   # roads/, ~110 MB in 5 km squares, ~7 min; after build-tiles
+```
+
+### Prototype: streets fitted to the aerial photo
+
+`server/streets/prototype/lanes-photo.mjs` is a prototype of the lane builder that also reads the LĢIA
+orthophoto (25 cm, all of Latvia, free WMTS) of every tile it builds: it moves kerbs to where the
+asphalt really ends, tells painted chevrons, grass and kerbed islands apart between carriageways,
+adds auxiliary lanes the photo shows, and takes in kerbs and islands traced by hand on GeoRīga's 1 cm
+photo by Stacijas laukums (`georiga-traced.json`). It is off unless the server runs with
+`STREETS_BUILDER=photo`; outside Latvia it falls back to the rules alone. It came out of an agent
+search over five sources (LĢIA photo, GeoRīga photo and lidar, Mapillary, OSM with Valhalla and the
+Latvian design rules) and scores about 6 out of 10 against the photo at the five test places: slip
+roads, junction boxes and yard stubs are still its weak points.
+
+To compare a builder with the photo:
+
+```bash
+node scripts/roads/bench/run.mjs server/streets/prototype/lanes-photo.mjs out/   # or server/streets/lanes.mjs
+```
+
+renders five test places (the A10 x Jūrkalnes iela cloverleaf, the Juglas roundabout, central Rīga by
+Avotu iela, Stacijas laukums, the Slāvu tilts interchange) as `<place>-pair.jpg`: the drawing beside
+the orthophoto of the same ground.
 
 ## How it is put together
 

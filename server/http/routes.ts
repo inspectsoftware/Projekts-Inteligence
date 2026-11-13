@@ -21,7 +21,7 @@ import { type Room, bannedFrom, createRoom, ownerFrom } from './room'
 import { ViewBusy, createViewAircraft } from './viewAircraft'
 import type { VehicleFix } from '../transit/match'
 import { tripService } from '../transit/service'
-import { STREETS_TILE_ZOOM, streetTile, tileBounds } from '../streets/detailed'
+import { STREETS_TILE_ZOOM, streetTile, streetsVersion, tileBounds } from '../streets/detailed'
 import { BALTIC_BBOX } from '../../shared/region'
 
 export interface ApiDeps {
@@ -202,7 +202,8 @@ export function apiRoutes(deps: ApiDeps): Hono {
 
   /**
    * One tile of streets lane by lane (/streets/15/x/y; server/streets/detailed.ts), in the Baltic
-   * states only: built from OpenStreetMap the first time it is asked for, then from disk.
+   * states only: built from the roads in roads/ the first time it is asked for, then from disk.
+   * 404 where those roads have not been built (the map's own street lines show instead).
    */
   api.get('/streets/:z/:x/:y', limit(120), async (c) => {
     const [z, x, y] = ['z', 'x', 'y'].map((k) => Number(c.req.param(k)))
@@ -210,14 +211,19 @@ export function apiRoutes(deps: ApiDeps): Hono {
     const [w, s, e, n] = tileBounds(z, x, y)
     const [bw, bs, be, bn] = BALTIC_BBOX
     if (e < bw || w > be || n < bs || s > bn) return c.json({ error: 'not_found' }, 404)
-    let gz: Buffer
+    // A browser keeps a tile and asks whether it is still current: unchanged until the roads, the
+    // fixes to them or the builder change, and then at once.
+    const etag = `"${streetsVersion()}"`
+    if (c.req.header('if-none-match') === etag) return c.body(null, 304)
+    let gz: Buffer | null
     try {
       gz = await streetTile(z, x, y)
     } catch {
       return c.json({ error: 'unavailable' }, 503)
     }
-    // Streets change slowly: a browser keeps a tile a day.
-    c.header('Cache-Control', 'public, max-age=86400')
+    if (!gz) return c.json({ error: 'not_found' }, 404)
+    c.header('Cache-Control', 'public, no-cache')
+    c.header('ETag', etag)
     c.header('Content-Type', 'application/json; charset=utf-8')
     c.header('Vary', 'Accept-Encoding')
     if (!/gzip/.test(c.req.header('accept-encoding') ?? '')) return c.body(new Uint8Array(gunzipSync(gz)))
